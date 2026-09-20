@@ -2,7 +2,11 @@
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 using namespace observatory;
@@ -15,6 +19,34 @@ std::vector<unsigned char> pixels(int w, int h) {
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
   return p;
 }
+struct BrightSkyFixture {
+  std::filesystem::path path;
+  BrightSkyFixture() {
+    char name[] = "/tmp/observatory-occlusion-XXXXXX";
+    auto dir = mkdtemp(name);
+    require(dir, "temporary shader fixture");
+    path = dir;
+    const auto source = std::filesystem::absolute(Renderer::defaultDataDirectory());
+    std::filesystem::copy(source / "shaders", path / "shaders",
+                          std::filesystem::copy_options::recursive);
+    std::filesystem::create_directory_symlink(source / "assets", path / "assets");
+    auto post = path / "shaders/post.frag";
+    std::ifstream input(post);
+    std::ostringstream buffer;
+    buffer << input.rdbuf();
+    auto shader = buffer.str();
+    // Inject extreme sky and glare radiance at their actual compositing stages.
+    // If either stage moves in front of the ridge, its interior must fail below.
+    for (const std::string needle : {"vec3 L=texture(uScene,uv).rgb;",
+         "L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;"}) {
+      auto at = shader.find(needle);
+      require(at != std::string::npos, "sky/glare injection stage");
+      shader.insert(at + needle.size(), "L+=vec3(1000.);");
+    }
+    std::ofstream(post) << shader;
+  }
+  ~BrightSkyFixture() { std::filesystem::remove_all(path); }
+};
 int main() {
   try {
     require(glfwInit(), "GLFW initialization");
@@ -78,6 +110,20 @@ int main() {
       auto repeat = pixels(640, 360);
       require(repeat == day,
               "resize and time changes must return to deterministic output");
+      {
+        BrightSkyFixture fixture;
+        Renderer brightSky(fixture.path.string());
+        for (double time : {0., 800., 880., 1350.}) {
+          r.render(640, 360, time);
+          auto normal = pixels(640, 360);
+          brightSky.render(640, 360, time);
+          auto bright = pixels(640, 360);
+          for (int i = 0; i < 640 * 20 * 4; ++i)
+            require(normal[i] == bright[i],
+                    "mountains must occlude all sky and solar glare at every time");
+          require(normal != bright, "bright sky fixture must change visible sky");
+        }
+      }
       require(glGetError() == GL_NO_ERROR, "OpenGL errors");
       std::cout << "GPU render: opaque mountains, visible bodies, "
                    "daylight/night contrast, resize determinism passed\n";
