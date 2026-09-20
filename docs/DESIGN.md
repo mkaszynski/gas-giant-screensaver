@@ -12,7 +12,7 @@ properties at approximately 1 AU. Length calculations use Jupiter radii;
 orbit solving and coordinate transforms use double precision. GPU coordinates
 are observer-relative. The solar disk radius is 0.00465047 radians.
 
-The home moon has three Earth radii, a semimajor axis of three giant radii, and
+The home moon has Earth's 6,371 km radius, a semimajor axis of three giant radii, and
 eccentricity 1/9: apocenter/pericenter = (1+e)/(1-e) = 1.25 exactly. Synchronous
 rotation follows mean anomaly, allowing optical libration. Solar-day duration
 is 1800 displayed seconds; the sidereal period includes the annual correction.

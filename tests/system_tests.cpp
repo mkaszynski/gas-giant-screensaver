@@ -22,8 +22,11 @@ int main() {
           "penumbra");
   const auto orbits = makeOrbits();
   const auto initial = sceneAt(0);
-  require(std::abs(initial.bodies[1].radius - 0.2673) < 1e-12,
-          "triple observer radius");
+  require(std::abs(initial.bodies[1].radius * 71492.0 - 6371.0) < 1e-9,
+          "observer moon has Earth's 6371 km mean radius");
+  require(std::abs(initial.bodies[2].radius - 0.0039) < 1e-12 &&
+              std::abs(initial.bodies[8].radius - 0.258) < 1e-12,
+          "other small and large moons retain tripled radii");
   require(homeA == 3.0, "observer orbit halved");
   std::array<Body, 21> eclipseBodies{};
   eclipseBodies[2] = {{0, 0, 10}, 1, 0, 0};

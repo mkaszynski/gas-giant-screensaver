@@ -83,12 +83,12 @@ Scene sceneAt(double seconds, double daySeconds) {
   const auto orbits = makeOrbits();
   s.bodies[0] = {{0, 0, 0}, 1, 0, orbitPhase * orbitalSeconds / 36000 * 2 * pi};
   for (int i = 0; i < 20; ++i) {
-    double radius = i == 0 ? 0.0891
+    double radius = i == 0 ? 6371.0 / 71492.0
                            : (i < 6 ? 0.001 + 0.0003 * (i % 3)
                                     : (i < 10 ? 0.065 + 0.007 * (i % 4)
                                               : 0.008 + 0.004 * (i % 5)));
     s.bodies[i + 1] = {
-        orbitPosition(orbits[i], orbitPhase), radius * 3.0, 1 + (i % 4),
+        orbitPosition(orbits[i], orbitPhase), radius * (i == 0 ? 1.0 : 3.0), 1 + (i % 4),
         orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5)};
   }
   const double rotation = 2 * pi * orbitPhase;

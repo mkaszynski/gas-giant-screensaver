@@ -1,6 +1,6 @@
 // Kilometers, radiance in solar-irradiance-normalized units. Earth atmosphere.
 const float PI=3.14159265359;
-const float Rg=19110., Rt=19210.;
+const float Rg=6371., Rt=6471.;
 const vec3 betaR=vec3(.005802,.013558,.033100);
 const vec3 betaM=vec3(.003996);
 const vec3 betaO=vec3(.000650,.001881,.000085);

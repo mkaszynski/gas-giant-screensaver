@@ -57,8 +57,9 @@ Installing the preview does not change any host configuration or idle timeout.
 - Giant: Jupiter radius, three Jupiter masses; solar-size star at about 1 AU.
 - Observer orbit: semimajor axis **three giant radii**, eccentricity **1/9**.
   Apocenter is exactly **25% farther** than pericenter.
-- All moon radii are **three times the initial design**; the largest is about
-  three Earth radii. This is a fictional, artist-directed system.
+- The observer moon has Earth's **6,371 km radius**. The other nineteen moons
+  retain **three times their initial radii**; the largest is about three Earth
+  radii. This is a fictional, artist-directed system.
 - Latitude 38° north, longitude 50° from the mean subplanet meridian. Mean
   synchronous rotation preserves natural eccentric-orbit libration.
 - Twenty moons includes the observer moon. Visibility and apparent size follow
