@@ -1,0 +1,58 @@
+#include "system.hpp"
+#include <iostream>
+#include <stdexcept>
+using namespace observatory;
+void require(bool b, const char *msg) {
+  if (!b)
+    throw std::runtime_error(msg);
+}
+int main() {
+  Orbit o{homeA, homeE, 0, 0, 0, 0};
+  require(std::abs(length(orbitPosition(o, .5)) / length(orbitPosition(o, 0)) -
+                   1.25) < 1e-12,
+          "apo/peri ratio");
+  require(length(orbitPosition(o, 1) - orbitPosition(o, 0)) < 1e-12,
+          "orbit closure");
+  require(diskVisibility(0, .004, .01) == 0, "total eclipse");
+  require(diskVisibility(.1, .004, .01) == 1, "no eclipse");
+  require(std::abs(diskVisibility(0, .01, .005) - .75) < 1e-12,
+          "annular eclipse");
+  require(diskVisibility(.01, .004, .01) > 0 &&
+              diskVisibility(.01, .004, .01) < 1,
+          "penumbra");
+  const auto orbits = makeOrbits();
+  const auto initial = sceneAt(0);
+  require(std::abs(initial.bodies[1].radius - 0.2673) < 1e-12,
+          "triple observer radius");
+  require(homeA == 3.0, "observer orbit halved");
+  std::array<Body, 21> eclipseBodies{};
+  eclipseBodies[2] = {{0, 0, 10}, 1, 0, 0};
+  require(visibility({0, 0, 0}, {0, 0, 1}, eclipseBodies, 1) == 0,
+          "moon casts shadow on another body");
+  eclipseBodies[2].position = {10, 0, 10};
+  require(visibility({0, 0, 0}, {0, 0, 1}, eclipseBodies, 1) == 1,
+          "displaced moon no longer eclipses");
+  for (int i = 0; i < 20; ++i)
+    for (int j = i + 1; j < 20; ++j) {
+      const auto a = orbits[i].a < orbits[j].a ? orbits[i] : orbits[j];
+      const auto b = orbits[i].a < orbits[j].a ? orbits[j] : orbits[i];
+      require(a.a * (1 + a.e) +
+                      initial.bodies[orbits[i].a < orbits[j].a ? i + 1 : j + 1]
+                          .radius <
+                  b.a * (1 - b.e) -
+                      initial.bodies[orbits[i].a < orbits[j].a ? j + 1 : i + 1]
+                          .radius,
+              "non-crossing radial orbital envelopes");
+    }
+  for (int t = 0; t < 3600; t += 7) {
+    auto s = sceneAt(t);
+    require(s.bodies.size() == 21, "20 moons plus giant");
+    require(std::abs(dot(s.up, s.east)) < 1e-12, "orthogonal local frame");
+    require(std::abs(length(s.forward) - 1) < 1e-12, "normalized camera");
+    require(s.sunVisibility >= 0 && s.sunVisibility <= 1, "bounded visibility");
+    require(s.local(-s.observer).y > 0, "giant remains above horizon");
+    for (auto b : s.bodies)
+      require(std::isfinite(length(b.position)), "finite ephemerides");
+  }
+  std::cout << "Orbital geometry, eccentricity, frames and eclipses passed\n";
+}

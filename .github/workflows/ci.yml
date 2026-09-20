@@ -1,0 +1,35 @@
+name: Validation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  renderer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and software-rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libglfw3-dev libgles2-mesa-dev libpng-dev xvfb
+      - name: Build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
+      - name: Unit and CLI tests
+        run: ctest --test-dir build --output-on-failure
+      - name: GPU behavior on Mesa software renderer
+        run: xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
+      - name: Render daylight and twilight
+        run: |
+          mkdir -p captures
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 0 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 880 --width 960 --height 540
+      - uses: actions/upload-artifact@v4
+        with:
+          name: software-rendered-captures
+          path: captures/*.png
+  nix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Build preview, Hyprlock and validate configuration
+        run: nix flake check --print-build-logs --cores 2

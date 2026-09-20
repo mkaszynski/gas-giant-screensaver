@@ -1,0 +1,4 @@
+/build*
+/result*
+/captures
+*.ppm

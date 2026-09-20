@@ -1,0 +1,477 @@
+--- a/src/config/ConfigManager.cpp
++++ b/src/config/ConfigManager.cpp
+@@ -219,6 +219,12 @@
+     m_config.addConfigValue("general:fractional_scaling", Hyprlang::INT{2});
+     m_config.addConfigValue("general:screencopy_mode", Hyprlang::INT{0});
+     m_config.addConfigValue("general:fail_timeout", Hyprlang::INT{2000});
++    m_config.addConfigValue("general:unlock_deceleration_ms", Hyprlang::INT{800});
++    m_config.addConfigValue("general:unlock_transition_ms", Hyprlang::INT{1000});
++    m_config.addConfigValue("general:failure_halo", Hyprlang::INT{1});
++    m_config.addConfigValue("general:failure_halo_size", Hyprlang::INT{72});
++    m_config.addConfigValue("general:failure_halo_opacity", Hyprlang::INT{18});
++    m_config.addConfigValue("general:failure_halo_transition_ms", Hyprlang::INT{450});
+ 
+     m_config.addConfigValue("auth:pam:enabled", Hyprlang::INT{1});
+     m_config.addConfigValue("auth:pam:module", Hyprlang::STRING{"hyprlock"});
+@@ -244,6 +250,12 @@
+     m_config.addSpecialConfigValue("background", "reload_time", Hyprlang::INT{-1});
+     m_config.addSpecialConfigValue("background", "reload_cmd", Hyprlang::STRING{""});
+     m_config.addSpecialConfigValue("background", "crossfade_time", Hyprlang::FLOAT{-1.0});
++
++    m_config.addSpecialCategory("observatory", Hyprlang::SSpecialCategoryOptions{.key = nullptr, .anonymousKeyBased = true});
++    m_config.addSpecialConfigValue("observatory", "monitor", Hyprlang::STRING{""});
++    m_config.addSpecialConfigValue("observatory", "fps", Hyprlang::INT{30});
++    m_config.addSpecialConfigValue("observatory", "day_seconds", Hyprlang::INT{1800});
++    m_config.addSpecialConfigValue("observatory", "zindex", Hyprlang::INT{-1});
+ 
+     m_config.addSpecialCategory("shape", Hyprlang::SSpecialCategoryOptions{.key = nullptr, .anonymousKeyBased = true});
+     m_config.addSpecialConfigValue("shape", "monitor", Hyprlang::STRING{""});
+@@ -285,6 +297,7 @@
+     m_config.addSpecialConfigValue("input-field", "outer_color", GRADIENTCONFIG("0xFF111111"));
+     m_config.addSpecialConfigValue("input-field", "outline_thickness", Hyprlang::INT{4});
+     m_config.addSpecialConfigValue("input-field", "dots_size", Hyprlang::FLOAT{0.25});
++    m_config.addSpecialConfigValue("input-field", "dots_aspect_ratio", Hyprlang::FLOAT{1.0});
+     m_config.addSpecialConfigValue("input-field", "dots_center", Hyprlang::INT{1});
+     m_config.addSpecialConfigValue("input-field", "dots_spacing", Hyprlang::FLOAT{0.2});
+     m_config.addSpecialConfigValue("input-field", "dots_rounding", Hyprlang::INT{-1});
+@@ -293,6 +306,7 @@
+     m_config.addSpecialConfigValue("input-field", "fade_timeout", Hyprlang::INT{2000});
+     m_config.addSpecialConfigValue("input-field", "font_color", Hyprlang::INT{0xFF000000});
+     m_config.addSpecialConfigValue("input-field", "font_family", Hyprlang::STRING{"Sans"});
++    m_config.addSpecialConfigValue("input-field", "font_size", Hyprlang::INT{0});
+     m_config.addSpecialConfigValue("input-field", "halign", Hyprlang::STRING{"center"});
+     m_config.addSpecialConfigValue("input-field", "valign", Hyprlang::STRING{"center"});
+     m_config.addSpecialConfigValue("input-field", "position", LAYOUTCONFIG("0,0"));
+@@ -403,6 +417,18 @@
+     }
+ 
+     //
++    keys = m_config.listKeysForSpecialCategory("observatory");
++    for (auto& k : keys) {
++        result.push_back(CConfigManager::SWidgetConfig{
++            .type = "observatory",
++            .monitor = std::any_cast<Hyprlang::STRING>(m_config.getSpecialConfigValue("observatory", "monitor", k.c_str())),
++            .values = {
++                {"fps", m_config.getSpecialConfigValue("observatory", "fps", k.c_str())},
++                {"day_seconds", m_config.getSpecialConfigValue("observatory", "day_seconds", k.c_str())},
++                {"zindex", m_config.getSpecialConfigValue("observatory", "zindex", k.c_str())},
++            }
++        });
++    }
+     keys = m_config.listKeysForSpecialCategory("shape");
+     for (auto& k : keys) {
+         // clang-format off
+@@ -467,6 +493,7 @@
+                 {"outer_color", m_config.getSpecialConfigValue("input-field", "outer_color", k.c_str())},
+                 {"outline_thickness", m_config.getSpecialConfigValue("input-field", "outline_thickness", k.c_str())},
+                 {"dots_size", m_config.getSpecialConfigValue("input-field", "dots_size", k.c_str())},
++                {"dots_aspect_ratio", m_config.getSpecialConfigValue("input-field", "dots_aspect_ratio", k.c_str())},
+                 {"dots_spacing", m_config.getSpecialConfigValue("input-field", "dots_spacing", k.c_str())},
+                 {"dots_center", m_config.getSpecialConfigValue("input-field", "dots_center", k.c_str())},
+                 {"dots_rounding", m_config.getSpecialConfigValue("input-field", "dots_rounding", k.c_str())},
+@@ -475,6 +502,7 @@
+                 {"fade_timeout", m_config.getSpecialConfigValue("input-field", "fade_timeout", k.c_str())},
+                 {"font_color", m_config.getSpecialConfigValue("input-field", "font_color", k.c_str())},
+                 {"font_family", m_config.getSpecialConfigValue("input-field", "font_family", k.c_str())},
++                {"font_size", m_config.getSpecialConfigValue("input-field", "font_size", k.c_str())},
+                 {"halign", m_config.getSpecialConfigValue("input-field", "halign", k.c_str())},
+                 {"valign", m_config.getSpecialConfigValue("input-field", "valign", k.c_str())},
+                 {"position", m_config.getSpecialConfigValue("input-field", "position", k.c_str())},
+--- a/src/core/hyprlock.cpp
++++ b/src/core/hyprlock.cpp
+@@ -23,6 +23,14 @@
+ #include <malloc.h>
+ 
+ using namespace Hyprutils::OS;
++
++static constexpr int MAX_UNLOCK_PHASE_MS = 10000;
++
++static int boundedUnlockDuration(const char* name, Hyprlang::INT configured) {
++    if (configured < 0 || configured > MAX_UNLOCK_PHASE_MS)
++        Debug::log(WARN, "{}={} is outside 0..{}; clamping", name, configured, MAX_UNLOCK_PHASE_MS);
++    return std::clamp(static_cast<int>(configured), 0, MAX_UNLOCK_PHASE_MS);
++}
+ 
+ static void setMallocThreshold() {
+ #ifdef M_TRIM_THRESHOLD
+@@ -554,9 +562,25 @@
+         return;
+     }
+ 
+-    g_pRenderer->startFadeOut(true);
++    if (m_bUnlocking)
++        return;
++
++    m_bUnlocking = true;
++
++    static const auto CONFIGUREDDECELERATION = g_pConfigManager->getValue<Hyprlang::INT>("general:unlock_deceleration_ms");
++    static const auto CONFIGUREDTRANSITION   = g_pConfigManager->getValue<Hyprlang::INT>("general:unlock_transition_ms");
++    const auto        DECELERATION = std::chrono::milliseconds(boundedUnlockDuration("general:unlock_deceleration_ms", *CONFIGUREDDECELERATION));
++    const auto        TRANSITION   = std::chrono::milliseconds(boundedUnlockDuration("general:unlock_transition_ms", *CONFIGUREDTRANSITION));
++
++    g_pRenderer->startUnlockTransition(DECELERATION, TRANSITION);
+ 
+     renderAllOutputs();
++
++    const auto TOTAL = DECELERATION + TRANSITION;
++    if (TOTAL.count() == 0)
++        releaseSessionLock();
++    else
++        addTimer(TOTAL, [](ASP<CTimer>, void*) { g_pHyprlock->releaseSessionLock(); }, nullptr);
+ }
+ 
+ bool CHyprlock::isUnlocked() {
+@@ -624,7 +648,7 @@
+ }
+ 
+ void CHyprlock::onKey(uint32_t key, bool down) {
+-    if (isUnlocked())
++    if (isUnlocked() || m_bUnlocking)
+         return;
+ 
+     if (down && std::chrono::system_clock::now() < m_tGraceEnds) {
+@@ -655,8 +679,10 @@
+         return;
+     }
+ 
+-    if (g_pAuth->m_bDisplayFailText)
+-        g_pAuth->resetDisplayFail();
++    if (g_pAuth->m_bDisplayFailText) {
++        renderAllOutputs();
++        return;
++    }
+ 
+     if (down) {
+         m_bCapsLock = xkb_state_mod_name_is_active(g_pSeatManager->m_pXKBState, XKB_MOD_NAME_CAPS, XKB_STATE_MODS_LOCKED);
+--- a/src/core/hyprlock.hpp
++++ b/src/core/hyprlock.hpp
+@@ -88,6 +88,7 @@
+     bool                             m_bCtrl     = false;
+ 
+     bool                             m_bImmediateRender = false;
++    bool                             m_bUnlocking       = false;
+ 
+     std::string                      m_sCurrentDesktop = "";
+ 
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -16,6 +16,7 @@
+                  "  --grace SECONDS          - Set grace period in seconds before requiring authentication\n"
+                  "  --immediate-render       - Do not wait for resources before drawing the background\n"
+                  "  --no-fade-in             - Disable the fade-in animation when the lock screen appears\n"
++                 "  --check-config           - Parse the configuration and exit without locking\n"
+                  "  -V, --version            - Show version information\n"
+                  "  -h, --help               - Show this help message");
+ }
+@@ -42,6 +43,7 @@
+     std::string              wlDisplay;
+     bool                     immediateRender = false;
+     bool                     noFadeIn        = false;
++    bool                     checkConfig     = false;
+     int                      graceSeconds    = 0;
+ 
+     std::vector<std::string> args(argv, argv + argc);
+@@ -103,6 +105,9 @@
+         else if (arg == "--no-fade-in")
+             noFadeIn = true;
+ 
++        else if (arg == "--check-config")
++            checkConfig = true;
++
+         else {
+             std::println(stderr, "Unknown option: {}", arg);
+             help();
+@@ -127,6 +132,9 @@
+     if (noFadeIn)
+         g_pConfigManager->m_AnimationTree.setConfigForNode("fadeIn", false, 0.f, "default");
+ 
++    if (checkConfig)
++        return 0;
++
+     try {
+         g_pHyprlock = makeUnique<CHyprlock>(wlDisplay, immediateRender, graceSeconds);
+         g_pHyprlock->run();
+--- a/src/renderer/Renderer.cpp
++++ b/src/renderer/Renderer.cpp
+@@ -6,6 +6,7 @@
+ #include "../core/Egl.hpp"
+ #include "../core/Output.hpp"
+ #include "../core/hyprlock.hpp"
++#include "../auth/Auth.hpp"
+ #include "../helpers/Color.hpp"
+ #include "../helpers/Log.hpp"
+ #include <GLES3/gl32.h>
+@@ -14,6 +15,7 @@
+ #include <algorithm>
+ #include "widgets/PasswordInputField.hpp"
+ #include "widgets/Background.hpp"
++#include "widgets/Observatory.hpp"
+ #include "widgets/Label.hpp"
+ #include "widgets/Image.hpp"
+ #include "widgets/Shape.hpp"
+@@ -24,6 +26,10 @@
+     1, 1, // bottom right
+     0, 1, // bottom left
+ };
++
++static constexpr int FAILURE_HALO_LAYERS           = 16;
++static constexpr int MAX_FAILURE_HALO_SIZE          = 512;
++static constexpr int MAX_FAILURE_HALO_TRANSITION_MS = 5000;
+ 
+ static GLuint compileShader(const GLuint& type, std::string src) {
+     auto shader = glCreateShader(type);
+@@ -216,13 +222,37 @@
+ 
+     SRenderFeedback feedback;
+     const bool      WAITFORASSETS = !g_pHyprlock->m_bImmediateRender && !g_pAsyncResourceGatherer->gathered;
++    float           renderOpacity = opacity->value();
++    float           motionScale   = 1.F;
++
++    if (unlockTransition.active) {
++        const auto elapsed = std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - unlockTransition.startedAt).count();
++        const auto ease    = [](float phase) {
++            const float bounded = std::clamp(phase, 0.F, 1.F);
++            return bounded * bounded * bounded * (bounded * (bounded * 6.F - 15.F) + 10.F);
++        };
++
++        const float decelerationMs    = static_cast<float>(unlockTransition.deceleration.count());
++        const float transitionMs      = static_cast<float>(unlockTransition.transition.count());
++        const float decelerationPhase = decelerationMs > 0.F ? elapsed / decelerationMs : 1.F;
++        motionScale                   = 1.F - ease(decelerationPhase);
++
++        if (elapsed >= decelerationMs) {
++            const float transitionPhase = transitionMs > 0.F ? (elapsed - decelerationMs) / transitionMs : 1.F;
++            renderOpacity *= 1.F - ease(transitionPhase);
++        }
++
++        feedback.needsFrame = elapsed < decelerationMs + transitionMs;
++    }
+ 
+     if (!WAITFORASSETS) {
+         // render widgets
+         const auto WIDGETS = getOrCreateWidgetsFor(surf);
+         for (auto& w : WIDGETS) {
+-            feedback.needsFrame = w->draw({opacity->value()}) || feedback.needsFrame;
++            feedback.needsFrame = w->draw({renderOpacity, motionScale}) || feedback.needsFrame;
+         }
++
++        feedback.needsFrame = drawFailureHalo(surf.size, renderOpacity) || feedback.needsFrame;
+     }
+ 
+     feedback.needsFrame = feedback.needsFrame || !g_pAsyncResourceGatherer->gathered;
+@@ -230,6 +260,56 @@
+     glDisable(GL_BLEND);
+ 
+     return feedback;
++}
++
++bool CRenderer::drawFailureHalo(const Vector2D& viewport, float lockOpacity) {
++    static const auto ENABLED      = g_pConfigManager->getValue<Hyprlang::INT>("general:failure_halo");
++    static const auto SIZE         = g_pConfigManager->getValue<Hyprlang::INT>("general:failure_halo_size");
++    static const auto OPACITY      = g_pConfigManager->getValue<Hyprlang::INT>("general:failure_halo_opacity");
++    static const auto TRANSITIONMS = g_pConfigManager->getValue<Hyprlang::INT>("general:failure_halo_transition_ms");
++
++    const bool target = *ENABLED && g_pAuth && g_pAuth->m_bDisplayFailText;
++    const auto now    = std::chrono::steady_clock::now();
++    if (target != failureHalo.target) {
++        failureHalo.target              = target;
++        failureHalo.startOpacity        = failureHalo.opacity;
++        failureHalo.transitionStartedAt = now;
++    }
++
++    const int   transitionMs  = std::clamp(static_cast<int>(*TRANSITIONMS), 0, MAX_FAILURE_HALO_TRANSITION_MS);
++    const float targetOpacity = target ? 1.F : 0.F;
++    bool        animating     = false;
++    if (transitionMs == 0) {
++        failureHalo.opacity = targetOpacity;
++    } else {
++        const float elapsed = std::chrono::duration<float, std::milli>(now - failureHalo.transitionStartedAt).count();
++        const float phase   = std::clamp(elapsed / static_cast<float>(transitionMs), 0.F, 1.F);
++        const float eased   = phase * phase * (3.F - 2.F * phase);
++        failureHalo.opacity = failureHalo.startOpacity + (targetOpacity - failureHalo.startOpacity) * eased;
++        animating           = phase < 1.F;
++    }
++
++    const int haloSize = std::clamp(static_cast<int>(*SIZE), 0, MAX_FAILURE_HALO_SIZE);
++    if (failureHalo.opacity <= 0.F || haloSize == 0)
++        return animating;
++
++    static const CGradientValueData HALO_COLOR{CHyprColor(0.9F, 0.015F, 0.005F, 1.F)};
++    const float configuredOpacity = std::clamp(static_cast<float>(*OPACITY) / 100.F, 0.F, 1.F);
++    const int   bandSize          = std::max(1, (haloSize + FAILURE_HALO_LAYERS - 1) / FAILURE_HALO_LAYERS);
++    for (int layer = 0; layer < FAILURE_HALO_LAYERS; ++layer) {
++        const int inset = layer * bandSize;
++        if (inset >= haloSize)
++            break;
++
++        const float falloff = 1.F - static_cast<float>(inset) / static_cast<float>(haloSize);
++        const float alpha   = configuredOpacity * failureHalo.opacity * lockOpacity * falloff * falloff;
++        const float width   = std::max(0.F, static_cast<float>(viewport.x) - 2.F * inset);
++        const float height  = std::max(0.F, static_cast<float>(viewport.y) - 2.F * inset);
++
++        renderBorder(CBox{inset, inset, width, height}, HALO_COLOR, bandSize, 0, alpha);
++    }
++
++    return animating;
+ }
+ 
+ void CRenderer::renderRect(const CBox& box, const CHyprColor& col, int rounding) {
+@@ -410,6 +490,8 @@
+             // by type
+             if (c.type == "background") {
+                 createWidget<CBackground>(widgets[surf.m_outputID]);
++            } else if (c.type == "observatory") {
++                createWidget<CObservatory>(widgets[surf.m_outputID]);
+             } else if (c.type == "input-field") {
+                 createWidget<CPasswordInputField>(widgets[surf.m_outputID]);
+             } else if (c.type == "label") {
+@@ -618,6 +700,13 @@
+         opacity->setCallbackOnEnd([](auto) { g_pHyprlock->releaseSessionLock(); }, true);
+ }
+ 
++void CRenderer::startUnlockTransition(std::chrono::milliseconds deceleration, std::chrono::milliseconds transition) {
++    unlockTransition.active       = true;
++    unlockTransition.startedAt    = std::chrono::steady_clock::now();
++    unlockTransition.deceleration = deceleration;
++    unlockTransition.transition   = transition;
++}
++
+ void CRenderer::warpOpacity(float newOpacity) {
+     opacity->setValueAndWarp(newOpacity);
+ }
+--- a/src/renderer/Renderer.hpp
++++ b/src/renderer/Renderer.hpp
+@@ -47,10 +47,13 @@
+ 
+     void                                  startFadeIn();
+     void                                  startFadeOut(bool unlock = false);
++    void                                  startUnlockTransition(std::chrono::milliseconds deceleration, std::chrono::milliseconds transition);
+     void                                  warpOpacity(float warpOpacity);
+     std::vector<ASP<IWidget>>&            getOrCreateWidgetsFor(const CSessionLockSurface& surf);
+ 
+   private:
++    bool               drawFailureHalo(const Vector2D& viewport, float lockOpacity);
++
+     widgetMap_t        widgets;
+ 
+     CShader            rectShader;
+@@ -67,6 +70,20 @@
+ 
+     PHLANIMVAR<float>  opacity;
+ 
++    struct {
++        bool                                  active = false;
++        std::chrono::steady_clock::time_point startedAt;
++        std::chrono::milliseconds             deceleration{0};
++        std::chrono::milliseconds             transition{0};
++    } unlockTransition;
++
++    struct {
++        bool                                  target       = false;
++        float                                 opacity      = 0.F;
++        float                                 startOpacity = 0.F;
++        std::chrono::steady_clock::time_point transitionStartedAt;
++    } failureHalo;
++
+     std::vector<GLint> boundFBs;
+ };
+ 
+--- a/src/renderer/widgets/IWidget.hpp
++++ b/src/renderer/widgets/IWidget.hpp
+@@ -11,7 +11,8 @@
+ class IWidget {
+   public:
+     struct SRenderData {
+-        float opacity = 1;
++        float opacity     = 1;
++        float motionScale = 1;
+     };
+ 
+     virtual ~IWidget() = default;
+--- a/src/renderer/widgets/PasswordInputField.cpp
++++ b/src/renderer/widgets/PasswordInputField.cpp
+@@ -38,6 +38,7 @@
+         valign                   = std::any_cast<Hyprlang::STRING>(props.at("valign"));
+         outThick                 = std::any_cast<Hyprlang::INT>(props.at("outline_thickness"));
+         dots.size                = std::any_cast<Hyprlang::FLOAT>(props.at("dots_size"));
++        dots.aspectRatio         = std::any_cast<Hyprlang::FLOAT>(props.at("dots_aspect_ratio"));
+         dots.spacing             = std::any_cast<Hyprlang::FLOAT>(props.at("dots_spacing"));
+         dots.center              = std::any_cast<Hyprlang::INT>(props.at("dots_center"));
+         dots.rounding            = std::any_cast<Hyprlang::INT>(props.at("dots_rounding"));
+@@ -49,6 +50,7 @@
+         configPlaceholderText    = std::any_cast<Hyprlang::STRING>(props.at("placeholder_text"));
+         configFailText           = std::any_cast<Hyprlang::STRING>(props.at("fail_text"));
+         fontFamily               = std::any_cast<Hyprlang::STRING>(props.at("font_family"));
++        fontSize                 = std::any_cast<Hyprlang::INT>(props.at("font_size"));
+         colorConfig.outer        = CGradientValueData::fromAnyPv(props.at("outer_color"));
+         colorConfig.inner        = std::any_cast<Hyprlang::INT>(props.at("inner_color"));
+         colorConfig.font         = std::any_cast<Hyprlang::INT>(props.at("font_color"));
+@@ -70,8 +72,9 @@
+     colorState.font = colorConfig.font;
+ 
+     pos          = posFromHVAlign(viewport, configSize, pos, halign, valign);
+-    dots.size    = std::clamp(dots.size, 0.2f, 0.8f);
+-    dots.spacing = std::clamp(dots.spacing, -1.f, 1.f);
++    dots.size        = std::clamp(dots.size, 0.2f, 0.8f);
++    dots.aspectRatio = std::clamp(dots.aspectRatio, 0.25f, 4.f);
++    dots.spacing     = std::clamp(dots.spacing, -1.f, 1.f);
+ 
+     colorConfig.caps = colorConfig.caps->m_bIsFallback ? colorConfig.fail : colorConfig.caps;
+ 
+@@ -162,16 +165,10 @@
+ }
+ 
+ void CPasswordInputField::updateDots() {
+-    if (dots.currentAmount->goal() == passwordLength)
+-        return;
+-
+-    if (checkWaiting)
+-        return;
+-
+-    if (passwordLength == 0)
+-        dots.currentAmount->setValueAndWarp(passwordLength);
+-    else
+-        *dots.currentAmount = passwordLength;
++    if (dots.currentAmount->value() == passwordLength)
++        return;
++
++    dots.currentAmount->setValueAndWarp(passwordLength);
+ }
+ 
+ bool CPasswordInputField::draw(const SRenderData& data) {
+@@ -237,7 +234,8 @@
+ 
+     if (!hiddenInputState.enabled) {
+         const int RECTPASSSIZE = std::nearbyint(inputFieldBox.h * dots.size * 0.5f) * 2.f;
+-        Vector2D  passSize{RECTPASSSIZE, RECTPASSSIZE};
++        const int RECTPASSWIDTH = std::nearbyint(RECTPASSSIZE * dots.aspectRatio);
++        Vector2D  passSize{RECTPASSWIDTH, RECTPASSSIZE};
+         int       passSpacing = std::floor(passSize.x * dots.spacing);
+ 
+         if (!dots.textFormat.empty()) {
+@@ -374,7 +372,7 @@
+     request.type                 = CAsyncResourceGatherer::eTargetType::TARGET_TEXT;
+     request.props["font_family"] = fontFamily;
+     request.props["color"]       = colorState.font;
+-    request.props["font_size"]   = (int)size->value().y / 4;
++    request.props["font_size"]   = fontSize > 0 ? fontSize : (int)size->value().y / 4;
+     request.callback             = [REF = m_self] {
+         if (const auto SELF = REF.lock(); SELF)
+             g_pHyprlock->renderOutput(SELF->outputStringPort);
+--- a/src/renderer/widgets/PasswordInputField.hpp
++++ b/src/renderer/widgets/PasswordInputField.hpp
+@@ -57,12 +57,13 @@
+     std::string              halign, valign, configFailText, outputStringPort, configPlaceholderText, fontFamily;
+     uint64_t                 configFailTimeoutMs = 2000;
+ 
+-    int                      outThick, rounding;
++    int                      outThick, rounding, fontSize;
+ 
+     struct {
+         PHLANIMVAR<float>    currentAmount;
+         bool                 center     = false;
+         float                size       = 0;
++        float                aspectRatio = 1;
+         float                spacing    = 0;
+         int                  rounding   = 0;
+         std::string          textFormat = "";
