@@ -10,7 +10,10 @@ The actual GLES renderer is exercised on an AMD Lucienne integrated GPU. GPU
 regressions check complete mountain occlusion, visible celestial bodies,
 daylight/night contrast, deterministic output after resize, and preservation
 of host blending state. The mountain occlusion test renders the scene both
-with and without celestial bodies: interior mountain pixels must be identical.
+with and without celestial bodies: interior mountain pixels must be identical. A second GPU regression injects
+extreme radiance into the sky and solar-glare stages at day, sunset, twilight
+and night; opaque mountain pixels must remain unchanged. This regression was
+also run against the previous composition order and correctly failed.
 
 GitHub Actions additionally builds with Ubuntu system libraries and renders on
 Mesa llvmpipe under Xvfb. The Nix gate builds the standalone renderer and patched
@@ -24,6 +27,7 @@ These are framebuffer captures from the renderer, not generated concept art:
 - [Sun and atmospheric glare](../assets/preview-sun.png)
 - [Twilight](../assets/preview-twilight.png)
 - [Night](../assets/preview-night.png)
+- [Native Hyprlock input display](../assets/preview-lock.png)
 - [Observer-moon eclipse shadow on the giant](../assets/preview-eclipse.png)
 
 [MP4 preview](../assets/preview.mp4) is H.264, 1280x800, 30 fps, 9 seconds.
@@ -39,6 +43,33 @@ The benchmark retains the configured frame cap, so it exercises ordinary
 power-management behavior rather than an unlimited busy loop. Results are
 rendering time, not a measurement of watts. Startup shader compilation and LUT
 construction occur before timed frames.
+
+Measured at 1920x1080 on AMD Lucienne integrated graphics (Mesa radeonsi),
+180 frames per scene, capped at 30 fps:
+
+| Scene | GPU median | GPU p95 | CPU+GPU median | CPU+GPU p95 |
+| --- | ---: | ---: | ---: | ---: |
+| Day | 2.59 ms | 2.99 ms | 3.44 ms | 3.94 ms |
+| Night, large illuminated giant | 2.71 ms | 6.03 ms | 3.64 ms | 6.86 ms |
+
+These measurements include the final enlarged moons, solar glare, slightly
+brighter night and fully opaque foreground. They were taken in a live desktop
+session, not an exclusive GPU laboratory environment.
+
+## Native integration
+
+The packaged Hyprlock renderer acquired a session lock and rendered correctly
+on an isolated Hyprland headless output. Virtual keyboard input also confirmed
+the cyan password segments render correctly over the scene. It survived a DPMS
+off/on cycle, and
+SIGUSR1 exercised the normal unlock transition and clean exit. The native
+headless backend continues issuing frame callbacks with DPMS off, so this
+test does not establish physical-display power consumption. On outputs whose
+compositor suspends callbacks, rendering follows that suspension.
+
+The standalone preview guard was tested against the isolated compositor: it
+terminated its child and exited cleanly when the output powered off. Actual
+successful PAM password authentication was not exercised.
 
 ## Limits
 
