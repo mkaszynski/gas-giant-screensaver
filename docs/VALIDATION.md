@@ -49,10 +49,11 @@ Measured at 1920x1080 on AMD Lucienne integrated graphics (Mesa radeonsi),
 
 | Scene | GPU median | GPU p95 | CPU+GPU median | CPU+GPU p95 |
 | --- | ---: | ---: | ---: | ---: |
-| Day | 2.59 ms | 2.99 ms | 3.44 ms | 3.94 ms |
-| Night, large illuminated giant | 2.71 ms | 6.03 ms | 3.64 ms | 6.86 ms |
+| Day | 2.91 ms | 3.52 ms | 4.41 ms | 5.16 ms |
+| Night, large illuminated giant | 2.86 ms | 3.74 ms | 4.41 ms | 5.26 ms |
 
-These measurements include the final enlarged moons, solar glare, slightly
+These measurements include the Earth-sized observer moon, enlarged companion
+moons, solar glare, slightly
 brighter night and fully opaque foreground. They were taken in a live desktop
 session, not an exclusive GPU laboratory environment.
 

@@ -72,7 +72,7 @@ double visibility(Vec3 p, Vec3 sun, const std::array<Body, 21> &bodies,
 }
 Scene sceneAt(double seconds, double daySeconds) {
   Scene s{};
-  // Giant: 3 Jupiter masses; 1 solar mass star at 1 AU. Observer period ~24.6
+  // Giant: 3 Jupiter masses; 1 solar mass star at 1 AU. Observer period ~8.9
   // h. Sidereal rotation is synchronous with mean anomaly. Solar and sidereal
   // days differ.
   const double orbitalSeconds =
