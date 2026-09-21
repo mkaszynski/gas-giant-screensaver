@@ -9,11 +9,12 @@
       version = "0.1.0";
       src = pkgs.lib.fileset.toSource {
         root = ./.;
-        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./src ./shaders ./tests ./assets/giant.png ./assets/mountains.png ];
+        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/mountains.png ];
       };
       nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
       buildInputs = [ pkgs.glfw pkgs.libGL pkgs.libpng ];
       cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+      meta.license = pkgs.lib.licenses.mit;
       doCheck = true;
       checkPhase = "ctest --output-on-failure";
     };

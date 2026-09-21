@@ -19,7 +19,7 @@ std::vector<unsigned char> pixels(int w, int h) {
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
   return p;
 }
-enum class FixtureMode { BrightSky, LongitudeChart };
+enum class FixtureMode { BrightSky, LongitudeChart, SlabReference };
 struct ShaderFixture {
   std::filesystem::path path;
   ShaderFixture(FixtureMode mode = FixtureMode::BrightSky) {
@@ -33,6 +33,16 @@ struct ShaderFixture {
                           std::filesystem::copy_options::recursive);
     std::filesystem::create_directory_symlink(source / "assets",
                                               path / "assets");
+    if (mode == FixtureMode::SlabReference) {
+      const auto target = path / "shaders/body.frag";
+      std::ifstream input(target);
+      std::ostringstream buffer;
+      buffer << input.rdbuf();
+      auto shader = buffer.str();
+      shader.insert(shader.find('\n') + 1, "#undef GIANT_SLAB_LUT\n");
+      std::ofstream(target) << shader;
+      return;
+    }
     if (mode == FixtureMode::LongitudeChart) {
       const auto target = path / "shaders/body.frag";
       std::ifstream input(target);
@@ -179,6 +189,24 @@ int main() {
                     << maximum << '\n';
           require(maximum <= 3,
                   "longitude chart must not create pixelated texture stripes");
+        }
+      }
+      {
+        ShaderFixture fixture(FixtureMode::SlabReference);
+        Renderer analytical(fixture.path.string());
+        for (double time : {0., 900., 376368.}) {
+          r.render(640, 360, time);
+          auto cached = pixels(640, 360);
+          analytical.render(640, 360, time);
+          auto exact = pixels(640, 360);
+          int maximum = 0;
+          for (size_t i = 0; i < cached.size(); ++i)
+            maximum =
+                std::max(maximum, std::abs(int(cached[i]) - int(exact[i])));
+          std::cout << "Atmosphere lookup vs analytical at " << time << ": "
+                    << maximum << '\n';
+          require(maximum <= 3,
+                  "cached scattering preserves analytical color/intensity");
         }
       }
       require(glGetError() == GL_NO_ERROR, "OpenGL errors");
