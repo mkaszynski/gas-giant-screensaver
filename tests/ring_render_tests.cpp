@@ -40,8 +40,8 @@ struct ShadowFixture {
       std::ofstream(target) << source;
     };
     if (!ringShadows)
-      disable("ring_profile.glsl",
-              "float ringSunTransmission(vec3 point,vec3 sun){");
+      disable("ring_profile.glsl", "float ringSunTransmissionFiltered(vec3 "
+                                   "point,vec3 sun,float pixelFootprint){");
     if (!sphereShadows)
       disable("sphere_shadow.glsl",
               "float sphereSunVisibility(vec3 p,int count,vec4 blockers[21]){");
@@ -145,7 +145,15 @@ int main() {
       require(delta > 10, "moon must cast a visible shadow onto rings");
 
       s = scene(x * .78 + pole * .625, -1);
-      Vec3 surface = x * .8660254038 - pole * .5;
+      // Choose a genuinely visible surface point below the ring plane.
+      // The former point was on the far hemisphere; its projection sampled
+      // an unrelated grazing ray rather than the specified shadow receiver.
+      Vec3 surface =
+          (x * .7 + cross(pole, x) * std::sqrt(.51)) * std::sqrt(.75) -
+          pole * .5;
+      require(dot(surface, s.observer - surface) > 0,
+              "ring shadow receiver faces the observer");
+      require(dot(surface, s.sun) > 0, "ring shadow receiver faces the Sun");
       a = render(normal, s);
       b = render(ringShadowOff, s);
       delta = difference(a, b, s, surface);

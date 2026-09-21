@@ -14,7 +14,7 @@ clouds and stars emerging at dusk.
 ## Run on NixOS / Hyprland
 
 ```sh
-nix run github:mkaszynski/gas-giant-screensaver/feature/icy-rings -- --fullscreen
+nix run github:mkaszynski/gas-giant-screensaver/feature/giant-atmosphere -- --fullscreen
 ```
 
 Press **Escape** or **Q** to close. The preview does not lock the desktop.
@@ -78,6 +78,35 @@ Installing the preview does not change any host configuration or idle timeout.
   lighting supplies their changing appearance. Mountain interiors fully occlude
   the sky, with antialiasing restricted to the silhouette.
 
+## Gas giant atmosphere
+
+The giant has a thin, physically scaled hydrogen/helium atmosphere above its
+cloud deck. A 280 K reference temperature, mean molecular mass of 2.3 atomic
+mass units and this giant’s gravity give a **13.6 km scale height**. Molecular
+scattering favors blue wavelengths; a very faint, nearly neutral haze adds
+forward scattering. The chosen temperature, 0.1-bar cloud-top pressure and haze
+are plausible parameters for this fictional warm giant, not measurements of an
+Earth-distance Jupiter. Solar illumination uses the same normalization as the
+clouds and rings: there is no special eclipse brightness boost.
+
+The atmospheric arc is most distinctive close to eclipse contact. It responds
+to the finite Sun, the giant’s own shadow, moon shadows and translucent ring
+shadows. At this close observer distance a central eclipse can hide the entire
+sunlit atmospheric limb; a glowing ring throughout totality is not imposed.
+The ordinary day/night appearance changes only subtly.
+
+[Actual eclipse-contact capture](assets/preview-atmosphere-contact.png)
+
+```sh
+nix run . -- --fullscreen --time 376368
+```
+
+A small static lookup and a narrow, antialiased limb integration keep the cost
+bounded. There is no atmospheric bloom or enlarged glowing shell. This is a
+single-scattering approximation; atmospheric refraction and multiple scattering
+inside the giant’s atmosphere are not simulated. Details and numerical checks:
+[design](docs/DESIGN.md#gas-giant-atmosphere) and [validation](docs/VALIDATION.md#gas-giant-atmosphere).
+
 ## Performance
 
 The renderer is C++20 / OpenGL ES 3.0. A cached transmittance table and an
@@ -100,6 +129,7 @@ ctest --test-dir build --output-on-failure
 ./build/render-tests
 ./build/ring-render-tests
 ./build/edge-render-tests
+./build/atmosphere-render-tests
 nix flake check
 ```
 
@@ -129,6 +159,8 @@ Atmospheric eclipses use local visibility rather than a volumetric shadow
 integration; overlapping penumbras use an approximation. See
 [design](docs/DESIGN.md) and [asset provenance and prompts](docs/ASSETS.md).
 
-Original renderer: MIT. Hyprlock integration incorporates BSD-3-Clause upstream
+## License
+
+The original renderer is released under the standard [MIT License](LICENSE). Hyprlock integration incorporates BSD-3-Clause upstream
 code and attributed UX patches. Generated assets: CC0-1.0 to the extent rights
 exist. See [LICENSE](LICENSE) and [attribution](docs/ASSETS.md).

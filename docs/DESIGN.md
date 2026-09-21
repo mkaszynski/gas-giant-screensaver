@@ -94,3 +94,51 @@ approximate the finite Sun's penumbra; mip filtering suppresses crawling fine
 shadows. Local ring eclipses also affect the observer's Sun and sky. No shadow
 maps or additional scattering passes are required. Exactly coplanar rays see
 no thickness: vertical ring structure and self-gravity wakes are not simulated.
+
+
+## Gas giant atmosphere
+
+A separate warm H2/He layer replaces the former decorative blue rim. The model
+uses T=280 K, molecular mass 2.3 u and g=74.36 m/s² (three Jupiter masses at one
+Jupiter radius): H=kT/(mg)=13.62 km, or 0.0001905 renderer length units. Density
+falls exponentially and truncates at 12 scale heights; this is less than 0.23%
+of the giant's radius. These are plausible fictional atmosphere assumptions.
+Being at 1 AU constrains irradiation but does not uniquely fix temperature,
+cloud pressure, composition or aerosol abundance.
+
+RGB molecular vertical optical depths are 0.0011/0.0026/0.0065 at representative
+680/550/440 nm wavelengths, approximately a 0.1-bar H2/He column under this high
+gravity. They follow the H2 wavelength dependence described by the
+[NASA PDS atmospheres node](https://pds-atmospheres.nmsu.edu/education_and_outreach/encyclopedia/rayleigh_optical.htm).
+A weak neutral aerosol has vertical optical depth 0.00025, single-scattering
+albedo 0.98 and Henyey–Greenstein g=0.65. Its abundance/particle behavior are
+assumptions, not claims about a measured extrasolar atmosphere. Rayleigh and
+normalized aerosol phase functions set color/intensity relative to the existing
+unit solar irradiance. There are no emissive terms or eclipse-only multipliers.
+
+Curved exponential columns use a Chapman approximation with a stable erfcx
+expression. A 128x128 RGBA16F table (128 KiB) caches the illuminated cloud-disk
+single-scattering solution and spectral extinction. It is generated once;
+quadratic angular coordinates resolve grazing sunlight. The giant's interior
+and limb use separate shader variants so expensive limb work does not penalize
+all disk pixels. Near the limb, six bounded path samples integrate density,
+Beer–Lambert extinction and light. Four radial subpixel samples integrate the
+very thin silhouette without inflating its physical thickness. No full-screen
+blur, extra framebuffer, shadow map or MSAA allocation is added.
+
+The finite solar disk is clipped by the cloud horizon. A partially exposed
+Sun uses an exposed-cap direction for its slant optical depth. The giant's
+shadow can therefore extinguish the complete visible rim during a deep eclipse
+from this very close moon. Moon and ring shadows are evaluated along the limb
+path; the disk interior reuses its cloud shadow. Ring shadow sampling uses the
+finite solar footprint, avoiding derivatives inside divergent ray loops. The
+sphere/ring composition and opaque foreground ridge remain shared with the
+existing renderer.
+
+Limits: single scattering, an isothermal atmosphere and prescribed haze; no
+refraction, spectral absorption bands, cloud/atmosphere multiple scattering or
+latitude-dependent haze. The disk solution approximates a thin curved layer by
+its integrated columns. Off-disk extinction uses mean RGB transmission because
+standard premultiplied-alpha blending has one opacity; scattering and on-disk
+extinction are RGB. This avoids another scene copy/composition pass for the
+subpixel rim. The existing moon-sky eclipse approximation remains unchanged.

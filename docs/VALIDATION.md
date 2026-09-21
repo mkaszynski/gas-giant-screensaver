@@ -147,3 +147,45 @@ unchanged. At times 550, 650 and 900, the corrected renderer differs by at most
 1/255 from the alternate chart. It also reproduces the reported dotted surface
 stripe in an isolated build using implicit texture gradients, which fails at
 70/255 maximum difference.
+
+## Gas giant atmosphere
+
+The float-framebuffer GPU test exercises the actual atmospheric shader, not a
+CPU duplicate. Curved columns differ by at most 0.0191% from independent
+20,000-step spherical density integration. Six limb samples differ from a
+192-sample shader reference by at most 0.00551 in radiance normalized to unit
+solar irradiance across the tested phases and impact parameters. The cached
+cloud-disk solution differs from analytical rendering by at most 1/255 in the
+final daylight/night images, and zero at the eclipse-contact test time.
+
+Tests also check finite nonnegative radiance, bounded opacity, restrained
+molecular blue scattering, an entirely dark rim in a central eclipse, complete
+moon-shadow extinction, partial transmission through ring shadows (0.215 in
+the fixture), and zero atmosphere beyond its physical cutoff. A supersampled
+silhouette reference checks moving atmospheric edges at two nearby times:
+mean edge error is 19.8/255, with over 80% of partial pixels retaining coverage.
+The test caught and fixed a low-resolution interior/limb boundary that had
+prematurely bypassed subpixel integration.
+
+The existing mountain, ring transparency, shadow, resize and longitude-seam
+regressions pass. The ring-to-planet fixture now explicitly verifies that its
+receiver faces both the observer and Sun; its old nominal point was on the
+far hemisphere. Shadow-disabled references now disable both surface and
+atmospheric ring attenuation.
+
+[The contact image](../assets/preview-atmosphere-contact.png) is an actual
+1920x1080 capture at scene time 376368. Daylight and nighttime captures were
+also inspected. No persistent full-circle halo is added in eclipse darkness.
+
+At 1920x1080, 180 frames, 30 fps on the same AMD Lucienne integrated GPU:
+
+| Scene/build | Median GPU time |
+| --- | ---: |
+| Previous installed renderer, time 391780 | 3.59 ms |
+| Atmospheric renderer, time 391780 | 4.71 ms |
+| Atmospheric renderer, eclipse contact at 376368 | 4.18 ms |
+
+The measured incremental median is approximately 1.12 ms. Shared-desktop
+activity produced large tail-latency spikes in some runs, so these are not
+exclusive-device laboratory measurements or watt estimates. The new cache
+uses 128 KiB, generated once; limb work is restricted to the narrow edge.

@@ -26,9 +26,10 @@ private:
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
-         postProgram = 0, ringProgram = 0;
-  GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, vao = 0,
-         starBuffer = 0, starVao = 0;
+         postProgram = 0, ringProgram = 0, giantProgram = 0,
+         giantLimbProgram = 0;
+  GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
+         vao = 0, starBuffer = 0, starVao = 0;
   Target trans, multi, sky, scene;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;
@@ -36,7 +37,8 @@ private:
   bool lastRings = false;
   int stars = 5000;
   std::string shader(const std::string &);
-  GLuint program(const std::string &, const std::string & = "fullscreen.vert");
+  GLuint program(const std::string &, const std::string & = "fullscreen.vert",
+                 int giantAtmosphere = 0);
   GLuint imageTexture(const std::string &);
   void target(Target &, int, int, bool depth = false);
   void release(Target &);

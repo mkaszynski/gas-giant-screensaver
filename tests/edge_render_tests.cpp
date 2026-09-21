@@ -25,7 +25,7 @@ struct Fixture {
     source.insert(source.rfind('}'), code);
     std::ofstream(target) << source;
   }
-  Fixture(bool mountains) {
+  Fixture(bool mountains, bool giant = false) {
     char name[] = "/tmp/observatory-edges-XXXXXX";
     auto dir = mkdtemp(name);
     require(dir, "edge fixture directory");
@@ -34,7 +34,15 @@ struct Fixture {
     std::filesystem::copy(root / "shaders", path / "shaders",
                           std::filesystem::copy_options::recursive);
     std::filesystem::create_directory_symlink(root / "assets", path / "assets");
-    if (mountains) {
+    if (giant) {
+      append("background.frag", "color=vec4(0.);\n");
+      append("stars.frag", "color=vec4(0.);\n");
+      append("rings.frag", "discard;\n");
+      append("body.frag", "\n#ifdef "
+                          "GIANT_ATMOSPHERE\ncolor=vec4(vec3(color.a),color.a);"
+                          "\n#else\ndiscard;\n#endif\n");
+      append("post.frag", "color=vec4(texture(uScene,uv).rgb,1.);\n");
+    } else if (mountains) {
       std::ifstream input(path / "shaders/post.frag");
       std::ostringstream buffer;
       buffer << input.rdbuf();
@@ -117,7 +125,11 @@ int main() {
     require(window, "GLES context");
     glfwMakeContextCurrent(window);
     {
-      Fixture mountainFixture(true), ringFixture(false);
+      Fixture mountainFixture(true), ringFixture(false),
+          giantFixture(false, true);
+      Renderer giant(giantFixture.path.string());
+      check(giant, 900., "Giant atmospheric silhouette");
+      check(giant, 900.5, "Moving giant atmospheric silhouette");
       Renderer mountains(mountainFixture.path.string()),
           rings(ringFixture.path.string());
       check(mountains, 0, "Mountain");

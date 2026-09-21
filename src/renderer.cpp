@@ -112,10 +112,17 @@ std::string Renderer::shader(const std::string &name) {
   }
   return out;
 }
-GLuint Renderer::program(const std::string &fragment,
-                         const std::string &vertex) {
+GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
+                         int giantAtmosphere) {
+  auto fragmentSource = shader(fragment);
+  if (giantAtmosphere)
+    fragmentSource.insert(
+        fragmentSource.find('\n') + 1,
+        std::string("#define GIANT_ATMOSPHERE\n#define GIANT_SLAB_LUT\n") +
+            (giantAtmosphere == 1 ? "#define GIANT_INTERIOR\n"
+                                  : "#define GIANT_LIMB\n"));
   GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)),
-         fs = compile(GL_FRAGMENT_SHADER, shader(fragment));
+         fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
   GLuint p = glCreateProgram();
   glAttachShader(p, vs);
   glAttachShader(p, fs);
@@ -240,6 +247,8 @@ Renderer::Renderer(std::string dir) : root(std::move(dir)) {
   skyProgram = program("sky_lut.frag");
   backgroundProgram = program("background.frag");
   bodyProgram = program("body.frag");
+  giantProgram = program("body.frag", "fullscreen.vert", 1);
+  giantLimbProgram = program("body.frag", "fullscreen.vert", 2);
   ringProgram = program("rings.frag");
   starProgram = program("stars.frag", "stars.vert");
   postProgram = program("post.frag");
@@ -270,6 +279,39 @@ Renderer::Renderer(std::string dir) : root(std::move(dir)) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   std::mt19937 rng(0x194bd);
+  // Static thin-atmosphere solution: RGB single-scattering integral and
+  // its view/total column ratio. The same sample reconstructs extinction.
+  // Quadratic coordinates concentrate samples near grazing sunlight.
+  constexpr int slabSize = 128;
+  auto column = [](double mu) {
+    constexpr double h = .0001905;
+    const double x = mu / std::sqrt(2 * h);
+    const double erfcx = x < 20 ? std::exp(x * x) * std::erfc(x)
+                                : (1 - .5 / (x * x) + .75 / std::pow(x, 4)) /
+                                      (std::sqrt(pi) * x);
+    return std::sqrt(pi / (2 * h)) * erfcx;
+  };
+  std::vector<float> slab(slabSize * slabSize * 4);
+  constexpr double beta[3] = {.00135, .00285, .00675};
+  for (int y = 0; y < slabSize; ++y)
+    for (int x = 0; x < slabSize; ++x) {
+      const double sunColumn = column(std::pow(double(x) / (slabSize - 1), 2));
+      const double viewColumn = column(std::pow(double(y) / (slabSize - 1), 2));
+      const double sum = sunColumn + viewColumn, weight = viewColumn / sum;
+      const int at = (y * slabSize + x) * 4;
+      for (int c = 0; c < 3; ++c)
+        slab[at + c] = weight * -std::expm1(-beta[c] * sum);
+      slab[at + 3] = weight;
+    }
+  glGenTextures(1, &giantSlab);
+  textures.push_back(giantSlab);
+  glBindTexture(GL_TEXTURE_2D, giantSlab);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, slabSize, slabSize, 0, GL_RGBA,
+               GL_FLOAT, slab.data());
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   std::uniform_real_distribution<float> unit(0, 1);
   std::vector<unsigned char> data(256 * 256);
   for (auto &v : data)
@@ -454,46 +496,57 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
               y2 = std::min(h, int(std::ceil(cy + radius)));
     if (x >= x2 || y >= y2)
       continue;
-    common(bodyProgram, s, w, h, seconds);
-    rings(bodyProgram, s, drawRings);
-    integer(bodyProgram, "uRingOccluderCount", ringOccluders.size() / 4);
-    if (!ringOccluders.empty())
-      glUniform4fv(glGetUniformLocation(bodyProgram, "uRingOccluders"),
-                   ringOccluders.size() / 4, ringOccluders.data());
-    glUniform4f(glGetUniformLocation(bodyProgram, "uBody"), center.x, center.y,
-                center.z, b.radius);
-    integer(bodyProgram, "uMaterial", b.material);
-    scalar(bodyProgram, "uSpin", std::remainder(b.spin, 2 * pi));
-    const Vec3 axisY = b.pole;
-    const Vec3 axisX = normalized(cross(axisY, {0, 0, 1}));
-    vector(bodyProgram, "uAxisX", s.local(axisX));
-    vector(bodyProgram, "uAxisY", s.local(axisY));
-    vector(bodyProgram, "uAxisZ", s.local(cross(axisX, axisY)));
-    bind(bodyProgram, 2, "uGiant", giant);
-    std::vector<float> occluders;
-    for (int j = 0; j < 21; ++j)
-      if (j != idx) {
-        Vec3 delta = s.bodies[j].position - b.position;
-        double along = dot(delta, s.sun);
-        double perpendicular = length(delta - s.sun * along);
-        if (along > 0 &&
-            perpendicular < b.radius + s.bodies[j].radius + along * sunRadius) {
-          Vec3 p = s.local(s.bodies[j].position - s.observer);
-          occluders.insert(occluders.end(), {float(p.x), float(p.y), float(p.z),
-                                             float(s.bodies[j].radius)});
+    // Separate programs keep the narrow limb integrator's register pressure
+    // out of the much larger cloud-disk draw. Their pixel domains are disjoint.
+    for (int pass = 0; pass < (b.material == 0 ? 2 : 1); ++pass) {
+      const GLuint bodyShader =
+          b.material == 0 ? (pass == 0 ? giantProgram : giantLimbProgram)
+                          : bodyProgram;
+      common(bodyShader, s, w, h, seconds);
+      rings(bodyShader, s, drawRings);
+      integer(bodyShader, "uRingOccluderCount", ringOccluders.size() / 4);
+      if (!ringOccluders.empty())
+        glUniform4fv(glGetUniformLocation(bodyShader, "uRingOccluders"),
+                     ringOccluders.size() / 4, ringOccluders.data());
+      glUniform4f(glGetUniformLocation(bodyShader, "uBody"), center.x, center.y,
+                  center.z, b.radius);
+      integer(bodyShader, "uMaterial", b.material);
+      scalar(bodyShader, "uSpin", std::remainder(b.spin, 2 * pi));
+      const Vec3 axisY = b.pole;
+      const Vec3 axisX = normalized(cross(axisY, {0, 0, 1}));
+      vector(bodyShader, "uAxisX", s.local(axisX));
+      vector(bodyShader, "uAxisY", s.local(axisY));
+      vector(bodyShader, "uAxisZ", s.local(cross(axisX, axisY)));
+      bind(bodyShader, 2, "uGiant", giant);
+      if (b.material == 0)
+        bind(bodyShader, 6, "uGiantSlab", giantSlab);
+      std::vector<float> occluders;
+      for (int j = 0; j < 21; ++j)
+        if (j != idx) {
+          Vec3 delta = s.bodies[j].position - b.position;
+          double along = dot(delta, s.sun);
+          double perpendicular = length(delta - s.sun * along);
+          if (along > 0 &&
+              perpendicular < b.radius * (b.material == 0 ? 1.0023 : 1.) +
+                                  s.bodies[j].radius + along * sunRadius) {
+            Vec3 p = s.local(s.bodies[j].position - s.observer);
+            occluders.insert(occluders.end(),
+                             {float(p.x), float(p.y), float(p.z),
+                              float(s.bodies[j].radius)});
+          }
         }
-      }
-    integer(bodyProgram, "uOccluderCount", occluders.size() / 4);
-    if (!occluders.empty())
-      glUniform4fv(glGetUniformLocation(bodyProgram, "uOccluders"),
-                   occluders.size() / 4, occluders.data());
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(x, y, x2 - x, y2 - y);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    quad(bodyProgram);
-    glDisable(GL_BLEND);
-    glDisable(GL_SCISSOR_TEST);
+      integer(bodyShader, "uOccluderCount", occluders.size() / 4);
+      if (!occluders.empty())
+        glUniform4fv(glGetUniformLocation(bodyShader, "uOccluders"),
+                     occluders.size() / 4, occluders.data());
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(x, y, x2 - x, y2 - y);
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+      quad(bodyShader);
+      glDisable(GL_BLEND);
+      glDisable(GL_SCISSOR_TEST);
+    }
   }
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
