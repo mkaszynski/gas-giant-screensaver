@@ -122,8 +122,12 @@ single-scattering solution and spectral extinction. It is generated once;
 quadratic angular coordinates resolve grazing sunlight. The giant's interior
 and limb use separate shader variants so expensive limb work does not penalize
 all disk pixels. Near the limb, six bounded path samples integrate density,
-Beer–Lambert extinction and light. Four radial subpixel samples integrate the
-very thin silhouette without inflating its physical thickness. No full-screen
+Beer–Lambert extinction and light. An analytic square-pixel coverage function integrates the cloud silhouette.
+The outside atmosphere is integrated in exponential-density coordinates, so
+samples cannot miss its subpixel thickness. Cloud and atmospheric portions of
+the footprint are integrated separately; inner edge rays retain their cloud
+illumination. The path quadrature is normalized to the curved column so it
+does not lose the dense lowest layer as resolution changes. No full-screen
 blur, extra framebuffer, shadow map or MSAA allocation is added.
 
 The finite solar disk is clipped by the cloud horizon. A partially exposed

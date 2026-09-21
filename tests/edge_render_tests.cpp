@@ -83,7 +83,8 @@ std::vector<unsigned char> render(Renderer &r, int w, int h, double time) {
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
   return p;
 }
-void check(Renderer &r, double time, const char *name) {
+void check(Renderer &r, double time, const char *name, double maxError = 25,
+           double minimumFiltered = .65) {
   constexpr int w = 320, h = 180, scale = 4;
   auto low = render(r, w, h, time),
        high = render(r, w * scale, h * scale, time);
@@ -108,8 +109,9 @@ void check(Renderer &r, double time, const char *name) {
   require(edges > 20, "reference must contain a substantial silhouette");
   std::cout << name << " time " << time << ": edge MAE " << error / edges
             << ", filtered " << filtered << "/" << edges << '\n';
-  require(error / edges < 25, "edge coverage must agree with 4x reference");
-  require(filtered > edges * .65,
+  require(error / edges < maxError,
+          "edge coverage must agree with 4x reference");
+  require(filtered > edges * minimumFiltered,
           "most partially covered pixels must retain coverage");
 }
 } // namespace
@@ -128,8 +130,8 @@ int main() {
       Fixture mountainFixture(true), ringFixture(false),
           giantFixture(false, true);
       Renderer giant(giantFixture.path.string());
-      check(giant, 900., "Giant atmospheric silhouette");
-      check(giant, 900.5, "Moving giant atmospheric silhouette");
+      check(giant, 900., "Giant atmospheric silhouette", 2., .95);
+      check(giant, 900.5, "Moving giant atmospheric silhouette", 2., .95);
       Renderer mountains(mountainFixture.path.string()),
           rings(ringFixture.path.string());
       check(mountains, 0, "Mountain");

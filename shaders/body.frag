@@ -14,6 +14,7 @@ uniform vec4 uOccluders[21];
 #include "ring_layer.glsl"
 #ifdef GIANT_ATMOSPHERE
 #include "giant_atmosphere.glsl"
+#include "giant_filter.glsl"
 #endif
 uniform float uSpin;
 float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
@@ -21,6 +22,7 @@ float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mi
 float fbm(vec3 p){return .5*noise(p)+.25*noise(p*2.03)+.125*noise(p*4.07)+.0625*noise(p*8.11);}
 void main(){
  vec3 d=ray();float impact=length(cross(uBody.xyz,d));float edge=max(fwidth(impact),uBody.w*.0001);
+ vec2 impactFootprint=abs(vec2(dFdx(impact),dFdy(impact)))/uBody.w;
  float coverage=1.-smoothstep(uBody.w-edge,uBody.w+edge,impact);
 #ifdef GIANT_INTERIOR
  if(impact>=min(uBody.w*.999,uBody.w-edge*1.5))discard;
@@ -47,8 +49,8 @@ void main(){
 #ifdef GIANT_ATMOSPHERE
  {
    vec3 sum=vec3(0.);float alpha=0.;
-   // Integrate the subpixel atmospheric limb radially without widening it.
-   // Interior pixels keep one evaluation; the narrow edge gets four samples.
+   // Integrate physical radiance over the pixel footprint without expanding
+   // the atmosphere. The cloud silhouette uses analytic pixel area coverage.
 #ifdef GIANT_INTERIOR
    const bool limb=false;
 #else
@@ -58,17 +60,9 @@ void main(){
      vec3 light;giantAtmosphere(d,impact/uBody.w,L,eclipse,light,alpha);
      sum=sky(d)*alpha+viewT(d)*light;
    }else{
-     vec3 axis=normalize(uBody.xyz),radial=normalize(d-axis*dot(d,axis));
-     float distance=length(uBody.xyz);
-     for(int k=0;k<4;++k){
-       float b=max(0.,impact+((float(k)+.5)/4.-.5)*edge);
-       float sine=min(.99999,b/distance);
-       vec3 sampleRay=axis*sqrt(1.-sine*sine)+radial*sine;
-       vec3 light;float a;
-       giantAtmosphere(sampleRay,b/uBody.w,L,eclipse,light,a);
-       sum+=sky(d)*a+viewT(d)*light;alpha+=a;
-     }
-     sum*=.25;alpha*=.25;
+     vec3 light;
+     giantFilteredAtmosphere(d,impact/uBody.w,impactFootprint,albedo,eclipse,light,alpha);
+     sum=sky(d)*alpha+viewT(d)*light;
    }
    if(alpha<=0.)discard;
    // The ring disk lies outside this thin shell, so it is entirely before
