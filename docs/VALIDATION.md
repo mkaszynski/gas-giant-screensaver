@@ -116,10 +116,26 @@ at 30 fps:
 
 | Mode | GPU median | GPU p95 | CPU+GPU median |
 | --- | ---: | ---: | ---: |
-| Rings disabled (`--no-rings`) | 2.84 ms | 3.39 ms | 4.43 ms |
-| Narrow translucent rings and all shadows | 3.26 ms | 6.00 ms | 4.98 ms |
+| Rings disabled (`--no-rings`) | 2.69 ms | 4.01 ms | 3.83 ms |
+| Narrow translucent rings and all shadows | 3.20 ms | 3.64 ms | 4.28 ms |
 
-The added median GPU time is about 0.42 ms. The new pass uses one static 4096x1
+The added median GPU time is about 0.51 ms. The new pass uses one static 4096x1
 RG16F radial profile (about 32 KiB including mipmaps), plus a 24-bit scene-depth
 attachment (driver storage typically 8 MiB at 1080p). These are timing and memory
 measurements/estimates, not watt measurements.
+
+## Silhouette antialiasing
+
+A dedicated GPU test isolates the real mountain coverage and ring annulus,
+then compares 320x180 output against 1280x720 output averaged into the same
+pixels (16 samples per reference pixel). It checks both coverage error and
+retention of partially covered pixels at several ring orientations and nearby
+animation times. Corrected mountain edge error is 12.49/255; ring edge error is
+about 5–9/255. An isolated build with the previous mountain alpha treatment fails
+at 107.60/255; restoring hard ring boundaries separately fails at 57.94/255.
+These failures confirm the tests catch both original problems.
+
+The mountain interior still passes the extreme sky/glare occlusion test. The
+solution uses upload-time alpha preparation, ordinary texture filtering and
+analytic ring coverage; it does not add a full-screen antialiasing pass or a
+multisampled framebuffer.

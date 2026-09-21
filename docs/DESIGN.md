@@ -77,7 +77,13 @@ Foreground moons occlude rings; background moons show through according to optic
 depth. Sphere fragments write analytic distance into a 24-bit depth attachment
 for sphere-to-sphere ordering. No multisampling, blur, or extra framebuffer is needed.
 Both disk and sphere radiance receive the same foreground atmosphere.
-The mountain silhouette is composed last and remains opaque.
+The mountain silhouette is composed last and remains opaque. Its source alpha
+is converted to opaque-ridge coverage once at texture upload, with premultiplied
+color and mipmaps. Sampling preserves coverage without another alpha threshold;
+up to 4x anisotropic filtering keeps the vertically compressed terrain detailed
+where supported. The ring annulus uses pixel coverage of its projected inner
+and outer conics. Derivatives are evaluated before divergent hit rejection so
+boundary mip levels remain stable. No full-scene supersampling is used.
 
 Planet and moon shadows on the rings use the same finite solar-disk sphere
 occlusion routine as body-to-body shadows. Ring shadows on spheres intersect

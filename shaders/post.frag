@@ -25,7 +25,7 @@ void main(){vec3 d=ray();vec3 L=texture(uScene,uv).rgb;
    vec2 sunScreen=vec2(dot(uSun,uRight)/(sunZ*uTanFov*uResolution.x/uResolution.y),dot(uSun,uUp)/(sunZ*uTanFov))*.5+.5;
    if(sunScreen.x>=0.&&sunScreen.x<=1.&&sunScreen.y>=0.&&sunScreen.y<.30){
      float ridgeAlpha=texture(uMountains,vec2(sunScreen.x,1.-sunScreen.y/.30)).a;
-     solarVisibility*=1.-smoothstep(.01,.12,ridgeAlpha);
+     solarVisibility*=1.-ridgeAlpha;
    }
  }
  vec3 sunCloudPoint=uSun*sphere(vec3(0,Rg+.2,0),uSun,Rg+8.).y;
@@ -37,13 +37,14 @@ void main(){vec3 d=ray();vec3 L=texture(uScene,uv).rgb;
  L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;
  // The ridge is a shallow foreground strip. Alpha is retained from the original asset.
  vec2 mt=vec2(uv.x,(1.-uv.y/.30));
- if(uv.y<.30){vec4 mountain=texture(uMountains,clamp(mt,0.,1.));vec3 albedo=pow(mountain.rgb,vec3(2.2));
+ if(uv.y<.30){vec4 mountain=texture(uMountains,clamp(mt,0.,1.));vec3 albedo=pow(mountain.rgb/max(mountain.a,1.e-5),vec3(2.2));
  vec3 light=vec3(.000040)+vec3(.10,.16,.24)*uPlanetLight*.10;
  light+=transmission(uTrans,.2,max(.01,uSun.y))*max(0.,uSun.y)*uEclipse*.20;
  light+=sky(vec3(0,1,0))*.45;
  vec3 terrain=albedo*light;
- // Generated alpha may be translucent inside the ridge. Only its silhouette is a coverage mask.
- float ridgeCoverage=smoothstep(.01,.12,mountain.a);
+ // The opaque source mask was premultiplied before mip generation. Its
+ // filtered alpha is area coverage, and must not be thresholded again.
+ float ridgeCoverage=mountain.a;
  L=ridgeCoverage>=1.?terrain:mix(L,terrain,ridgeCoverage);}
  vec3 mapped=pow(tonemap(L*uExposure),vec3(1./2.2));
  float dither=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;

@@ -99,6 +99,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/render-tests
 ./build/ring-render-tests
+./build/edge-render-tests
 nix flake check
 ```
 

@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include <GLES2/gl2ext.h>
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -181,6 +182,18 @@ GLuint Renderer::imageTexture(const std::string &file) {
     png_image_free(&img);
     throw std::runtime_error(msg);
   }
+  if (file == "mountains.png") {
+    // Make the ridge opaque BEFORE minification. Thresholding a filtered
+    // alpha value in the shader destroys its subpixel coverage. Premultiply
+    // color as well so transparent asset pixels cannot darken the silhouette.
+    for (size_t i = 0; i < pixels.size(); i += 4) {
+      double coverage = std::clamp((pixels[i + 3] / 255. - .01) / .11, 0., 1.);
+      coverage = coverage * coverage * (3 - 2 * coverage);
+      for (int channel = 0; channel < 3; ++channel)
+        pixels[i + channel] = std::lround(pixels[i + channel] * coverage);
+      pixels[i + 3] = std::lround(255 * coverage);
+    }
+  }
   GLuint t;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
@@ -193,6 +206,18 @@ GLuint Renderer::imageTexture(const std::string &file) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                   file == "giant.png" ? GL_REPEAT : GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  if (file == "mountains.png") {
+    const auto *extensions =
+        reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
+    if (extensions &&
+        std::string(extensions).find("GL_EXT_texture_filter_anisotropic") !=
+            std::string::npos) {
+      GLfloat maximum = 1;
+      glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximum);
+      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                      std::min(4.f, maximum));
+    }
+  }
   png_image_free(&img);
   textures.push_back(t);
   return t;
