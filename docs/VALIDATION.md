@@ -31,6 +31,7 @@ These are framebuffer captures from the renderer, not generated concept art:
 - [Native Hyprlock input display](../assets/preview-lock.png)
 - [Observer-moon eclipse shadow on the giant](../assets/preview-eclipse.png)
 - [Ring shadows and the unlit ring face](../assets/preview-ring-shadow.png)
+- [Giant surface without the former dotted stripe](../assets/preview-surface.png)
 
 Standalone capture times are 0 (day), 270 (Sun), 1180 (twilight), 900 (night),
 1000 (ring shadows), and 391780 (observer-moon eclipse during a later season).
@@ -144,4 +145,5 @@ A longitude-chart regression rotates the spherical coordinate chart by half a
 turn while compensating the texture coordinate, leaving the physical image
 unchanged. At times 550, 650 and 900, the corrected renderer differs by at most
 1/255 from the alternate chart. It also reproduces the reported dotted surface
-stripe in an isolated build using implicit texture gradients.
+stripe in an isolated build using implicit texture gradients, which fails at
+70/255 maximum difference.
