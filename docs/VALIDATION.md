@@ -139,3 +139,9 @@ The mountain interior still passes the extreme sky/glare occlusion test. The
 solution uses upload-time alpha preparation, ordinary texture filtering and
 analytic ring coverage; it does not add a full-screen antialiasing pass or a
 multisampled framebuffer.
+
+A longitude-chart regression rotates the spherical coordinate chart by half a
+turn while compensating the texture coordinate, leaving the physical image
+unchanged. At times 550, 650 and 900, the corrected renderer differs by at most
+1/255 from the alternate chart. It also reproduces the reported dotted surface
+stripe in an isolated build using implicit texture gradients.

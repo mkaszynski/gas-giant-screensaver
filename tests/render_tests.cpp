@@ -19,9 +19,10 @@ std::vector<unsigned char> pixels(int w, int h) {
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
   return p;
 }
-struct BrightSkyFixture {
+enum class FixtureMode { BrightSky, LongitudeChart };
+struct ShaderFixture {
   std::filesystem::path path;
-  BrightSkyFixture() {
+  ShaderFixture(FixtureMode mode = FixtureMode::BrightSky) {
     char name[] = "/tmp/observatory-occlusion-XXXXXX";
     auto dir = mkdtemp(name);
     require(dir, "temporary shader fixture");
@@ -32,6 +33,25 @@ struct BrightSkyFixture {
                           std::filesystem::copy_options::recursive);
     std::filesystem::create_directory_symlink(source / "assets",
                                               path / "assets");
+    if (mode == FixtureMode::LongitudeChart) {
+      const auto target = path / "shaders/body.frag";
+      std::ifstream input(target);
+      std::ostringstream buffer;
+      buffer << input.rdbuf();
+      auto shader = buffer.str();
+      // Rotate the longitude coordinate chart by half a turn and compensate
+      // the texture coordinate. The physical image must remain identical;
+      // only atan's branch cut moves to the opposite side of the sphere.
+      const std::string angle = "atan(sn.z,sn.x)", spin = "-uSpin/(2.*PI)";
+      auto at = shader.find(angle);
+      require(at != std::string::npos, "longitude chart angle exists");
+      shader.replace(at, angle.size(), "atan(-sn.z,-sn.x)");
+      at = shader.find(spin);
+      require(at != std::string::npos, "longitude chart spin exists");
+      shader.replace(at, spin.size(), spin + "+.5");
+      std::ofstream(target) << shader;
+      return;
+    }
     auto post = path / "shaders/post.frag";
     std::ifstream input(post);
     std::ostringstream buffer;
@@ -49,7 +69,7 @@ struct BrightSkyFixture {
     }
     std::ofstream(post) << shader;
   }
-  ~BrightSkyFixture() { std::filesystem::remove_all(path); }
+  ~ShaderFixture() { std::filesystem::remove_all(path); }
 };
 int main() {
   try {
@@ -128,7 +148,7 @@ int main() {
       require(repeat == day,
               "resize and time changes must return to deterministic output");
       {
-        BrightSkyFixture fixture;
+        ShaderFixture fixture;
         Renderer brightSky(fixture.path.string());
         for (double time : {0., 1320., 1180., 900.}) {
           r.render(640, 360, time);
@@ -141,6 +161,24 @@ int main() {
                 "mountains must occlude all sky and solar glare at every time");
           require(normal != bright,
                   "bright sky fixture must change visible sky");
+        }
+      }
+      {
+        ShaderFixture fixture(FixtureMode::LongitudeChart);
+        Renderer otherChart(fixture.path.string());
+        for (double time : {550., 650., 900.}) {
+          r.render(640, 360, time, 1800, 1, true, false);
+          auto normal = pixels(640, 360);
+          otherChart.render(640, 360, time, 1800, 1, true, false);
+          auto rotated = pixels(640, 360);
+          int maximum = 0;
+          for (size_t i = 0; i < normal.size(); ++i)
+            maximum =
+                std::max(maximum, std::abs(int(normal[i]) - int(rotated[i])));
+          std::cout << "Longitude chart invariance at " << time << ": "
+                    << maximum << '\n';
+          require(maximum <= 3,
+                  "longitude chart must not create pixelated texture stripes");
         }
       }
       require(glGetError() == GL_NO_ERROR, "OpenGL errors");

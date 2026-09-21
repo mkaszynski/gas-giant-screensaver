@@ -23,7 +23,9 @@ void main(){
  vec3 point=d*hit,n=normalize(point-uBody.xyz);
  vec3 sn=vec3(dot(n,uAxisX),dot(n,uAxisY),dot(n,uAxisZ));
  vec3 albedo;
- if(uMaterial==0){vec2 st=vec2(atan(sn.z,sn.x)/(2.*PI)+.5-uSpin/(2.*PI),acos(clamp(sn.y,-1.,1.))/PI);albedo=pow(texture(uGiant,st).rgb,vec3(2.2));}
+ // Longitude wraps by a full turn at atan’s branch cut. Correct its
+ // gradients before choosing a mip level so that cut cannot become a stripe.
+ if(uMaterial==0){vec2 st=vec2(atan(sn.z,sn.x)/(2.*PI)+.5-uSpin/(2.*PI),acos(clamp(sn.y,-1.,1.))/PI);vec2 dx=dFdx(st),dy=dFdy(st);dx.x-=round(dx.x);dy.x-=round(dy.x);albedo=pow(textureGrad(uGiant,st,dx,dy).rgb,vec3(2.2));}
  else {float f=fbm(sn*9.+float(uMaterial)*19.);float fine=noise(sn*180.);vec3 a=vec3(.28,.25,.22),b=vec3(.62,.58,.49);if(uMaterial==2){a=vec3(.3,.39,.42);b=vec3(.83,.86,.82);}if(uMaterial==3){a=vec3(.3,.16,.09);b=vec3(.6,.43,.29);}albedo=mix(a,b,smoothstep(.2,.75,f))*(.85+.15*fine);if(uMaterial==4){albedo=mix(vec3(.014,.045,.09),vec3(.11,.19,.09),smoothstep(.43,.5,f));albedo=mix(albedo,vec3(.75),smoothstep(.72,.86,abs(sn.y)));}}
  float mu=max(0.,dot(n,uSun));float eclipse=sphereSunVisibility(point+n*.00001,uOccluderCount,uOccluders);
  if(mu>0.) eclipse*=ringSunTransmission(point+n*.00001,uSun);

@@ -83,7 +83,9 @@ color and mipmaps. Sampling preserves coverage without another alpha threshold;
 up to 4x anisotropic filtering keeps the vertically compressed terrain detailed
 where supported. The ring annulus uses pixel coverage of its projected inner
 and outer conics. Derivatives are evaluated before divergent hit rejection so
-boundary mip levels remain stable. No full-scene supersampling is used.
+boundary mip levels remain stable. No full-scene supersampling is used. The giant’s longitude gradients are
+wrapped before explicit-gradient texture sampling, preventing the atan branch
+cut from choosing an excessively coarse mip level and drawing a dotted stripe.
 
 Planet and moon shadows on the rings use the same finite solar-disk sphere
 occlusion routine as body-to-body shadows. Ring shadows on spheres intersect
