@@ -16,12 +16,15 @@ jobs:
       - name: Unit and CLI tests
         run: ctest --test-dir build --output-on-failure
       - name: GPU behavior on Mesa software renderer
-        run: xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
+        run: |
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/ring-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/edge-render-tests
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 0 --width 960 --height 540
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 880 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --width 960 --height 540
       - uses: actions/upload-artifact@v4
         with:
           name: software-rendered-captures

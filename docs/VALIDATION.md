@@ -3,7 +3,8 @@
 ## Automated checks
 
 The local CMake/CTest gate covers the 1.25 apocenter/pericenter ratio, closed
-Keplerian paths, orbital clearance including the enlarged moon radii, local
+Keplerian paths, observer inclination of exactly 10 degrees and all other
+orbital planes within 10 degrees of the giant’s equator, orbital clearance including the enlarged moon radii, local
 coordinate frames, total/partial/annular eclipses, and invalid CLI arguments.
 
 The actual GLES renderer is exercised on an AMD Lucienne integrated GPU. GPU
@@ -29,6 +30,12 @@ These are framebuffer captures from the renderer, not generated concept art:
 - [Night](../assets/preview-night.png)
 - [Native Hyprlock input display](../assets/preview-lock.png)
 - [Observer-moon eclipse shadow on the giant](../assets/preview-eclipse.png)
+- [Ring shadows and the unlit ring face](../assets/preview-ring-shadow.png)
+- [Giant surface without the former dotted stripe](../assets/preview-surface.png)
+
+Standalone capture times are 0 (day), 270 (Sun), 1180 (twilight), 900 (night),
+1000 (ring shadows), and 391780 (observer-moon eclipse during a later season).
+The native capture follows the running clock.
 
 [MP4 preview](../assets/preview.mp4) is H.264, 1280x800, 30 fps, 9 seconds.
 [Animated WebP](../assets/preview.webp) is 960x600, 20 fps, looping.
@@ -85,3 +92,58 @@ Local eclipse visibility scales the atmosphere rather than integrating moving
 planetary shadow volumes through it. Simultaneously overlapping penumbras use
 the darkest single-occluder visibility. Thin clouds trade volumetric depth for
 low rendering cost. These are explicit approximations, not path-traced images.
+
+## Narrow ice-ring update
+
+The ring GPU tests construct known geometric alignments and compare the actual
+renderer against shadow-disabled reference shaders. They separately verify
+planet-to-ring, moon-to-ring, ring-to-planet and ring-to-moon shadows. Three
+band densities test a moon in front of and behind the disk: foreground moons
+block rings, thin bands/gaps reveal background moons, and dense bands attenuate
+them without becoming fully opaque. The existing mountain/glare occlusion and
+GL state checks still pass; depth function, depth-write mask and clear depth
+are now included in host-state restoration checks.
+
+An additional GPU regression renders a foreground moon and its background ring
+with equal radiance. The complete moon silhouette must remain seamless, including
+partially covered pixels. Restoring the former depth-tested ring pass in an
+isolated test build failed with a maximum 241/255 channel difference; corrected
+composition passes with zero difference on this GPU. It adds no framebuffer,
+blur pass, or multisample storage.
+
+Matched 1920x1080 measurements on the same AMD Lucienne GPU, 180 frames at scene
+time 900 with the final inclined orbits and corrected edge composition, capped
+at 30 fps:
+
+| Mode | GPU median | GPU p95 | CPU+GPU median |
+| --- | ---: | ---: | ---: |
+| Rings disabled (`--no-rings`) | 2.69 ms | 4.01 ms | 3.83 ms |
+| Narrow translucent rings and all shadows | 3.20 ms | 3.64 ms | 4.28 ms |
+
+The added median GPU time is about 0.51 ms. The new pass uses one static 4096x1
+RG16F radial profile (about 32 KiB including mipmaps), plus a 24-bit scene-depth
+attachment (driver storage typically 8 MiB at 1080p). These are timing and memory
+measurements/estimates, not watt measurements.
+
+## Silhouette antialiasing
+
+A dedicated GPU test isolates the real mountain coverage and ring annulus,
+then compares 320x180 output against 1280x720 output averaged into the same
+pixels (16 samples per reference pixel). It checks both coverage error and
+retention of partially covered pixels at several ring orientations and nearby
+animation times. Corrected mountain edge error is 12.49/255; ring edge error is
+about 5–9/255. An isolated build with the previous mountain alpha treatment fails
+at 107.60/255; restoring hard ring boundaries separately fails at 57.94/255.
+These failures confirm the tests catch both original problems.
+
+The mountain interior still passes the extreme sky/glare occlusion test. The
+solution uses upload-time alpha preparation, ordinary texture filtering and
+analytic ring coverage; it does not add a full-screen antialiasing pass or a
+multisampled framebuffer.
+
+A longitude-chart regression rotates the spherical coordinate chart by half a
+turn while compensating the texture coordinate, leaving the physical image
+unchanged. At times 550, 650 and 900, the corrected renderer differs by at most
+1/255 from the alternate chart. It also reproduces the reported dotted surface
+stripe in an isolated build using implicit texture gradients, which fails at
+70/255 maximum difference.

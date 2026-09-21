@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   try {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
     double day = 1800, time = -1, timeout = 0, timeStep = 1.0 / 30;
-    bool fullscreen = false;
+    bool fullscreen = false, drawRings = true;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
       std::string a = argv[i];
@@ -54,12 +54,17 @@ int main(int argc, char **argv) {
                "directory\n  --record DIRECTORY     Write a numbered PNG "
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
-               "frame\nEscape or Q closes the preview. This preview does "
+               "frame\n  --no-rings             Disable rings for comparison\n"
+               "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
       }
       if (a == "--fullscreen") {
         fullscreen = true;
+        continue;
+      }
+      if (a == "--no-rings") {
+        drawRings = false;
         continue;
       }
       if (i + 1 >= argc)
@@ -168,7 +173,7 @@ int main(int argc, char **argv) {
                         time + (!record.empty()
                                     ? frames * timeStep
                                     : (capture.empty() ? elapsed : 0)),
-                        day);
+                        day, 1, true, drawRings);
         if (benchmark) {
           if (query)
             glEndQuery(0x88BF);

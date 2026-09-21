@@ -2,7 +2,8 @@
 
 A fixed view from a green mountain ridge on a synchronously rotating moon.
 A large gas giant hangs above the mountains while twenty eccentric moons move
-through a shared 3D system. Sunlight, phases and eclipse shadows follow that
+through a shared 3D system. Slender, translucent ice rings share the giant’s
+tilted equator. Sunlight, phases and eclipse shadows follow that
 geometry. The sky changes through a 30-minute solar day, with thin drifting
 clouds and stars emerging at dusk.
 
@@ -13,7 +14,7 @@ clouds and stars emerging at dusk.
 ## Run on NixOS / Hyprland
 
 ```sh
-nix run github:mkaszynski/gas-giant-screensaver/feature/planetary-screensaver -- --fullscreen
+nix run github:mkaszynski/gas-giant-screensaver/feature/icy-rings -- --fullscreen
 ```
 
 Press **Escape** or **Q** to close. The preview does not lock the desktop.
@@ -60,10 +61,16 @@ Installing the preview does not change any host configuration or idle timeout.
 - The observer moon has Earth's **6,371 km radius**. The other nineteen moons
   retain **three times their initial radii**; the largest is about three Earth
   radii. This is a fictional, artist-directed system.
+- Observer orbit: **10° inclined to the giant’s equator**. Other moon planes
+  span **1–10°** from that same equator, with different nodes.
 - Latitude 38° north, longitude 50° from the mean subplanet meridian. Mean
   synchronous rotation preserves natural eccentric-orbit libration.
 - Twenty moons includes the observer moon. Visibility and apparent size follow
   geometry; the renderer does not arrange all nineteen others in the frame.
+- Rings: **1.235–1.780 giant radii**, with narrow bands and a Cassini-like gap.
+  Their plane and the giant’s texture share a **26.7° tilted pole**. Optical
+  depth varies by radius and viewing angle; moons remain visible through
+  thinner bands. Planet/ring and moon/ring shadows work in both directions.
 - Faint nighttime airglow and ambient mountain light preserve subtle detail.
 - Finite solar disk (about 0.53° across), atmospheric aureole, soft optical glare,
   mutual eclipses, and planetshine approximation.
@@ -91,8 +98,12 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/render-tests
+./build/ring-render-tests
+./build/edge-render-tests
 nix flake check
 ```
+
+Use `--no-rings` for a direct visual or performance comparison.
 
 GPU tests need a display and GLES 3. CI runs them using Mesa llvmpipe and Xvfb.
 They check opaque mountain occlusion, deterministic resize, visible bodies,
@@ -101,8 +112,8 @@ and day/night contrast. Unit tests verify orbital geometry and eclipse cases.
 Capture and measure the real renderer:
 
 ```sh
-nix run . -- --capture twilight.png --time 880 --width 1920 --height 1080
-nix run . -- --benchmark 180 --time 1350 --width 1920 --height 1080
+nix run . -- --capture twilight.png --time 1180 --width 1920 --height 1080
+nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 ```
 
 `--time` sets the starting scene time; `--capture` freezes it. Normal launches

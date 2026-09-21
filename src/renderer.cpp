@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include <GLES2/gl2ext.h>
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -12,7 +13,9 @@ namespace {
 // Restore the host lock renderer's state, including on shader/asset exceptions.
 struct GLState {
   GLint framebuffer = 0, viewport[4]{}, vao = 0, program = 0, buffer = 0,
-        active = 0;
+        active = 0, renderbuffer = 0, depthFunction = 0;
+  GLboolean depthWrite = GL_TRUE;
+  GLfloat clearDepth = 1;
   GLint srcRGB = 0, dstRGB = 0, srcAlpha = 0, dstAlpha = 0, scissorBox[4]{};
   bool blend = false, depth = false, scissor = false;
   GLState() {
@@ -22,6 +25,10 @@ struct GLState {
     glGetIntegerv(GL_CURRENT_PROGRAM, &program);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &buffer);
     glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &renderbuffer);
+    glGetIntegerv(GL_DEPTH_FUNC, &depthFunction);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &depthWrite);
+    glGetFloatv(GL_DEPTH_CLEAR_VALUE, &clearDepth);
     glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
     glGetIntegerv(GL_BLEND_SRC_RGB, &srcRGB);
     glGetIntegerv(GL_BLEND_DST_RGB, &dstRGB);
@@ -38,6 +45,10 @@ struct GLState {
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     glUseProgram(program);
     glActiveTexture(active);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    glDepthFunc(depthFunction);
+    glDepthMask(depthWrite);
+    glClearDepthf(clearDepth);
     glScissor(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
     glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
     if (blend)
@@ -123,13 +134,15 @@ GLuint Renderer::program(const std::string &fragment,
   return p;
 }
 void Renderer::release(Target &t) {
+  if (t.depth)
+    glDeleteRenderbuffers(1, &t.depth);
   if (t.framebuffer)
     glDeleteFramebuffers(1, &t.framebuffer);
   if (t.texture)
     glDeleteTextures(1, &t.texture);
   t = {};
 }
-void Renderer::target(Target &t, int w, int h) {
+void Renderer::target(Target &t, int w, int h, bool depth) {
   if (t.width == w && t.height == h)
     return;
   release(t);
@@ -147,6 +160,13 @@ void Renderer::target(Target &t, int w, int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, t.framebuffer);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          t.texture, 0);
+  if (depth) {
+    glGenRenderbuffers(1, &t.depth);
+    glBindRenderbuffer(GL_RENDERBUFFER, t.depth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                              GL_RENDERBUFFER, t.depth);
+  }
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     throw std::runtime_error("Floating-point framebuffer unavailable");
 }
@@ -162,6 +182,18 @@ GLuint Renderer::imageTexture(const std::string &file) {
     png_image_free(&img);
     throw std::runtime_error(msg);
   }
+  if (file == "mountains.png") {
+    // Make the ridge opaque BEFORE minification. Thresholding a filtered
+    // alpha value in the shader destroys its subpixel coverage. Premultiply
+    // color as well so transparent asset pixels cannot darken the silhouette.
+    for (size_t i = 0; i < pixels.size(); i += 4) {
+      double coverage = std::clamp((pixels[i + 3] / 255. - .01) / .11, 0., 1.);
+      coverage = coverage * coverage * (3 - 2 * coverage);
+      for (int channel = 0; channel < 3; ++channel)
+        pixels[i + channel] = std::lround(pixels[i + channel] * coverage);
+      pixels[i + 3] = std::lround(255 * coverage);
+    }
+  }
   GLuint t;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
@@ -174,6 +206,18 @@ GLuint Renderer::imageTexture(const std::string &file) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                   file == "giant.png" ? GL_REPEAT : GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  if (file == "mountains.png") {
+    const auto *extensions =
+        reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
+    if (extensions &&
+        std::string(extensions).find("GL_EXT_texture_filter_anisotropic") !=
+            std::string::npos) {
+      GLfloat maximum = 1;
+      glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximum);
+      glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                      std::min(4.f, maximum));
+    }
+  }
   png_image_free(&img);
   textures.push_back(t);
   return t;
@@ -196,10 +240,35 @@ Renderer::Renderer(std::string dir) : root(std::move(dir)) {
   skyProgram = program("sky_lut.frag");
   backgroundProgram = program("background.frag");
   bodyProgram = program("body.frag");
+  ringProgram = program("rings.frag");
   starProgram = program("stars.frag", "stars.vert");
   postProgram = program("post.frag");
   giant = imageTexture("giant.png");
   mountains = imageTexture("mountains.png");
+  constexpr int profileWidth = 4096;
+  std::vector<float> profile(profileWidth * 2);
+  for (int i = 0; i < profileWidth; ++i) {
+    const double r =
+        ringInner + (ringOuter - ringInner) * (i + .5) / profileWidth;
+    profile[i * 2] = ringOpticalDepth(r);
+    // Slight particle-albedo variation remains visible where dense bands
+    // saturate.
+    profile[i * 2 + 1] = .69 +
+                         .11 * std::sin(r * 173. + 2. * std::sin(r * 31.)) +
+                         .09 * std::sin(r * 1103. + 3. * std::sin(r * 119.)) +
+                         .04 * std::sin(r * 3779.);
+  }
+  glGenTextures(1, &ringProfile);
+  textures.push_back(ringProfile);
+  glBindTexture(GL_TEXTURE_2D, ringProfile);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, profileWidth, 1, 0, GL_RG, GL_FLOAT,
+               profile.data());
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   std::mt19937 rng(0x194bd);
   std::uniform_real_distribution<float> unit(0, 1);
   std::vector<unsigned char> data(256 * 256);
@@ -276,16 +345,30 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h, double seconds) {
   bind(p, 0, "uSky", sky.texture);
   bind(p, 1, "uTrans", trans.texture);
 }
+void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
+  integer(p, "uRingsEnabled", enabled);
+  vector(p, "uRingCenter", s.local(-s.observer));
+  vector(p, "uRingNormal", s.local(giantPole()));
+  glUniform2f(glGetUniformLocation(p, "uRingBounds"), ringInner, ringOuter);
+  bind(p, 5, "uRingProfile", ringProfile);
+}
 void Renderer::render(int w, int h, double seconds, double day, float opacity,
-                      bool drawBodies) {
+                      bool drawBodies, bool drawRings) {
+  renderScene(w, h, sceneAt(seconds, day, drawRings), seconds, day, opacity,
+              drawBodies, drawRings);
+}
+void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
+                           double day, float opacity, bool drawBodies,
+                           bool drawRings) {
   if (w <= 0 || h <= 0)
     return;
   const GLState state;
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_SCISSOR_TEST);
-  auto s = sceneAt(seconds, day);
-  if (std::abs(seconds - lastSky) >= day / 7200. || day != lastDay) {
+  if (std::abs(seconds - lastSky) >= day / 7200. || day != lastDay ||
+      std::abs(s.sunVisibility - lastVisibility) > .01 ||
+      length(s.sunLocal - lastSun) > .01 || drawRings != lastRings) {
     glBindFramebuffer(GL_FRAMEBUFFER, sky.framebuffer);
     glViewport(0, 0, sky.width, sky.height);
     glUseProgram(skyProgram);
@@ -296,10 +379,16 @@ void Renderer::render(int w, int h, double seconds, double day, float opacity,
     quad(skyProgram);
     lastSky = seconds;
     lastDay = day;
+    lastVisibility = s.sunVisibility;
+    lastSun = s.sunLocal;
+    lastRings = drawRings;
   }
-  target(scene, w, h);
+  target(scene, w, h, true);
   glBindFramebuffer(GL_FRAMEBUFFER, scene.framebuffer);
   glViewport(0, 0, w, h);
+  glDepthMask(GL_TRUE);
+  glClearDepthf(1);
+  glClear(GL_DEPTH_BUFFER_BIT);
   common(backgroundProgram, s, w, h, seconds);
   quad(backgroundProgram);
   common(starProgram, s, w, h, seconds);
@@ -313,6 +402,32 @@ void Renderer::render(int w, int h, double seconds, double day, float opacity,
   glBindVertexArray(starVao);
   glDrawArrays(GL_POINTS, 0, stars);
   glDisable(GL_BLEND);
+  std::vector<float> ringOccluders;
+  if (drawBodies && drawRings) {
+    common(ringProgram, s, w, h, seconds);
+    rings(ringProgram, s, true);
+    for (const auto &body : s.bodies) {
+      const double along = dot(body.position, s.sun);
+      const double perpendicular = length(body.position - s.sun * along);
+      if (along + body.radius < -ringOuter ||
+          perpendicular >
+              ringOuter + body.radius + std::max(0., along) * sunRadius)
+        continue;
+      const auto p = s.local(body.position - s.observer);
+      ringOccluders.insert(
+          ringOccluders.end(),
+          {float(p.x), float(p.y), float(p.z), float(body.radius)});
+    }
+    integer(ringProgram, "uRingOccluderCount", ringOccluders.size() / 4);
+    glUniform4fv(glGetUniformLocation(ringProgram, "uRingOccluders"),
+                 ringOccluders.size() / 4, ringOccluders.data());
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    quad(ringProgram);
+    glDisable(GL_BLEND);
+  }
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
   std::vector<int> order;
   for (int i = 0; i < 21; ++i)
     if (i != 1)
@@ -340,13 +455,20 @@ void Renderer::render(int w, int h, double seconds, double day, float opacity,
     if (x >= x2 || y >= y2)
       continue;
     common(bodyProgram, s, w, h, seconds);
+    rings(bodyProgram, s, drawRings);
+    integer(bodyProgram, "uRingOccluderCount", ringOccluders.size() / 4);
+    if (!ringOccluders.empty())
+      glUniform4fv(glGetUniformLocation(bodyProgram, "uRingOccluders"),
+                   ringOccluders.size() / 4, ringOccluders.data());
     glUniform4f(glGetUniformLocation(bodyProgram, "uBody"), center.x, center.y,
                 center.z, b.radius);
     integer(bodyProgram, "uMaterial", b.material);
     scalar(bodyProgram, "uSpin", std::remainder(b.spin, 2 * pi));
-    vector(bodyProgram, "uAxisX", s.local({1, 0, 0}));
-    vector(bodyProgram, "uAxisY", s.local({0, 1, 0}));
-    vector(bodyProgram, "uAxisZ", s.local({0, 0, 1}));
+    const Vec3 axisY = b.pole;
+    const Vec3 axisX = normalized(cross(axisY, {0, 0, 1}));
+    vector(bodyProgram, "uAxisX", s.local(axisX));
+    vector(bodyProgram, "uAxisY", s.local(axisY));
+    vector(bodyProgram, "uAxisZ", s.local(cross(axisX, axisY)));
     bind(bodyProgram, 2, "uGiant", giant);
     std::vector<float> occluders;
     for (int j = 0; j < 21; ++j)
@@ -373,6 +495,7 @@ void Renderer::render(int w, int h, double seconds, double day, float opacity,
     glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
   }
+  glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h, seconds);
