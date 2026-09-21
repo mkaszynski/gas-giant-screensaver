@@ -21,6 +21,7 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/ring-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/edge-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/atmosphere-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/scattering-edge-tests
       - name: Render daylight and twilight
         run: |
           mkdir -p captures

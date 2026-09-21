@@ -98,10 +98,20 @@ void giantAtmosphere(vec3 d,float impact,vec3 cloudLight,float cloudShadow,
  }else{
    const int steps=6;
    float ds=(end-start)/float(steps);
+   float densities[steps];float columnSum=0.;
    for(int j=0;j<steps;++j){
      vec3 p=d*(start+(float(j)+.5)*ds)-center;
-     float density=exp(-max(0.,length(p)-1.)/giantH);
-     vec3 segmentT=exp(-beta*(density*ds/giantH));
+     densities[j]=exp(-max(0.,length(p)-1.)/giantH)*ds/giantH;
+     columnSum+=densities[j];
+   }
+   // Normalize the quadrature to the curved column. Without this correction,
+   // six uniform height samples lose about 15% of the dense lowest layer,
+   // creating a resolution-dependent step where the disk meets the limb.
+   float exactColumn=max(0.,giantColumn(d*end-center,-d)-giantColumn(d*start-center,-d));
+   float correction=exactColumn/max(columnSum,1.e-12);
+   for(int j=0;j<steps;++j){
+     vec3 p=d*(start+(float(j)+.5)*ds)-center;
+     vec3 segmentT=exp(-beta*densities[j]*correction);
      vec3 world=(p+center)*uBody.w;
      vec3 sunlight=giantBeam(p);
      if(any(greaterThan(sunlight,vec3(0.)))){
@@ -115,7 +125,13 @@ void giantAtmosphere(vec3 d,float impact,vec3 cloudLight,float cloudShadow,
  radiance=scatter;
  if(cloud){
    vec3 surface=d*end-center;
+#ifdef GIANT_LIMB
+   // This shader also covers inner subpixel rays: all used the path integral,
+   // even below the nominal limb threshold. Never leave their cloud beam zero.
+   cloudBeam=giantBeam(surface);
+#else
    if(impact>=.999)cloudBeam=giantBeam(surface);
+#endif
    radiance+=transmit*cloudBeam*cloudLight;
    opacity=1.;
  }else{

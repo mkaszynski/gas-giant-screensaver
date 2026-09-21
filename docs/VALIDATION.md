@@ -189,3 +189,34 @@ The measured incremental median is approximately 1.12 ms. Shared-desktop
 activity produced large tail-latency spikes in some runs, so these are not
 exclusive-device laboratory measurements or watt estimates. The new cache
 uses 128 KiB, generated once; limb work is restricted to the narrow edge.
+
+
+### Atmospheric antialiasing correction
+
+The original four uniformly spaced subpixel rays missed the physical haze
+between samples. This produced dotted arcs and up to 44.3% brightness variation
+when the image moved by fractions of one pixel. A second bug left cloud
+illumination at zero for inner rays handled by the limb shader, creating a
+dark seam. The old coverage-only test did not establish correct scattering.
+
+The replacement uses analytic pixel-area coverage, two cloud-region rays and
+four density-weighted atmospheric rays. Density-space quadrature always
+samples the thin layer without enlarging it. The six path samples are also
+normalized to the curved column rather than losing the dense lowest layer.
+
+A new GPU regression measures linear HDR radiance against a reference rendered
+at eight times the width and height. It covers three lighting phases and four
+quarter-pixel camera offsets. Eclipse-contact relative radiance error is under
+1.8%, with 0.49% flux variation; all tested phases remain below 8.5% radiance
+error and 1% flux variation. The lit, uniform-cloud edge agrees within 0.20%.
+A separate silhouette reference improved from about 19.8/255 error to 0.36/255;
+its acceptance threshold is now 2/255 with at least 95% of partial pixels
+retaining coverage. Restoring the previous renderer fails the scattered-light
+reference at 249% relative error and the temporal stability check.
+
+Updated eclipse-contact and night captures were inspected, along with a short
+sequence at 0.1-second simulation steps. At 1920x1080, 180 frames and the same
+30 fps cap, measured median GPU time is 5.75 ms at scene time 391780 and 4.63 ms
+at eclipse contact (376368). The correction adds no texture allocation, blur,
+multisampled framebuffer or fullscreen pass. These remain shared-desktop
+timing measurements rather than power measurements.

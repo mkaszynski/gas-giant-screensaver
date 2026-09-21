@@ -14,7 +14,7 @@ clouds and stars emerging at dusk.
 ## Run on NixOS / Hyprland
 
 ```sh
-nix run github:mkaszynski/gas-giant-screensaver/feature/giant-atmosphere -- --fullscreen
+nix run github:mkaszynski/gas-giant-screensaver -- --fullscreen
 ```
 
 Press **Escape** or **Q** to close. The preview does not lock the desktop.
@@ -130,6 +130,7 @@ ctest --test-dir build --output-on-failure
 ./build/ring-render-tests
 ./build/edge-render-tests
 ./build/atmosphere-render-tests
+./build/scattering-edge-tests
 nix flake check
 ```
 
