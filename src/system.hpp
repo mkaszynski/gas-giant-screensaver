@@ -37,9 +37,14 @@ struct Scene {
 // Length unit: Jupiter equatorial radii (71492 km). Time: observer orbital
 // periods.
 constexpr double homeA = 3.0, homeE = 1.0 / 9.0, sunRadius = 0.00465047;
+constexpr double ringInner = 1.235, ringOuter = 1.780;
+Vec3 ringNormal();
+double ringOpticalDepth(double radius);
+double ringSunVisibility(Vec3 point, Vec3 toSun);
 Vec3 orbitPosition(const Orbit &, double periods);
 std::array<Orbit, 20> makeOrbits();
-Scene sceneAt(double displayedSeconds, double daySeconds = 1800);
+Scene sceneAt(double displayedSeconds, double daySeconds = 1800,
+              bool ringsEnabled = true);
 double diskVisibility(double separation, double sourceRadius,
                       double occluderRadius);
 double visibility(Vec3 point, Vec3 toSun, const std::array<Body, 21> &,

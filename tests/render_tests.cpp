@@ -26,19 +26,23 @@ struct BrightSkyFixture {
     auto dir = mkdtemp(name);
     require(dir, "temporary shader fixture");
     path = dir;
-    const auto source = std::filesystem::absolute(Renderer::defaultDataDirectory());
+    const auto source =
+        std::filesystem::absolute(Renderer::defaultDataDirectory());
     std::filesystem::copy(source / "shaders", path / "shaders",
                           std::filesystem::copy_options::recursive);
-    std::filesystem::create_directory_symlink(source / "assets", path / "assets");
+    std::filesystem::create_directory_symlink(source / "assets",
+                                              path / "assets");
     auto post = path / "shaders/post.frag";
     std::ifstream input(post);
     std::ostringstream buffer;
     buffer << input.rdbuf();
     auto shader = buffer.str();
     // Inject extreme sky and glare radiance at their actual compositing stages.
-    // If either stage moves in front of the ridge, its interior must fail below.
-    for (const std::string needle : {"vec3 L=texture(uScene,uv).rgb;",
-         "L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;"}) {
+    // If either stage moves in front of the ridge, its interior must fail
+    // below.
+    for (const std::string needle :
+         {"vec3 L=texture(uScene,uv).rgb;",
+          "L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;"}) {
       auto at = shader.find(needle);
       require(at != std::string::npos, "sky/glare injection stage");
       shader.insert(at + needle.size(), "L+=vec3(1000.);");
@@ -61,11 +65,23 @@ int main() {
     {
       glEnable(GL_BLEND);
       glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glDepthFunc(GL_GREATER);
+      glDepthMask(GL_FALSE);
+      glClearDepthf(.4f);
       Renderer r(Renderer::defaultDataDirectory());
       require(glIsEnabled(GL_BLEND), "constructor must preserve host blending");
       r.render(640, 360, 1350);
       auto with = pixels(640, 360);
       require(glIsEnabled(GL_BLEND), "render must preserve host blending");
+      GLint depthFunction = 0;
+      GLboolean depthWrite = GL_TRUE;
+      GLfloat clearDepth = 0;
+      glGetIntegerv(GL_DEPTH_FUNC, &depthFunction);
+      glGetBooleanv(GL_DEPTH_WRITEMASK, &depthWrite);
+      glGetFloatv(GL_DEPTH_CLEAR_VALUE, &clearDepth);
+      require(depthFunction == GL_GREATER && depthWrite == GL_FALSE &&
+                  clearDepth == .4f,
+              "ring depth rendering must preserve host depth state");
       GLint blendSource = 0;
       glGetIntegerv(GL_BLEND_SRC_RGB, &blendSource);
       require(blendSource == GL_SRC_ALPHA,
@@ -103,8 +119,9 @@ int main() {
         for (int x = 500; x < 620; ++x)
           nightSky += without[(y * 640 + x) * 4 + 2];
       double skyBlue = double(nightSky) / (80 * 120);
-      require(skyBlue > 3. && skyBlue < 25.,
-              "night sky should retain faint detail without looking like daylight");
+      require(
+          skyBlue > 3. && skyBlue < 25.,
+          "night sky should retain faint detail without looking like daylight");
       r.render(320, 180, 850);
       r.render(640, 360, 0);
       auto repeat = pixels(640, 360);
@@ -119,9 +136,11 @@ int main() {
           brightSky.render(640, 360, time);
           auto bright = pixels(640, 360);
           for (int i = 0; i < 640 * 20 * 4; ++i)
-            require(normal[i] == bright[i],
-                    "mountains must occlude all sky and solar glare at every time");
-          require(normal != bright, "bright sky fixture must change visible sky");
+            require(
+                normal[i] == bright[i],
+                "mountains must occlude all sky and solar glare at every time");
+          require(normal != bright,
+                  "bright sky fixture must change visible sky");
         }
       }
       require(glGetError() == GL_NO_ERROR, "OpenGL errors");

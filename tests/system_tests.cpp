@@ -28,6 +28,28 @@ int main() {
               std::abs(initial.bodies[8].radius - 0.258) < 1e-12,
           "other small and large moons retain tripled radii");
   require(homeA == 3.0, "observer orbit halved");
+  const Vec3 pole = ringNormal(), equator = normalized(cross(pole, {0, 0, 1}));
+  require(std::abs(length(pole) - 1) < 1e-12, "unit ring/giant shared pole");
+  require(std::abs(dot(pole, equator)) < 1e-12, "rings lie in giant equator");
+  require(homeA * (1 - homeE) - initial.bodies[1].radius > ringOuter,
+          "observer stays outside the ring system");
+  require(ringOpticalDepth(1.1) == 0 && ringOpticalDepth(2.4) == 0,
+          "finite ring annulus");
+  require(ringOpticalDepth(1.52) > ringOpticalDepth(1.30) * 4 &&
+              ringOpticalDepth(1.6075) < ringOpticalDepth(1.67) * .1,
+          "dense B ring, translucent C ring and Cassini division");
+  double denseTransmission =
+      ringSunVisibility(equator * 1.52 - pole * .2, pole);
+  double thinTransmission = ringSunVisibility(equator * 1.30 - pole * .2, pole);
+  require(denseTransmission > 0 && denseTransmission < thinTransmission &&
+              thinTransmission < 1,
+          "rings cast partial density-dependent shadows");
+  require(ringSunVisibility(equator * 1.52 + pole * .2, pole) == 1 &&
+              ringSunVisibility(equator * 1.52 - pole * .2, equator) == 1,
+          "rings cannot shadow a source on the same side or a parallel ray");
+  require(ringSunVisibility(equator * .8660254038 - pole * .5,
+                            normalized(equator * .78 + pole * .625)) < .7,
+          "ring shadow reaches the giant's lit surface");
   std::array<Body, 21> eclipseBodies{};
   eclipseBodies[2] = {{0, 0, 10}, 1, 0, 0};
   require(visibility({0, 0, 0}, {0, 0, 1}, eclipseBodies, 1) == 0,

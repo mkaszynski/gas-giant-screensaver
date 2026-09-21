@@ -70,7 +70,53 @@ double visibility(Vec3 p, Vec3 sun, const std::array<Body, 21> &bodies,
     }
   return result;
 }
-Scene sceneAt(double seconds, double daySeconds) {
+Vec3 ringNormal() {
+  const double tilt = 26.7 * pi / 180;
+  return {std::sin(tilt) / std::sqrt(2.), std::cos(tilt),
+          std::sin(tilt) / std::sqrt(2.)};
+}
+double ringOpticalDepth(double r) {
+  if (r < ringInner || r > ringOuter)
+    return 0;
+  // Compress Saturn-like C/B/A bands and gaps into a slimmer half-width system.
+  r = 1.235 + (r - ringInner) / (ringOuter - ringInner) * (2.325 - 1.235);
+  // The profile is baked once into a mipmapped radial lookup texture.
+  double tau = 0;
+  if (r < 1.526)
+    tau = .10 + .045 * std::sin(r * 93.) + .02 * std::sin(r * 231.);
+  else if (r < 1.950)
+    tau = 1.15 + .50 * std::sin(r * 27.) + .20 * std::sin(r * 89.);
+  else if (r < 2.025)
+    tau = .018;
+  else if (r < 2.270)
+    tau = .46 + .12 * std::sin(r * 49.) + .06 * std::sin(r * 119.);
+  // Encke and Keeler-like clear gaps; faint outer F ring.
+  if ((r > 2.213 && r < 2.219) || (r > 2.260 && r < 2.262))
+    tau = .001;
+  if (r > 2.315 && r < 2.321)
+    tau = .13;
+  double fine = 1. + .13 * std::sin(r * 1307. + .8 * std::sin(r * 317.)) +
+                .06 * std::sin(r * 3503.);
+  return std::max(0., tau * fine * .55);
+}
+double ringSunVisibility(Vec3 p, Vec3 sun) {
+  const Vec3 normal = ringNormal();
+  const double mu = dot(normal, sun);
+  if (std::abs(mu) < 1e-7)
+    return 1;
+  const double t = -dot(p, normal) / mu;
+  if (t <= 0)
+    return 1;
+  const double r = length(p + sun * t);
+  // Three radial samples approximate the finite Sun's penumbra footprint.
+  const double footprint = t * sunRadius / std::abs(mu);
+  auto transmission = [&](double radius) {
+    return std::exp(-ringOpticalDepth(radius) / std::abs(mu));
+  };
+  return .5 * transmission(r) + .25 * transmission(r - footprint * .7) +
+         .25 * transmission(r + footprint * .7);
+}
+Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
   Scene s{};
   // Giant: 3 Jupiter masses; 1 solar mass star at 1 AU. Observer period ~8.9
   // h. Sidereal rotation is synchronous with mean anomaly. Solar and sidereal
@@ -88,8 +134,8 @@ Scene sceneAt(double seconds, double daySeconds) {
                                     : (i < 10 ? 0.065 + 0.007 * (i % 4)
                                               : 0.008 + 0.004 * (i % 5)));
     s.bodies[i + 1] = {
-        orbitPosition(orbits[i], orbitPhase), radius * (i == 0 ? 1.0 : 3.0), 1 + (i % 4),
-        orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5)};
+        orbitPosition(orbits[i], orbitPhase), radius * (i == 0 ? 1.0 : 3.0),
+        1 + (i % 4), orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5)};
   }
   const double rotation = 2 * pi * orbitPhase;
   // 38 N, 50 degrees from the subplanet meridian: giant stays low, with
@@ -116,6 +162,8 @@ Scene sceneAt(double seconds, double daySeconds) {
   s.right = normalized(cross(Vec3{0, 1, 0}, s.forward));
   s.cameraUp = cross(s.forward, s.right);
   s.sunVisibility = visibility(s.observer, s.sun, s.bodies, 1);
+  if (ringsEnabled)
+    s.sunVisibility *= ringSunVisibility(s.observer, s.sun);
   const double phase = (1 + dot(normalized(s.observer), s.sun)) * 0.5;
   s.giantLight = 0.45 * phase / std::pow(length(s.observer), 2);
   return s;

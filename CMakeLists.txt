@@ -25,6 +25,8 @@ add_test(NAME cli-invalid COMMAND gas-giant-screensaver --fps 0)
 set_tests_properties(cli-invalid PROPERTIES WILL_FAIL TRUE)
 add_executable(render-tests tests/render_tests.cpp)
 target_link_libraries(render-tests PRIVATE observatory PkgConfig::GLFW)
+add_executable(ring-render-tests tests/ring_render_tests.cpp)
+target_link_libraries(ring-render-tests PRIVATE observatory PkgConfig::GLFW)
 # GPU tests are explicitly run under the real compositor or CI's Xvfb/llvmpipe.
 add_test(NAME cli-fractional-fps COMMAND gas-giant-screensaver --fps 1.5)
 add_test(NAME cli-nonfinite COMMAND gas-giant-screensaver --day-seconds nan)

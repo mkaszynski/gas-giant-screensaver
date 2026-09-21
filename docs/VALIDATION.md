@@ -29,6 +29,7 @@ These are framebuffer captures from the renderer, not generated concept art:
 - [Night](../assets/preview-night.png)
 - [Native Hyprlock input display](../assets/preview-lock.png)
 - [Observer-moon eclipse shadow on the giant](../assets/preview-eclipse.png)
+- [Ring shadows and the unlit ring face](../assets/preview-ring-shadow.png)
 
 [MP4 preview](../assets/preview.mp4) is H.264, 1280x800, 30 fps, 9 seconds.
 [Animated WebP](../assets/preview.webp) is 960x600, 20 fps, looping.
@@ -85,3 +86,28 @@ Local eclipse visibility scales the atmosphere rather than integrating moving
 planetary shadow volumes through it. Simultaneously overlapping penumbras use
 the darkest single-occluder visibility. Thin clouds trade volumetric depth for
 low rendering cost. These are explicit approximations, not path-traced images.
+
+## Narrow ice-ring update
+
+The ring GPU tests construct known geometric alignments and compare the actual
+renderer against shadow-disabled reference shaders. They separately verify
+planet-to-ring, moon-to-ring, ring-to-planet and ring-to-moon shadows. Three
+band densities test a moon in front of and behind the disk: foreground moons
+block rings, thin bands/gaps reveal background moons, and dense bands attenuate
+them without becoming fully opaque. The existing mountain/glare occlusion and
+GL state checks still pass; depth function, depth-write mask and clear depth
+are now included in host-state restoration checks.
+
+Matched 1920x1080 measurements on the same AMD Lucienne GPU, 180 frames at scene
+time 1350, capped at 30 fps:
+
+| Mode | GPU median | GPU p95 | CPU+GPU median |
+| --- | ---: | ---: | ---: |
+| Rings disabled (`--no-rings`) | 2.82 ms | 3.50 ms | 4.43 ms |
+| Narrow translucent rings and all shadows | 3.30 ms | 4.68 ms | 4.81 ms |
+
+The added median GPU time is about 0.48 ms. The original pre-ring renderer
+measured 2.82 ms in the same session. The new pass uses one static 4096x1
+RG16F radial profile (about 32 KiB including mipmaps), plus a 24-bit scene-depth
+attachment (driver storage typically 8 MiB at 1080p). These are timing and memory
+measurements/estimates, not watt measurements.
