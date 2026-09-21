@@ -30,8 +30,8 @@ Rendering passes:
 1. Transmittance LUT, 256x128, generated once.
 2. Isotropic multiple-scattering feedback LUT, 32x32, generated once.
 3. Sky-view LUT, 256x128, updated four times per displayed second at normal speed.
-4. Full-resolution sky, sparse star points, scissored sphere draws sorted by depth.
-5. One analytic ring-disk draw, depth-tested against sphere surfaces.
+4. Full-resolution sky, sparse star points, and one analytic ring-disk draw.
+5. Scissored sphere draws sorted by depth, with foreground rings composited before edge coverage.
 6. Thin clouds and solar glare, opaque mountain composition, exposure and dithering.
 
 One renderer is used by both the GLFW preview and Hyprlock. There are no
@@ -50,8 +50,13 @@ The ring disk extends from 1.235 to 1.780 giant radii. Saturn-like C/B/A bands,
 the Cassini division, narrow gaps and an F-like ringlet are compressed into half
 the original Saturn-width profile. Optical depths are scaled to 55% of that
 initial design for a lighter, more translucent appearance. The disk and giant
-texture coordinates use the same 26.7-degree tilted pole. Moon orbits are not
-moved to avoid ring crossings.
+texture coordinates use the same 26.7-degree tilted pole. Every moon orbit is defined in the giant’s equatorial coordinate system.
+The observer orbit is inclined exactly 10 degrees; other orbital planes span
+2–10 degrees with varied ascending nodes. Outer irregular moons retain their
+retrograde direction. The rings use the giant’s pole directly; no independent
+ring tilt exists. The observer’s synchronous rotation and local ground frame
+follow its inclined orbital plane. This naturally takes the moon above and
+below the rings, with two edge-on crossings per orbit.
 
 A 4096-by-1 RG16F texture stores normal optical depth and modest particle-albedo
 variation. It is generated once and mipmapped; neither particles nor ring
@@ -64,9 +69,13 @@ The compressed band layout follows the general structure in the
 [NASA ring fact sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html),
 not a reproduction of measured Saturn optical-depth data.
 
-Opaque sphere fragments write analytic distance into a 24-bit depth attachment.
-The translucent disk is drawn afterward with depth writes off, so foreground
-moons occlude rings and background moons show through according to optical depth.
+The translucent disk is drawn first. Each sphere analytically composites the
+portion of the disk in front of its surface before applying silhouette coverage.
+This preserves partial-pixel coverage: a sphere edge blends against the ring
+behind it rather than letting a full-pixel depth rejection expose bare sky.
+Foreground moons occlude rings; background moons show through according to optical
+depth. Sphere fragments write analytic distance into a 24-bit depth attachment
+for sphere-to-sphere ordering. No multisampling, blur, or extra framebuffer is needed.
 Both disk and sphere radiance receive the same foreground atmosphere.
 The mountain silhouette is composed last and remains opaque.
 

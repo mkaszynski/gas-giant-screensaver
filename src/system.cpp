@@ -10,7 +10,15 @@ Vec3 rx(Vec3 v, double a) {
   return {v.x, std::cos(a) * v.y - std::sin(a) * v.z,
           std::sin(a) * v.y + std::cos(a) * v.z};
 }
+Vec3 orbitToWorld(Vec3 v, const Orbit &o) {
+  return equatorialToWorld(ry(rx(ry(v, o.periapsis), o.inclination), o.node));
+}
 } // namespace
+Vec3 equatorialToWorld(Vec3 v) {
+  const Vec3 y = giantPole(), x = normalized(cross(y, {0, 0, 1}));
+  return x * v.x + y * v.y + cross(x, y) * v.z;
+}
+Vec3 orbitNormal(const Orbit &o) { return orbitToWorld({0, 1, 0}, o); }
 Vec3 orbitPosition(const Orbit &o, double periods) {
   const double m = std::remainder(
       o.phase + 2 * pi * periods * std::pow(homeA / o.a, 1.5), 2 * pi);
@@ -19,22 +27,29 @@ Vec3 orbitPosition(const Orbit &o, double periods) {
     e -= (e - o.e * std::sin(e) - m) / (1 - o.e * std::cos(e));
   Vec3 p{o.a * (std::cos(e) - o.e), 0,
          -o.a * std::sqrt(1 - o.e * o.e) * std::sin(e)};
-  return ry(rx(ry(p, o.periapsis), o.inclination), o.node);
+  return orbitToWorld(p, o);
 }
 std::array<Orbit, 20> makeOrbits() {
   std::array<Orbit, 20> a{};
-  a[0] = {homeA, homeE, 0, 0, 0, 0};
+  // All orbital elements are relative to the giant's equator. Periapsis is
+  // at maximum southern latitude. The node keeps moderate solar declination
+  // for the fixed mid-latitude observer while the orbit stays inclined 10°.
+  a[0] = {homeA, homeE, 10 * pi / 180, pi, -pi / 2, 0};
   // Deliberately small inner moons; widely separated outer major moons.
   const double radii[19] = {1.30, 1.48, 1.68, 1.92, 2.18, 10.8, 18.8,
                             33,   59,   73,   78,   83,   88,   93,
                             98,   104,  110,  117,  125};
-  for (int i = 1; i < 20; ++i)
+  const double inclinations[19] = {1.5, 4,   7, 9.5, 2.5, 6, 8.5, 3.5, 10, 2,
+                                   8,   4.5, 1, 9,   5.5, 3, 7.5, 5,   6.5};
+  for (int i = 1; i < 20; ++i) {
+    const double tilt = inclinations[i - 1] * pi / 180;
     a[i] = {radii[i - 1],
             0.014 + 0.003 * (i % 5),
-            (i >= 10 ? pi - 0.03 : 0.012 * std::sin(i * 2.7)),
+            (i >= 10 ? pi - tilt : tilt),
             i * 0.73,
             i * 0.31,
             i * 2.399963};
+  }
   return a;
 }
 double diskVisibility(double d, double s, double r) {
@@ -70,7 +85,7 @@ double visibility(Vec3 p, Vec3 sun, const std::array<Body, 21> &bodies,
     }
   return result;
 }
-Vec3 ringNormal() {
+Vec3 giantPole() {
   const double tilt = 26.7 * pi / 180;
   return {std::sin(tilt) / std::sqrt(2.), std::cos(tilt),
           std::sin(tilt) / std::sqrt(2.)};
@@ -100,7 +115,7 @@ double ringOpticalDepth(double r) {
   return std::max(0., tau * fine * .55);
 }
 double ringSunVisibility(Vec3 p, Vec3 sun) {
-  const Vec3 normal = ringNormal();
+  const Vec3 normal = giantPole();
   const double mu = dot(normal, sun);
   if (std::abs(mu) < 1e-7)
     return 1;
@@ -128,6 +143,7 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
       seconds / daySeconds / (1 - orbitalSeconds / yearSeconds);
   const auto orbits = makeOrbits();
   s.bodies[0] = {{0, 0, 0}, 1, 0, orbitPhase * orbitalSeconds / 36000 * 2 * pi};
+  s.bodies[0].pole = giantPole();
   for (int i = 0; i < 20; ++i) {
     double radius = i == 0 ? 6371.0 / 71492.0
                            : (i < 6 ? 0.001 + 0.0003 * (i % 3)
@@ -136,15 +152,16 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
     s.bodies[i + 1] = {
         orbitPosition(orbits[i], orbitPhase), radius * (i == 0 ? 1.0 : 3.0),
         1 + (i % 4), orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5)};
+    s.bodies[i + 1].pole = orbitNormal(orbits[i]);
   }
-  const double rotation = 2 * pi * orbitPhase;
+  const double rotation = 2 * pi * orbitPhase + orbits[0].phase;
   // 38 N, 50 degrees from the subplanet meridian: giant stays low, with
   // libration.
   const double lat = 38 * pi / 180, lon = 50 * pi / 180;
-  const Vec3 toward = ry({-1, 0, 0}, rotation),
-             eastAxis = ry({0, 0, 1}, rotation);
+  const Vec3 toward = orbitToWorld(ry({-1, 0, 0}, rotation), orbits[0]),
+             eastAxis = orbitToWorld(ry({0, 0, 1}, rotation), orbits[0]);
   const Vec3 equator = toward * std::cos(lon) + eastAxis * std::sin(lon);
-  s.up = equator * std::cos(lat) + Vec3{0, 1, 0} * std::sin(lat);
+  s.up = equator * std::cos(lat) + orbitNormal(orbits[0]) * std::sin(lat);
   s.east = -toward * std::sin(lon) + eastAxis * std::cos(lon);
   s.north = normalized(cross(s.east, s.up));
   s.observer =

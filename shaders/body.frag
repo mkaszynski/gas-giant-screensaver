@@ -7,8 +7,11 @@ uniform vec4 uBody;
 uniform vec3 uAxisX,uAxisY,uAxisZ;
 uniform sampler2D uGiant;
 uniform int uMaterial;
+uniform int uOccluderCount;
+uniform vec4 uOccluders[21];
 #include "sphere_shadow.glsl"
 #include "ring_profile.glsl"
+#include "ring_layer.glsl"
 uniform float uSpin;
 float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
 float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
@@ -22,11 +25,16 @@ void main(){
  vec3 albedo;
  if(uMaterial==0){vec2 st=vec2(atan(sn.z,sn.x)/(2.*PI)+.5-uSpin/(2.*PI),acos(clamp(sn.y,-1.,1.))/PI);albedo=pow(texture(uGiant,st).rgb,vec3(2.2));}
  else {float f=fbm(sn*9.+float(uMaterial)*19.);float fine=noise(sn*180.);vec3 a=vec3(.28,.25,.22),b=vec3(.62,.58,.49);if(uMaterial==2){a=vec3(.3,.39,.42);b=vec3(.83,.86,.82);}if(uMaterial==3){a=vec3(.3,.16,.09);b=vec3(.6,.43,.29);}albedo=mix(a,b,smoothstep(.2,.75,f))*(.85+.15*fine);if(uMaterial==4){albedo=mix(vec3(.014,.045,.09),vec3(.11,.19,.09),smoothstep(.43,.5,f));albedo=mix(albedo,vec3(.75),smoothstep(.72,.86,abs(sn.y)));}}
- float mu=max(0.,dot(n,uSun));float eclipse=sphereSunVisibility(point+n*.00001);
+ float mu=max(0.,dot(n,uSun));float eclipse=sphereSunVisibility(point+n*.00001,uOccluderCount,uOccluders);
  if(mu>0.) eclipse*=ringSunTransmission(point+n*.00001,uSun);
  // Lambertian direct reflection, faint planetshine on moons, no artificial light on giant's night side.
  vec3 L=albedo*(mu*eclipse/PI+ (uMaterial==0?vec3(.0000003):vec3(.5,.65,1.)*uPlanetLight*.08));
  if(uMaterial==0) L+=vec3(.13,.21,.3)*pow(1.-max(0.,dot(n,-d)),5.)*pow(mu,.35)*eclipse*.045;
  gl_FragDepth=hit/256.;
- color=vec4((sky(d)+viewT(d)*L)*coverage,coverage);
+ // Rings behind the sphere are already in the background. Composite only
+ // the foreground disk here, before sphere coverage, so its antialiased
+ // silhouette blends against that background without a depth-buffer fringe.
+ vec4 frontRing=ringLayer(d,hit);
+ vec3 radiance=frontRing.rgb+(sky(d)+viewT(d)*L)*(1.-frontRing.a);
+ color=vec4(radiance*coverage,coverage);
 }

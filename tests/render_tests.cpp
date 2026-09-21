@@ -70,7 +70,7 @@ int main() {
       glClearDepthf(.4f);
       Renderer r(Renderer::defaultDataDirectory());
       require(glIsEnabled(GL_BLEND), "constructor must preserve host blending");
-      r.render(640, 360, 1350);
+      r.render(640, 360, 900);
       auto with = pixels(640, 360);
       require(glIsEnabled(GL_BLEND), "render must preserve host blending");
       GLint depthFunction = 0;
@@ -86,7 +86,7 @@ int main() {
       glGetIntegerv(GL_BLEND_SRC_RGB, &blendSource);
       require(blendSource == GL_SRC_ALPHA,
               "render must preserve blend factors");
-      r.render(640, 360, 1350, 1800, 1, false);
+      r.render(640, 360, 900, 1800, 1, false);
       auto without = pixels(640, 360);
       long visibleDifference = 0;
       int bottomDifference = 0;
@@ -130,7 +130,7 @@ int main() {
       {
         BrightSkyFixture fixture;
         Renderer brightSky(fixture.path.string());
-        for (double time : {0., 800., 880., 1350.}) {
+        for (double time : {0., 1320., 1180., 900.}) {
           r.render(640, 360, time);
           auto normal = pixels(640, 360);
           brightSky.render(640, 360, time);

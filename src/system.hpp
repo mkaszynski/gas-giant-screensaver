@@ -26,6 +26,7 @@ struct Body {
   double radius;
   int material;
   double spin;
+  Vec3 pole{0, 1, 0};
 };
 struct Scene {
   std::array<Body, 21> bodies;
@@ -38,7 +39,9 @@ struct Scene {
 // periods.
 constexpr double homeA = 3.0, homeE = 1.0 / 9.0, sunRadius = 0.00465047;
 constexpr double ringInner = 1.235, ringOuter = 1.780;
-Vec3 ringNormal();
+Vec3 giantPole();
+Vec3 equatorialToWorld(Vec3);
+Vec3 orbitNormal(const Orbit &);
 double ringOpticalDepth(double radius);
 double ringSunVisibility(Vec3 point, Vec3 toSun);
 Vec3 orbitPosition(const Orbit &, double periods);

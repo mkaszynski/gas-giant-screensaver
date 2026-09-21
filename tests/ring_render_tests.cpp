@@ -19,7 +19,7 @@ void require(bool condition, const char *message) {
 }
 struct ShadowFixture {
   std::filesystem::path path;
-  ShadowFixture(bool ringShadows, bool sphereShadows) {
+  ShadowFixture(bool ringShadows, bool sphereShadows, bool flat = false) {
     char name[] = "/tmp/observatory-rings-XXXXXX";
     auto dir = mkdtemp(name);
     require(dir, "temporary shader directory");
@@ -43,7 +43,23 @@ struct ShadowFixture {
       disable("ring_profile.glsl",
               "float ringSunTransmission(vec3 point,vec3 sun){");
     if (!sphereShadows)
-      disable("sphere_shadow.glsl", "float sphereSunVisibility(vec3 p){");
+      disable("sphere_shadow.glsl",
+              "float sphereSunVisibility(vec3 p,int count,vec4 blockers[21]){");
+    if (flat) {
+      for (const char *file : {"body.frag", "rings.frag"}) {
+        const auto target = path / "shaders" / file;
+        std::ifstream input(target);
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        auto source = buffer.str();
+        const auto end = source.rfind('}');
+        require(end != std::string::npos, "flat fixture main exists");
+        source.insert(end, std::string(file) == "body.frag"
+                               ? "color=vec4(vec3(.15)*coverage,coverage);\n"
+                               : "color=vec4(vec3(.15),1.);\n");
+        std::ofstream(target) << source;
+      }
+    }
   }
   ~ShadowFixture() { std::filesystem::remove_all(path); }
 };
@@ -52,6 +68,7 @@ Scene scene(Vec3 sun, double side = 1) {
   for (int i = 0; i < 21; ++i)
     s.bodies[i] = {{1e6 + i * 100., 1e6, 1e6}, .01, 3, 0};
   s.bodies[0] = {{0, 0, 0}, 1, 0, 0};
+  s.bodies[0].pole = giantPole();
   s.observer = {0, 0, side * 5};
   s.east = {side, 0, 0};
   s.up = {0, std::sqrt(.75), -side * .5};
@@ -111,7 +128,7 @@ int main() {
       Renderer ringShadowOff(noRings.path.string()),
           sphereShadowOff(noSpheres.path.string()),
           allShadowsOff(noShadows.path.string());
-      const Vec3 pole = ringNormal(), x = normalized(cross(pole, {0, 0, 1}));
+      const Vec3 pole = giantPole(), x = normalized(cross(pole, {0, 0, 1}));
       const Vec3 ringPoint = x * 1.52;
       auto s = scene(-x + pole * .25);
       auto a = render(normal, s), b = render(sphereShadowOff, s);
@@ -168,6 +185,28 @@ int main() {
           require(backDelta > frontDelta * .3,
                   "thin bands and gaps must transmit a background moon");
       }
+      // Equal-radiance opaque layers must not acquire a dark silhouette at
+      // partially covered sphere pixels. The former depth-tested ring pass
+      // rejected their entire pixel and exposed the dark sky under the edge.
+      ShadowFixture flatFixture(false, false, true);
+      Renderer flat(flatFixture.path.string());
+      s = scene({0, 0, 1});
+      const Vec3 toward = normalized(s.observer - ringPoint);
+      auto empty = render(flat, s);
+      s.bodies[2] = {ringPoint + toward * .3, .05, 3, 0};
+      auto foreground = render(flat, s);
+      const auto [cx, cy] = project(s, ringPoint);
+      int maxSeam = 0;
+      for (int y = cy - 12; y <= cy + 12; ++y)
+        for (int xPixel = cx - 12; xPixel <= cx + 12; ++xPixel)
+          for (int c = 0; c < 3; ++c) {
+            const auto at = (y * width + xPixel) * 4 + c;
+            maxSeam = std::max(maxSeam,
+                               std::abs(int(empty[at]) - int(foreground[at])));
+          }
+      std::cout << "Equal-radiance silhouette maximum delta: " << maxSeam
+                << '\n';
+      require(maxSeam <= 2, "ring/moon antialiasing must not leave dark seams");
       require(glGetError() == GL_NO_ERROR, "ring rendering GL errors");
     }
     glfwDestroyWindow(window);

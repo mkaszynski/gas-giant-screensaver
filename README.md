@@ -61,6 +61,8 @@ Installing the preview does not change any host configuration or idle timeout.
 - The observer moon has Earth's **6,371 km radius**. The other nineteen moons
   retain **three times their initial radii**; the largest is about three Earth
   radii. This is a fictional, artist-directed system.
+- Observer orbit: **10° inclined to the giant’s equator**. Other moon planes
+  span **1–10°** from that same equator, with different nodes.
 - Latitude 38° north, longitude 50° from the mean subplanet meridian. Mean
   synchronous rotation preserves natural eccentric-orbit libration.
 - Twenty moons includes the observer moon. Visibility and apparent size follow
@@ -109,8 +111,8 @@ and day/night contrast. Unit tests verify orbital geometry and eclipse cases.
 Capture and measure the real renderer:
 
 ```sh
-nix run . -- --capture twilight.png --time 880 --width 1920 --height 1080
-nix run . -- --benchmark 180 --time 1350 --width 1920 --height 1080
+nix run . -- --capture twilight.png --time 1180 --width 1920 --height 1080
+nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 ```
 
 `--time` sets the starting scene time; `--capture` freezes it. Normal launches

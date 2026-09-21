@@ -323,7 +323,7 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h, double seconds) {
 void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
   integer(p, "uRingsEnabled", enabled);
   vector(p, "uRingCenter", s.local(-s.observer));
-  vector(p, "uRingNormal", s.local(ringNormal()));
+  vector(p, "uRingNormal", s.local(giantPole()));
   glUniform2f(glGetUniformLocation(p, "uRingBounds"), ringInner, ringOuter);
   bind(p, 5, "uRingProfile", ringProfile);
 }
@@ -377,6 +377,30 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glBindVertexArray(starVao);
   glDrawArrays(GL_POINTS, 0, stars);
   glDisable(GL_BLEND);
+  std::vector<float> ringOccluders;
+  if (drawBodies && drawRings) {
+    common(ringProgram, s, w, h, seconds);
+    rings(ringProgram, s, true);
+    for (const auto &body : s.bodies) {
+      const double along = dot(body.position, s.sun);
+      const double perpendicular = length(body.position - s.sun * along);
+      if (along + body.radius < -ringOuter ||
+          perpendicular >
+              ringOuter + body.radius + std::max(0., along) * sunRadius)
+        continue;
+      const auto p = s.local(body.position - s.observer);
+      ringOccluders.insert(
+          ringOccluders.end(),
+          {float(p.x), float(p.y), float(p.z), float(body.radius)});
+    }
+    integer(ringProgram, "uRingOccluderCount", ringOccluders.size() / 4);
+    glUniform4fv(glGetUniformLocation(ringProgram, "uRingOccluders"),
+                 ringOccluders.size() / 4, ringOccluders.data());
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    quad(ringProgram);
+    glDisable(GL_BLEND);
+  }
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   std::vector<int> order;
@@ -407,11 +431,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       continue;
     common(bodyProgram, s, w, h, seconds);
     rings(bodyProgram, s, drawRings);
+    integer(bodyProgram, "uRingOccluderCount", ringOccluders.size() / 4);
+    if (!ringOccluders.empty())
+      glUniform4fv(glGetUniformLocation(bodyProgram, "uRingOccluders"),
+                   ringOccluders.size() / 4, ringOccluders.data());
     glUniform4f(glGetUniformLocation(bodyProgram, "uBody"), center.x, center.y,
                 center.z, b.radius);
     integer(bodyProgram, "uMaterial", b.material);
     scalar(bodyProgram, "uSpin", std::remainder(b.spin, 2 * pi));
-    const Vec3 axisY = idx == 0 ? ringNormal() : Vec3{0, 1, 0};
+    const Vec3 axisY = b.pole;
     const Vec3 axisX = normalized(cross(axisY, {0, 0, 1}));
     vector(bodyProgram, "uAxisX", s.local(axisX));
     vector(bodyProgram, "uAxisY", s.local(axisY));
@@ -441,30 +469,6 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     quad(bodyProgram);
     glDisable(GL_BLEND);
     glDisable(GL_SCISSOR_TEST);
-  }
-  if (drawBodies && drawRings) {
-    common(ringProgram, s, w, h, seconds);
-    rings(ringProgram, s, true);
-    std::vector<float> occluders;
-    for (const auto &body : s.bodies) {
-      const double along = dot(body.position, s.sun);
-      const double perpendicular = length(body.position - s.sun * along);
-      if (along + body.radius < -ringOuter ||
-          perpendicular >
-              ringOuter + body.radius + std::max(0., along) * sunRadius)
-        continue;
-      const auto p = s.local(body.position - s.observer);
-      occluders.insert(occluders.end(), {float(p.x), float(p.y), float(p.z),
-                                         float(body.radius)});
-    }
-    integer(ringProgram, "uOccluderCount", occluders.size() / 4);
-    glUniform4fv(glGetUniformLocation(ringProgram, "uOccluders"),
-                 occluders.size() / 4, occluders.data());
-    glDepthMask(GL_FALSE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    quad(ringProgram);
-    glDisable(GL_BLEND);
   }
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);

@@ -3,7 +3,8 @@
 ## Automated checks
 
 The local CMake/CTest gate covers the 1.25 apocenter/pericenter ratio, closed
-Keplerian paths, orbital clearance including the enlarged moon radii, local
+Keplerian paths, observer inclination of exactly 10 degrees and all other
+orbital planes within 10 degrees of the giant’s equator, orbital clearance including the enlarged moon radii, local
 coordinate frames, total/partial/annular eclipses, and invalid CLI arguments.
 
 The actual GLES renderer is exercised on an AMD Lucienne integrated GPU. GPU
@@ -30,6 +31,10 @@ These are framebuffer captures from the renderer, not generated concept art:
 - [Native Hyprlock input display](../assets/preview-lock.png)
 - [Observer-moon eclipse shadow on the giant](../assets/preview-eclipse.png)
 - [Ring shadows and the unlit ring face](../assets/preview-ring-shadow.png)
+
+Standalone capture times are 0 (day), 270 (Sun), 1180 (twilight), 900 (night),
+1000 (ring shadows), and 391780 (observer-moon eclipse during a later season).
+The native capture follows the running clock.
 
 [MP4 preview](../assets/preview.mp4) is H.264, 1280x800, 30 fps, 9 seconds.
 [Animated WebP](../assets/preview.webp) is 960x600, 20 fps, looping.
@@ -98,16 +103,23 @@ them without becoming fully opaque. The existing mountain/glare occlusion and
 GL state checks still pass; depth function, depth-write mask and clear depth
 are now included in host-state restoration checks.
 
+An additional GPU regression renders a foreground moon and its background ring
+with equal radiance. The complete moon silhouette must remain seamless, including
+partially covered pixels. Restoring the former depth-tested ring pass in an
+isolated test build failed with a maximum 241/255 channel difference; corrected
+composition passes with zero difference on this GPU. It adds no framebuffer,
+blur pass, or multisample storage.
+
 Matched 1920x1080 measurements on the same AMD Lucienne GPU, 180 frames at scene
-time 1350, capped at 30 fps:
+time 900 with the final inclined orbits and corrected edge composition, capped
+at 30 fps:
 
 | Mode | GPU median | GPU p95 | CPU+GPU median |
 | --- | ---: | ---: | ---: |
-| Rings disabled (`--no-rings`) | 2.82 ms | 3.50 ms | 4.43 ms |
-| Narrow translucent rings and all shadows | 3.30 ms | 4.68 ms | 4.81 ms |
+| Rings disabled (`--no-rings`) | 2.84 ms | 3.39 ms | 4.43 ms |
+| Narrow translucent rings and all shadows | 3.26 ms | 6.00 ms | 4.98 ms |
 
-The added median GPU time is about 0.48 ms. The original pre-ring renderer
-measured 2.82 ms in the same session. The new pass uses one static 4096x1
+The added median GPU time is about 0.42 ms. The new pass uses one static 4096x1
 RG16F radial profile (about 32 KiB including mipmaps), plus a 24-bit scene-depth
 attachment (driver storage typically 8 MiB at 1080p). These are timing and memory
 measurements/estimates, not watt measurements.
