@@ -18,6 +18,10 @@ void CObservatory::configure(
   fps = std::clamp<int>(std::any_cast<Hyprlang::INT>(props.at("fps")), 1, 60);
   day = std::clamp<int>(std::any_cast<Hyprlang::INT>(props.at("day_seconds")),
                         30, 86400);
+  lightningBrightness =
+      std::any_cast<Hyprlang::FLOAT>(props.at("lightning_brightness"));
+  auroraBrightness =
+      std::any_cast<Hyprlang::FLOAT>(props.at("aurora_brightness"));
   time = std::fmod(std::chrono::duration<double>(
                        std::chrono::system_clock::now().time_since_epoch())
                        .count(),
@@ -36,7 +40,8 @@ bool CObservatory::draw(const SRenderData &data) {
       time += std::min(dt, .25) * data.motionScale;
       renderer->render(viewport.x, viewport.y, time, day, data.opacity, true,
                        true,
-                       {time, std::max(.001, double(data.motionScale) / fps)});
+                       {time, std::max(.001, double(data.motionScale) / fps),
+                        true, true, lightningBrightness, auroraBrightness});
     } catch (const std::exception &e) {
       Debug::log(ERR, "Observatory: {}; using opaque fallback", e.what());
       failed = true;

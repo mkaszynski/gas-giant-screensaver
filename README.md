@@ -162,6 +162,19 @@ rendered with a 5× brightness boost, shared with lightning, for visibility.
 This scales emitted light before tone mapping; daylight can still wash it out. Geometry, foreground
 moons, translucent rings, local clouds and mountains control their visibility.
 
+Adjust them independently without rebuilding:
+
+```sh
+./build/gas-giant-screensaver --fullscreen --time 437625 \
+  --aurora-brightness 1000 --lightning-brightness 20
+```
+
+Both accept 0–1,000,000: `0` disables that effect, `1` is the modeled baseline,
+and `5` is the current default. Larger values brighten the effect before tone
+mapping, without changing its size or timing. Restart the preview to change
+values. In Hyprlock's `observatory` block, use `aurora_brightness = 1000.0` and
+`lightning_brightness = 20.0`; these also default to `5.0`.
+
 Use `--weather-time SECONDS` for a reproducible weather starting time, or
 `--no-emissions` for a comparison. See [physical assumptions, sources and
 rendering details](docs/EMISSIONS.md).

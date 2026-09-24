@@ -248,6 +248,30 @@ int main() {
         max = std::max(max, low);
       }
       require(max / min - 1 < .06, "aurora stable under subpixel motion");
+      // Each multiplier scales only its own emission, before tone mapping.
+      for (bool lightning : {false, true}) {
+        auto controlledScene =
+            lightning ? scene(flash.normal * 3) : scene({0, 1.5, -2.598076211});
+        EmissionFrame controlled{t, 1. / 30, lightning, !lightning, 1, 1};
+        const double baseline = flux(render(r, controlledScene, controlled));
+        require(baseline > 0, "brightness fixture has visible emission");
+        double &gain = lightning ? controlled.lightningBrightness
+                                 : controlled.auroraBrightness;
+        for (double value : {0., .5, 5., 1000.}) {
+          gain = value;
+          const double measured = flux(render(r, controlledScene, controlled));
+          if (value == 0)
+            require(measured == 0, "zero brightness disables selected effect");
+          else
+            require(std::abs(measured / (baseline * value) - 1) < .08,
+                    "independent brightness scales HDR emission linearly");
+        }
+        gain = 1;
+        (lightning ? controlled.auroraBrightness
+                   : controlled.lightningBrightness) = 1000000;
+        require(flux(render(r, controlledScene, controlled)) == baseline,
+                "disabled effect brightness cannot alter the other effect");
+      }
       // Exercise the actual foreground compositor, not the isolated HDR
       // fixture.
       Renderer actual(Renderer::defaultDataDirectory());

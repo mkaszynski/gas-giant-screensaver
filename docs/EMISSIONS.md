@@ -59,8 +59,16 @@ of perceptible visibility.
 
 ## Rendering and review
 
-Both effects now receive an explicit **5× visible-radiance boost** at rendering,
-as requested for visibility. The physical baseline below the gain, event rate,
+Both effects default to an explicit **5× visible-radiance boost** at rendering,
+as requested for visibility. `--lightning-brightness N` and
+`--aurora-brightness N` override each independently, from 0 to 1,000,000.
+Values are relative to modeled radiance: 1 is baseline, 5 preserves the previous
+build, and 0 disables the selected effect. `--no-emissions` overrides both.
+Hyprlock exposes the same values as `lightning_brightness` and
+`aurora_brightness` in its `observatory` block (both default to 5.0).
+CLI values outside the range or nonfinite values are rejected. The native
+renderer clamps out-of-range values and falls back to 5 for nonfinite values.
+Restart the preview or start a new lock session after changing settings. The physical baseline below the gain, event rate,
 pulse duration, geometry, filtering and occlusion are unchanged. This is an
 artistic brightness adjustment, not a revised Jovian measurement. Tone mapping
 means final display-code values do not increase by exactly five.

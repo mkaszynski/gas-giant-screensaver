@@ -286,3 +286,16 @@ lightning reference flux is 0.000142127, versus 0.0000284165 before the gain;
 the aurora reference is 0.0000324339 versus 0.00000646088. Half-float rounding
 accounts for the small deviation from exactly five. All nine CPU/CLI tests and
 six GPU suites pass, including daylight washout and foreground occlusion.
+
+### Independent brightness controls
+
+Seventeen CPU/CLI tests cover the brightness range, fractional values, zero,
+nonfinite input and values beyond the limit. The six GPU suites pass. New
+isolated HDR checks exercise each effect at 0, 0.5, 5 and 1000 and verify linear
+brightness scaling, zero output when disabled and independence from the other
+control. Default final-display samples remain 141/255 and 11/255.
+
+A real CLI capture at scene 437625 / weather 103.04 with aurora brightness 1000
+and lightning brightness 0 shows the reddish arc near the upper-left limb;
+compared with both controls at zero, the peak displayed increase is 222/255.
+The controls alter emission radiance only and do not add render passes.

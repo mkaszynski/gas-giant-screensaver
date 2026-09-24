@@ -609,6 +609,11 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
 void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
                          bool ringsEnabled, double daySeconds) {
   const auto &body = s.bodies[0];
+  auto brightness = [](double value) {
+    return std::isfinite(value) ? std::clamp(value, 0., 1.e6) : 5.;
+  };
+  const double lightningGain = brightness(frame.lightningBrightness);
+  const double auroraGain = brightness(frame.auroraBrightness);
   const double focal = h / (2 * std::tan(29 * pi / 180));
   struct Pixel {
     double x, y;
@@ -628,8 +633,9 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
       vertices.push_back(float(value));
   };
   for (const auto &flash :
-       (frame.lightning ? lightningAt(acceleratedLightning(frame, daySeconds))
-                        : std::vector<LightningFlash>{})) {
+       (frame.lightning && lightningGain > 0
+            ? lightningAt(acceleratedLightning(frame, daySeconds))
+            : std::vector<LightningFlash>{})) {
     const Vec3 normal = bodyDirection(flash.normal, body);
     const Vec3 world = body.position + normal * body.radius;
     const Vec3 point = s.local(world - s.observer);
@@ -648,7 +654,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
     const double area = 2 * pi * std::pow(flash.sigmaKm * 1000, 2);
     const double peak =
         flash.powerWatts / (pi * area * visibleSolarIrradiance) * mu;
-    const Vec3 light = Vec3{1.04, .98, .98} * peak;
+    const Vec3 light = Vec3{1.04, .98, .98} * (peak * lightningGain);
     for (int corner : {0, 1, 2, 2, 1, 3}) {
       const double x = corner & 1 ? extent : -extent;
       const double y = corner & 2 ? extent : -extent;
@@ -664,7 +670,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
   constexpr double photonEnergy = 6.62607015e-34 * 299792458. / 650e-9;
   const double baseRadiance = auroraRayleighs(frame.seconds) * 1.e10 /
                               (4 * pi) * photonEnergy / visibleSolarIrradiance;
-  if (frame.aurora)
+  if (frame.aurora && auroraGain > 0)
     for (int hemisphere : {-1, 1}) {
       struct Sample {
         Pixel screen, offset;
@@ -705,7 +711,8 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
         samples[i] = {center,
                       {across.x - center.x, across.y - center.y},
                       point,
-                      Vec3{1.6, .65, .75} * (baseRadiance * path * structure),
+                      Vec3{1.6, .65, .75} *
+                          (baseRadiance * path * structure * auroraGain),
                       0};
       }
       // Filter segment endpoints too: short bright tangent sections otherwise
