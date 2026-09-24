@@ -609,11 +609,11 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
 void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
                          bool ringsEnabled, double daySeconds) {
   const auto &body = s.bodies[0];
-  auto brightness = [](double value) {
-    return std::isfinite(value) ? std::clamp(value, 0., 1.e6) : 5.;
+  auto brightness = [](double value, double fallback) {
+    return std::isfinite(value) ? std::clamp(value, 0., 1.e6) : fallback;
   };
-  const double lightningGain = brightness(frame.lightningBrightness);
-  const double auroraGain = brightness(frame.auroraBrightness);
+  const double lightningGain = brightness(frame.lightningBrightness, 5);
+  const double auroraGain = brightness(frame.auroraBrightness, 100);
   const double focal = h / (2 * std::tan(29 * pi / 180));
   struct Pixel {
     double x, y;
@@ -666,7 +666,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
   // fictional planet. It is attached to the rotating body, not the camera.
   constexpr int segments = 256;
   constexpr double altitude = 120. / 71492.,
-                   sigmaAngle = 350. / 2.354820045 / 71492.;
+                   sigmaAngle = 2800. / 2.354820045 / 71492.;
   constexpr double photonEnergy = 6.62607015e-34 * 299792458. / 650e-9;
   const double baseRadiance = auroraRayleighs(frame.seconds) * 1.e10 /
                               (4 * pi) * photonEnergy / visibleSolarIrradiance;
@@ -680,9 +680,16 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
       std::array<Sample, segments + 1> samples{};
       for (int i = 0; i <= segments; ++i) {
         const double longitude = 2 * pi * i / segments;
+        // Traveling waves deform the oval slowly in the weather clock,
+        // independently of body rotation. No random per-frame displacement.
+        const double drift = hemisphere * frame.seconds / 45.;
         const double colat =
-            (20 + 2 * std::sin(2 * longitude) + 3 * std::sin(longitude)) * pi /
-            180;
+            (20 + 2 * std::sin(2 * longitude) + 3 * std::sin(longitude) +
+             1.2 * std::sin(5 * longitude - drift) +
+             .6 * std::sin(9 * longitude + drift * .73)) *
+            pi / 180;
+        const double ribbonWidth =
+            sigmaAngle * (1 + .18 * std::sin(4 * longitude - drift * .8));
         const double tilt = (hemisphere > 0 ? 10. : -3.) * pi / 180;
         auto normalAt = [&](double angle) {
           Vec3 n{std::sin(angle) * std::cos(longitude),
@@ -700,7 +707,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
         const auto center = project(point);
         const auto across = project(
             s.local(body.position +
-                    normalAt(colat + sigmaAngle) * (body.radius + altitude) -
+                    normalAt(colat + ribbonWidth) * (body.radius + altitude) -
                     s.observer));
         const double mu = std::abs(dot(s.local(normal), normalized(-point)));
         // Finite emitting-layer thickness bounds tangent-path enhancement.
@@ -711,7 +718,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
         samples[i] = {center,
                       {across.x - center.x, across.y - center.y},
                       point,
-                      Vec3{1.6, .65, .75} *
+                      Vec3{.92, .80, 1.12} *
                           (baseRadiance * path * structure * auroraGain),
                       0};
       }

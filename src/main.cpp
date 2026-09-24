@@ -36,7 +36,8 @@ int main(int argc, char **argv) {
   try {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
     double day = 1800, time = -1, weatherTime = -1, timeout = 0,
-           timeStep = 1.0 / 30, lightningBrightness = 5, auroraBrightness = 5;
+           timeStep = 1.0 / 30, lightningBrightness = 5,
+           auroraBrightness = 100;
     bool fullscreen = false, drawRings = true, drawEmissions = true;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
@@ -61,7 +62,7 @@ int main(int argc, char **argv) {
                "  --lightning-brightness N  Lightning multiplier, 0..1000000 "
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
-               "(default 5)\n"
+               "(default 100)\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"
                "Escape or Q closes the preview. This preview does "

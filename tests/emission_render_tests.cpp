@@ -272,6 +272,40 @@ int main() {
         require(flux(render(r, controlledScene, controlled)) == baseline,
                 "disabled effect brightness cannot alter the other effect");
       }
+      // Keep the planet fixed: the aurora itself must flow continuously.
+      s = scene({0, 1.5, -2.598076211});
+      EmissionFrame moving{t, 1. / 30, false, true};
+      const auto startArc = render(r, s, moving);
+      const Vec3 center = s.local(-s.observer);
+      const double pixelMargin =
+          2 * length(center) * std::tan(29 * pi / 180) / 180;
+      for (int y = 0; y < 180; ++y)
+        for (int x = 0; x < 320; ++x) {
+          const Vec3 ray =
+              normalized(s.forward +
+                         s.right * ((2 * (x + .5) / 320 - 1) * 320 / 180. *
+                                    std::tan(29 * pi / 180)) +
+                         s.cameraUp * ((2 * (y + .5) / 180 - 1) *
+                                       std::tan(29 * pi / 180)));
+          if (length(cross(center, ray)) > 1 + 120. / 71492 + pixelMargin)
+            for (int channel = 0; channel < 3; ++channel)
+              require(startArc[(y * 320 + x) * 4 + channel] == 0,
+                      "wide aurora cannot spill beyond its atmospheric shell");
+        }
+      auto shapeDifference = [&](double elapsed) {
+        moving.seconds = t + elapsed;
+        const auto nextArc = render(r, s, moving);
+        const double a = flux(startArc), b = flux(nextArc);
+        double difference = 0;
+        for (size_t i = 0; i < startArc.size(); ++i)
+          if (i % 4 != 3)
+            difference += std::abs(startArc[i] / a - nextArc[i] / b);
+        return difference;
+      };
+      require(shapeDifference(30) > .05,
+              "auroral shape and bright patches move without planet rotation");
+      require(shapeDifference(.001) < .02,
+              "auroral motion is continuous rather than frame-random flicker");
       // Exercise the actual foreground compositor, not the isolated HDR
       // fixture.
       Renderer actual(Renderer::defaultDataDirectory());

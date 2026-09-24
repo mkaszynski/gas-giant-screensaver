@@ -23,7 +23,7 @@
 +    m_config.addSpecialConfigValue("observatory", "fps", Hyprlang::INT{30});
 +    m_config.addSpecialConfigValue("observatory", "day_seconds", Hyprlang::INT{1800});
 +    m_config.addSpecialConfigValue("observatory", "lightning_brightness", Hyprlang::FLOAT{5.0});
-+    m_config.addSpecialConfigValue("observatory", "aurora_brightness", Hyprlang::FLOAT{5.0});
++    m_config.addSpecialConfigValue("observatory", "aurora_brightness", Hyprlang::FLOAT{100.0});
 +    m_config.addSpecialConfigValue("observatory", "zindex", Hyprlang::INT{-1});
  
      m_config.addSpecialCategory("shape", Hyprlang::SSpecialCategoryOptions{.key = nullptr, .anonymousKeyBased = true});

@@ -55,6 +55,8 @@ void main(){
        // antialiasing vertices: inward subpixels hit the shell sooner.
        bool front=dot(point-body.xyz,d)<0.;
        float shell=body.w+120./71492.;
+       // Wide, filtered ribbons must stay inside the emitting shell silhouette.
+       visible*=1.-smoothstep(shell-.5*width,shell+.5*width,impact);
        float halfPath=sqrt(max(0.,shell*shell-impact*impact));
        dist=along+(front?-halfPath:halfPath);
        if(!front)visible*=1.-coverage;
