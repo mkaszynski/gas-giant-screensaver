@@ -158,7 +158,8 @@ Water-cloud thunderstorms produce small, brief glows on the giant. Flash frequen
 duration follow the orbital simulation speed (about 17.8× at the default
 30-minute day). Sub-frame pulses retain their energy through exposure integration.
 Persistent, thin polar auroras use visible-light brightness estimates; they are
-intentionally faint and usually lost against daylight. Geometry, foreground
+rendered with a 5× brightness boost, shared with lightning, for visibility.
+This scales emitted light before tone mapping; daylight can still wash it out. Geometry, foreground
 moons, translucent rings, local clouds and mountains control their visibility.
 
 Use `--weather-time SECONDS` for a reproducible weather starting time, or

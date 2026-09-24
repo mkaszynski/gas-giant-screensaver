@@ -268,7 +268,8 @@ fastest setting where many complete events occur within one display frame.
 
 ### Final display visibility regression
 
-The complete 1920x1080 RGBA8 output is compared with emissions disabled. At
+The complete 1920x1080 RGBA8 output is compared with emissions disabled. Before
+the subsequent 5× visibility boost, at
 scene 430350 and accelerated weather 430354.833333333, a lightning flash changes
 the peak channel by 49/255 after bounded dark-scene adaptation (previously
 5/255). At scene 437625 and weather 103.04, aurora changes the peak channel by
@@ -276,3 +277,12 @@ the peak channel by 49/255 after bounded dark-scene adaptation (previously
 washes out the flash. The aurora check proves survival through the compositor,
 not naked-eye perceptibility; it remains extremely subtle. All six GPU suites
 continue to check ring shadows, silhouettes, terrain, and scattering edges.
+
+### Fivefold emission brightness
+
+With the requested 5× radiance gain, the same final-display samples measure
+141/255 for lightning and 11/255 for aurora (formerly 49 and 4). The isolated
+lightning reference flux is 0.000142127, versus 0.0000284165 before the gain;
+the aurora reference is 0.0000324339 versus 0.00000646088. Half-float rounding
+accounts for the small deviation from exactly five. All nine CPU/CLI tests and
+six GPU suites pass, including daylight washout and foreground occlusion.

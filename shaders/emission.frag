@@ -76,5 +76,6 @@ void main(){
  float coverage=max(0.,smoothstep(-.5*max(fwidth(outer),1.e-12),.5*max(fwidth(outer),1.e-12),outer)-smoothstep(-.5*max(fwidth(inner),1.e-12),.5*max(fwidth(inner),1.e-12),inner));
  if(uRingsEnabled&&abs(denom)>1.e-7&&ringHit>0.&&ringHit<dist)
    visible*=1.-coverage+coverage*exp(-ringTau(clamp(radius,uRingBounds.x,uRingBounds.y),lod)/max(abs(denom),.0001));
- color=vec4(radiance*max(0.,shape)*visible*viewT(d),0.);
+ // Requested visibility boost: five times the modeled visible radiance.
+ color=vec4(5.*radiance*max(0.,shape)*visible*viewT(d),0.);
 }

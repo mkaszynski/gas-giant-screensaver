@@ -59,6 +59,12 @@ of perceptible visibility.
 
 ## Rendering and review
 
+Both effects now receive an explicit **5× visible-radiance boost** at rendering,
+as requested for visibility. The physical baseline below the gain, event rate,
+pulse duration, geometry, filtering and occlusion are unchanged. This is an
+artistic brightness adjustment, not a revised Jovian measurement. Tone mapping
+means final display-code values do not increase by exactly five.
+
 One additive geometry batch contains only the active flash patches and two
 256-segment auroral strips. No extra framebuffer, shadow map, fullscreen blur,
 or texture is allocated. Gaussian pixel integration preserves unresolved flash
@@ -104,7 +110,7 @@ executable and compiled shaders. An eclipse provides a useful lightning check:
 ./build/gas-giant-screensaver --fullscreen --time 430350
 ```
 
-At 1080p, scene 430350 / weather 430354.833333333 changes the brightest lightning
+Before the 5× rendering boost, at 1080p, scene 430350 / weather 430354.833333333 changes the brightest lightning
 pixel by 49/255 in the development GPU's final output. The previous exposure
 produced only 5/255. A favorable aurora at scene 437625 / weather 103.04 changes
 a channel by only 4/255, so it may still be imperceptible on a monitor. These
