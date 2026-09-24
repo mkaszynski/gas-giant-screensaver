@@ -51,8 +51,11 @@ Neither eclipses nor ring shadows turn electrical emission off.
 
 No bright UV dawn-storm power is added to RGB. Moon footprints require an
 assumed plasma interaction model and are not synthesized for all 20 moons.
-The existing display exposure and low-latitude, nearby observer make these
-visible-light ovals very faint; much of an oval can also lie behind the planet.
+The low-latitude, nearby observer makes these visible-light ovals very faint;
+much of an oval can lie behind the planet. At the ordinary display exposure
+they can quantize to zero. Favorable eclipse views retain a faint arc, not a
+prominent colorful curtain. Shader-level nonzero radiance alone is not evidence
+of perceptible visibility.
 
 ## Rendering and review
 
@@ -67,7 +70,13 @@ compositor after/before the appropriate stages.
 Fixed 128× internal pre-exposure preserves dim emission in the existing RGBA16F
 scene buffer, with explicit high-precision sampling when decoding it. Very high
 values are bounded before half-float overflow; the solar disk remains far above
-display white. Exposure shown to the user is unchanged. GPU tests compare actual
+display white. A bounded dark-scene exposure now responds to solar visibility
+and the giant's Lambert phase, increasing sensitivity only with a dim sky and
+dim giant (up to eight stops). This is a deterministic display approximation,
+not a retinal-adaptation simulation; it does not change emitted energy. Bright
+rings can overexpose as they would in a longer photographic exposure. Decorative
+sky/ground light floors and artist-scaled stars retain their display brightness
+instead of being amplified along with physical emission. GPU tests compare actual
 linear radiance with 8×-per-axis references and fractional-pixel camera motion.
 
 `--weather-time SECONDS` sets the starting weather clock for repeatable previews.
@@ -85,3 +94,19 @@ freeze both clocks. Recording advances each clock by `--time-step`; use
 - [Ingersoll et al. (1998), Imaging Jupiter's Aurora at Visible Wavelengths](https://doi.org/10.1006/icar.1998.5971): approximately 80–300 kR overhead broadband radiance.
 - [Vasavada et al. (1999), Jupiter's visible aurora and Io footprint](https://doi.org/10.1029/1999JE001055): persistent thin arcs, altitude and optical power.
 - [NASA, Night Side Jovian Aurora](https://science.nasa.gov/photojournal/night-side-jovian-aurora/): visible emission, display-color caveat and hydrogen interpretation.
+
+## Reproducible visibility check
+
+Restart an already-running preview after rebuilding; it retains its previous
+executable and compiled shaders. An eclipse provides a useful lightning check:
+
+```sh
+./build/gas-giant-screensaver --fullscreen --time 430350
+```
+
+At 1080p, scene 430350 / weather 430354.833333333 changes the brightest lightning
+pixel by 49/255 in the development GPU's final output. The previous exposure
+produced only 5/255. A favorable aurora at scene 437625 / weather 103.04 changes
+a channel by only 4/255, so it may still be imperceptible on a monitor. These
+are output-code differences, not measurements of human visual thresholds.
+Sunlit scenes continue to wash the effects out.

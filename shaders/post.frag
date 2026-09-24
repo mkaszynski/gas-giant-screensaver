@@ -40,7 +40,7 @@ void main(){vec3 d=ray();vec3 L=sceneColor(uv);
  // The ridge is a shallow foreground strip. Alpha is retained from the original asset.
  vec2 mt=vec2(uv.x,(1.-uv.y/.30));
  if(uv.y<.30){vec4 mountain=texture(uMountains,clamp(mt,0.,1.));vec3 albedo=pow(mountain.rgb/max(mountain.a,1.e-5),vec3(2.2));
- vec3 light=vec3(.000040)+vec3(.10,.16,.24)*uPlanetLight*.10;
+ vec3 light=vec3(.000040)/uDarkGain+vec3(.10,.16,.24)*uPlanetLight*.10;
  light+=transmission(uTrans,.2,max(.01,uSun.y))*max(0.,uSun.y)*uEclipse*.20;
  light+=sky(vec3(0,1,0))*.45;
  vec3 terrain=albedo*light;

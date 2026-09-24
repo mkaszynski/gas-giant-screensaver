@@ -45,7 +45,7 @@ void main(){
  float mu=max(0.,dot(n,uSun));float eclipse=sphereSunVisibility(point+n*.00001,uOccluderCount,uOccluders);
  if(mu>0.) eclipse*=ringSunTransmission(point+n*.00001,uSun);
  // Lambertian direct reflection, faint planetshine on moons, no artificial light on giant's night side.
- vec3 L=albedo*(mu*eclipse/PI+ (uMaterial==0?vec3(.0000003):vec3(.5,.65,1.)*uPlanetLight*.08));
+ vec3 L=albedo*(mu*eclipse/PI+ (uMaterial==0?vec3(.0000003)/uDarkGain:vec3(.5,.65,1.)*uPlanetLight*.08));
 #ifdef GIANT_ATMOSPHERE
  {
    vec3 sum=vec3(0.);float alpha=0.;

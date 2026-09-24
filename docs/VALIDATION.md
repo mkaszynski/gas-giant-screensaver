@@ -257,9 +257,22 @@ exceeded 8/255. At night scene 900 the nearly full giant hid all flashes below
 old rates are not predictions for the final accelerated model.
 Actual full-resolution night/eclipse captures and a six-second 30-fps sequence
 were generated for review. The aurora is intentionally extremely subtle at
-the existing exposure and low-latitude viewpoint.
+the low-latitude viewpoint. Subsequent final-output checks exposed near-zero
+visibility at the original exposure; the dark-scene adaptation described below
+addresses lightning without changing its physical energy.
 
 After switching lightning to orbital time, tests also integrate complete event
 windows at 15/30/60 fps for 30-second, 30-minute and 24-hour solar days. All
 recover the same physical energy for their respective windows, including the
 fastest setting where many complete events occur within one display frame.
+
+### Final display visibility regression
+
+The complete 1920x1080 RGBA8 output is compared with emissions disabled. At
+scene 430350 and accelerated weather 430354.833333333, a lightning flash changes
+the peak channel by 49/255 after bounded dark-scene adaptation (previously
+5/255). At scene 437625 and weather 103.04, aurora changes the peak channel by
+4/255. Tests require at least 20 and 2 respectively, and verify daylight still
+washes out the flash. The aurora check proves survival through the compositor,
+not naked-eye perceptibility; it remains extremely subtle. All six GPU suites
+continue to check ring shadows, silhouettes, terrain, and scattering edges.

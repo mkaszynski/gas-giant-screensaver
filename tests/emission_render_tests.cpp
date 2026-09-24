@@ -89,6 +89,34 @@ std::vector<float> render(Renderer &r, const Scene &s, EmissionFrame frame,
   glDeleteTextures(1, &tex);
   return p;
 }
+// Validate the actual display path as well as isolated linear radiance. A
+// physically nonzero signal can otherwise disappear in exposure/quantization.
+int displayDifference(Renderer &r, double time, EmissionFrame frame) {
+  constexpr int w = 1920, h = 1080;
+  GLuint fbo, texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture, 0);
+  require(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+          "display framebuffer");
+  std::vector<unsigned char> off(w * h * 4), on(off.size());
+  r.render(w, h, time);
+  glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, off.data());
+  r.render(w, h, time, 1800, 1, true, true, frame);
+  glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, on.data());
+  int peak = 0;
+  for (size_t i = 0; i < on.size(); ++i)
+    peak = std::max(peak, int(on[i]) - int(off[i]));
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &texture);
+  return peak;
+}
 double flux(const std::vector<float> &p) {
   double f = 0;
   for (size_t i = 0; i < p.size(); i++)
@@ -235,6 +263,19 @@ int main() {
             require(hidden[(y * 320 + x) * 4 + c] ==
                         background[(y * 320 + x) * 4 + c],
                     "opaque mountains block emission in the actual compositor");
+      const int flashDisplay = displayDifference(
+          actual, 430350, {430354.833333333, 1. / 30, true, false});
+      const int auroraDisplay =
+          displayDifference(actual, 437625, {103.04, 1. / 30, false, true});
+      std::cout << "Final display lightning " << flashDisplay << " aurora "
+                << auroraDisplay << '\n';
+      require(flashDisplay >= 20,
+              "eclipse flash survives final exposure and display quantization");
+      require(auroraDisplay >= 2,
+              "visible part of aurora survives the actual eclipse compositor");
+      require(displayDifference(actual, 1400,
+                                {430354.833333333, 1. / 30, true, false}) <= 2,
+              "sunlight continues to wash out calibrated lightning");
       require(glGetError() == GL_NO_ERROR, "GL errors");
     }
     glfwDestroyWindow(win);

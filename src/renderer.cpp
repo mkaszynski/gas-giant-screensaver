@@ -410,8 +410,26 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h, double seconds) {
   // pumping).
   double daylight = std::clamp((s.sunLocal.y + .18) / .30, 0., 1.);
   daylight = daylight * daylight * (3 - 2 * daylight);
+  // Adapt only when both the local sky and the visible giant are dim. The
+  // Lambert phase integral suppresses adaptation beside a sunlit giant even
+  // when the observer is at midnight. This bounded display model is not an
+  // emission-energy multiplier or a claim to simulate retinal adaptation.
+  const double phaseAngle = std::acos(std::clamp(
+      dot(normalized(s.observer - s.bodies[0].position), s.sun), -1., 1.));
+  const double phase =
+      (std::sin(phaseAngle) + (pi - phaseAngle) * std::cos(phaseAngle)) / pi;
+  const double planet =
+      .45 * phase *
+      std::pow(s.bodies[0].radius / length(s.observer - s.bodies[0].position),
+               2);
+  const double dark = 1 - daylight * s.sunVisibility;
+  const double dimPlanet = std::clamp(1 - planet / .002, 0., 1.);
+  const double gain = 1 + 255 * std::pow(dark, 4) * dimPlanet * dimPlanet /
+                              (1 + planet * 50000);
+  scalar(p, "uDarkGain", gain);
   scalar(p, "uExposure",
-         std::exp(std::log(18.) * (1 - daylight) + std::log(12.) * daylight));
+         gain * std::exp(std::log(18.) * (1 - daylight) +
+                         std::log(12.) * daylight));
   bind(p, 0, "uSky", sky.texture);
   bind(p, 1, "uTrans", trans.texture);
 }
