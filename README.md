@@ -159,8 +159,8 @@ duration follow the orbital simulation speed (about 17.8× at the default
 30-minute day). Sub-frame pulses retain their energy through exposure integration.
 Broad, pale lavender polar auroras use a deliberately brighter artistic style.
 Their ribbons are eight times wider than the original thin arcs, with slow
-undulations and drifting bright patches. Aurora brightness defaults to 100×
-the modeled baseline (20× the previous brightness); lightning remains at 5×.
+undulations and drifting bright patches. Aurora brightness defaults to 1000×
+the modeled baseline (200× the earlier brightness of 5); lightning remains at 5×.
 Brightness scales emitted light before tone mapping; daylight can still wash
 it out. Geometry, foreground moons, translucent rings, local clouds and
 mountains control their visibility.
@@ -169,14 +169,14 @@ Adjust them independently without rebuilding:
 
 ```sh
 ./build/gas-giant-screensaver --fullscreen --time 437625 \
-  --aurora-brightness 100 --lightning-brightness 20
+  --aurora-brightness 1000 --lightning-brightness 20
 ```
 
 Both accept 0–1,000,000: `0` disables that effect, `1` is the modeled baseline,
-with defaults of `5` for lightning and `100` for auroras. Larger values brighten
+with defaults of `5` for lightning and `1000` for auroras. Larger values brighten
 the effect before tone mapping, without changing its size or timing. Restart the preview to change
-values. In Hyprlock's `observatory` block, use `aurora_brightness = 100.0` and
-`lightning_brightness = 20.0`; their defaults are `100.0` and `5.0`, respectively.
+values. In Hyprlock's `observatory` block, use `aurora_brightness = 1000.0` and
+`lightning_brightness = 20.0`; their defaults are `1000.0` and `5.0`, respectively.
 
 Use `--weather-time SECONDS` for a reproducible weather starting time, or
 `--no-emissions` for a comparison. See [physical assumptions, sources and

@@ -613,7 +613,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
     return std::isfinite(value) ? std::clamp(value, 0., 1.e6) : fallback;
   };
   const double lightningGain = brightness(frame.lightningBrightness, 5);
-  const double auroraGain = brightness(frame.auroraBrightness, 100);
+  const double auroraGain = brightness(frame.auroraBrightness, 1000);
   const double focal = h / (2 * std::tan(29 * pi / 180));
   struct Pixel {
     double x, y;

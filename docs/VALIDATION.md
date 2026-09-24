@@ -305,7 +305,7 @@ The controls alter emission radiance only and do not add render passes.
 ### Wide moving lavender auroras
 
 Auroras now use 2800 km FWHM ribbons with pale lavender radiance and a default
-brightness multiplier of 100 (20 times the previous 5). Continuous traveling
+brightness multiplier of 1000 (200 times the earlier 5). Continuous traveling
 waves deform the ovals and modulate their width; bright patches drift along
 them. GPU tests keep the planet fixed and verify spatial change over 30 seconds
 and continuity over a millisecond. Wider filtered ribbons are clipped to the

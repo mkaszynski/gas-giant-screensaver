@@ -9,7 +9,7 @@ struct EmissionFrame {
   double exposure = 1. / 30;
   bool lightning = true, aurora = true;
   // Multipliers of modeled radiance; auroras use a brighter artistic default.
-  double lightningBrightness = 5, auroraBrightness = 100;
+  double lightningBrightness = 5, auroraBrightness = 1000;
 };
 struct LightningFlash {
   Vec3 normal;

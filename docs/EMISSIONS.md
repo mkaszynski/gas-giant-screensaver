@@ -40,7 +40,7 @@ while brighter patches drift along it. Motion is continuous and deterministic,
 using the displayed weather clock rather than random frame-to-frame jumps.
 
 The requested visual style uses **2800 km FWHM ribbons**, eight times the
-original width, a **whitish lavender** tint, and **100× baseline brightness** (20× the previous default of 5).
+original width, a **whitish lavender** tint, and **1000× baseline brightness** (200× the earlier default of 5).
 These are deliberate artistic choices for readable moving bands. The underlying
 160 kR baseline remains a Jovian visible-light reference; the resulting wider,
 brighter, recolored display is not a calibrated naked-eye prediction.
@@ -55,7 +55,7 @@ No separate UV dawn-storm power or synthesized moon-footprint model is added.
 
 Brightness is independently adjustable with `--lightning-brightness N` and
 `--aurora-brightness N`, from 0 to 1,000,000. Defaults are **5 for lightning**
-and **100 for auroras**. Values multiply modeled radiance: 1 is baseline, and
+and **1000 for auroras**. Values multiply modeled radiance: 1 is baseline, and
 0 disables the selected effect. `--no-emissions` overrides both.
 Hyprlock exposes the same controls as `lightning_brightness` and
 `aurora_brightness` in its `observatory` block, with the same defaults.
