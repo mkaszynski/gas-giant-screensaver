@@ -146,3 +146,9 @@ its integrated columns. Off-disk extinction uses mean RGB transmission because
 standard premultiplied-alpha blending has one opacity; scattering and on-disk
 extinction are RGB. This avoids another scene copy/composition pass for the
 subpixel rim. The existing moon-sky eclipse approximation remains unchanged.
+
+## Electrical emission
+
+[Lightning and visible auroras](EMISSIONS.md) use an independent real-time clock,
+physically normalized emission, and a bounded additive geometry pass before
+foreground composition. Their timing is not multiplied by orbital speed.

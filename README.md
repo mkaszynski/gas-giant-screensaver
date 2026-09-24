@@ -131,6 +131,7 @@ ctest --test-dir build --output-on-failure
 ./build/edge-render-tests
 ./build/atmosphere-render-tests
 ./build/scattering-edge-tests
+./build/emission-render-tests
 nix flake check
 ```
 
@@ -150,6 +151,18 @@ nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 `--time` sets the starting scene time; `--capture` freezes it. Normal launches
 continue from wall-clock-derived celestial time. `--day-seconds` changes the
 speed of the system. See `--help` for recording options.
+
+## Lightning and auroras
+
+Water-cloud thunderstorms produce small, brief glows on the giant. Flash timing
+runs in real seconds independently of the accelerated orbit and unlock slowdown.
+Persistent, thin polar auroras use visible-light brightness estimates; they are
+intentionally faint and usually lost against daylight. Geometry, foreground
+moons, translucent rings, local clouds and mountains control their visibility.
+
+Use `--weather-time SECONDS` for a reproducible weather starting time, or
+`--no-emissions` for a comparison. See [physical assumptions, sources and
+rendering details](docs/EMISSIONS.md).
 
 ## Scope and provenance
 

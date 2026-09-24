@@ -19,6 +19,6 @@ private:
   std::string output;
   int fps = 30, day = 1800;
   bool failed = false;
-  double time = 0;
+  double time = 0, weatherTime = 0;
   std::chrono::steady_clock::time_point last;
 };

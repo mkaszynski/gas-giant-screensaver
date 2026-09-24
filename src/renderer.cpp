@@ -121,6 +121,20 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
         std::string("#define GIANT_ATMOSPHERE\n#define GIANT_SLAB_LUT\n") +
             (giantAtmosphere == 1 ? "#define GIANT_INTERIOR\n"
                                   : "#define GIANT_LIMB\n"));
+  // Fixed pre-exposure preserves dim visible auroras in the existing RGBA16F
+  // target. No larger framebuffer or extra pass. The solar disk is already
+  // far above display white; clamp it before half-float storage can overflow.
+  if (fragment == "background.frag" || fragment == "body.frag" ||
+      fragment == "stars.frag" || fragment == "rings.frag" ||
+      fragment == "emission.frag") {
+    const auto main = fragmentSource.find("void main()");
+    if (main == std::string::npos)
+      throw std::runtime_error("Missing scene shader entry point");
+    fragmentSource.replace(main, 11, "void scenePixel()");
+    fragmentSource +=
+        "\nvoid "
+        "main(){scenePixel();color.rgb=min(color.rgb*128.,vec3(60000.));}\n";
+  }
   GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)),
          fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
   GLuint p = glCreateProgram();
@@ -252,6 +266,18 @@ Renderer::Renderer(std::string dir) : root(std::move(dir)) {
   ringProgram = program("rings.frag");
   starProgram = program("stars.frag", "stars.vert");
   postProgram = program("post.frag");
+  emissionProgram = program("emission.frag", "emission.vert");
+  glGenVertexArrays(1, &emissionVao);
+  glGenBuffers(1, &emissionBuffer);
+  glBindVertexArray(emissionVao);
+  glBindBuffer(GL_ARRAY_BUFFER, emissionBuffer);
+  for (int i = 0, offset = 0; i < 4; ++i) {
+    const int size = i == 0 ? 2 : (i == 3 ? 4 : 3);
+    glEnableVertexAttribArray(i);
+    glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, 12 * sizeof(float),
+                          reinterpret_cast<void *>(offset * sizeof(float)));
+    offset += size;
+  }
   giant = imageTexture("giant.png");
   mountains = imageTexture("mountains.png");
   constexpr int profileWidth = 4096;
@@ -364,6 +390,8 @@ Renderer::~Renderer() {
   for (auto t : textures)
     glDeleteTextures(1, &t);
   glDeleteBuffers(1, &starBuffer);
+  glDeleteBuffers(1, &emissionBuffer);
+  glDeleteVertexArrays(1, &emissionVao);
   glDeleteVertexArrays(1, &starVao);
   glDeleteVertexArrays(1, &vao);
 }
@@ -395,13 +423,13 @@ void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
   bind(p, 5, "uRingProfile", ringProfile);
 }
 void Renderer::render(int w, int h, double seconds, double day, float opacity,
-                      bool drawBodies, bool drawRings) {
+                      bool drawBodies, bool drawRings, EmissionFrame emission) {
   renderScene(w, h, sceneAt(seconds, day, drawRings), seconds, day, opacity,
-              drawBodies, drawRings);
+              drawBodies, drawRings, emission);
 }
 void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                            double day, float opacity, bool drawBodies,
-                           bool drawRings) {
+                           bool drawRings, EmissionFrame emission) {
   if (w <= 0 || h <= 0)
     return;
   const GLState state;
@@ -549,6 +577,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     }
   }
   glDisable(GL_DEPTH_TEST);
+  if (drawBodies && emission.seconds >= 0)
+    emissions(s, w, h, emission, drawRings);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h, seconds);
@@ -557,6 +587,154 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   bind(postProgram, 4, "uNoise", noise);
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
+}
+void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
+                         bool ringsEnabled) {
+  const auto &body = s.bodies[0];
+  const double focal = h / (2 * std::tan(29 * pi / 180));
+  struct Pixel {
+    double x, y;
+  };
+  auto project = [&](Vec3 p) {
+    const double z = dot(p, s.forward);
+    return Pixel{w * .5 + focal * dot(p, s.right) / z,
+                 h * .5 + focal * dot(p, s.cameraUp) / z};
+  };
+  std::vector<float> vertices;
+  vertices.reserve(2 * 256 * 6 * 12 + stormCount * 6 * 12);
+  auto vertex = [&](Pixel pixel, Vec3 point, Vec3 light, Vec3 profile,
+                    double halfLength = 0.) {
+    for (double value : {2 * pixel.x / w - 1, 2 * pixel.y / h - 1, point.x,
+                         point.y, point.z, light.x, light.y, light.z, profile.x,
+                         profile.y, profile.z, halfLength})
+      vertices.push_back(float(value));
+  };
+  for (const auto &flash :
+       (frame.lightning ? lightningAt(frame) : std::vector<LightningFlash>{})) {
+    const Vec3 normal = bodyDirection(flash.normal, body);
+    const Vec3 world = body.position + normal * body.radius;
+    const Vec3 point = s.local(world - s.observer);
+    const double mu = dot(normal, normalized(s.observer - world));
+    if (mu <= 0 || dot(point, s.forward) <= 0)
+      continue;
+    const auto center = project(point);
+    const double sigma =
+        focal * flash.sigmaKm / (71492 * dot(point, s.forward));
+    const double extent = 4 * sigma + 1.5;
+    if (center.x + extent < 0 || center.x - extent > w ||
+        center.y + extent < 0 || center.y - extent > h)
+      continue;
+    // Gaussian cloud-screen footprint, normalized to upward Lambertian power.
+    // mu preserves projected flux without trying to resolve a subpixel bolt.
+    const double area = 2 * pi * std::pow(flash.sigmaKm * 1000, 2);
+    const double peak =
+        flash.powerWatts / (pi * area * visibleSolarIrradiance) * mu;
+    const Vec3 light = Vec3{1.04, .98, .98} * peak;
+    for (int corner : {0, 1, 2, 2, 1, 3}) {
+      const double x = corner & 1 ? extent : -extent;
+      const double y = corner & 2 ? extent : -extent;
+      vertex({center.x + x, center.y + y}, point, light,
+             {x / sigma, y / sigma, 1});
+    }
+  }
+  // A Jupiter-like magnetic geometry is an explicit assumption for this
+  // fictional planet. It is attached to the rotating body, not the camera.
+  constexpr int segments = 256;
+  constexpr double altitude = 120. / 71492.,
+                   sigmaAngle = 350. / 2.354820045 / 71492.;
+  constexpr double photonEnergy = 6.62607015e-34 * 299792458. / 650e-9;
+  const double baseRadiance = auroraRayleighs(frame.seconds) * 1.e10 /
+                              (4 * pi) * photonEnergy / visibleSolarIrradiance;
+  if (frame.aurora)
+    for (int hemisphere : {-1, 1}) {
+      struct Sample {
+        Pixel screen, offset;
+        Vec3 point, light;
+        double extent;
+      };
+      std::array<Sample, segments + 1> samples{};
+      for (int i = 0; i <= segments; ++i) {
+        const double longitude = 2 * pi * i / segments;
+        const double colat =
+            (20 + 2 * std::sin(2 * longitude) + 3 * std::sin(longitude)) * pi /
+            180;
+        const double tilt = (hemisphere > 0 ? 10. : -3.) * pi / 180;
+        auto normalAt = [&](double angle) {
+          Vec3 n{std::sin(angle) * std::cos(longitude),
+                 hemisphere * std::cos(angle),
+                 std::sin(angle) * std::sin(longitude)};
+          n = {n.x * std::cos(tilt) + n.y * std::sin(tilt),
+               -n.x * std::sin(tilt) + n.y * std::cos(tilt), n.z};
+          return bodyDirection(n, body);
+        };
+        const Vec3 normal = normalAt(colat);
+        const Vec3 point = s.local(
+            body.position + normal * (body.radius + altitude) - s.observer);
+        if (dot(point, s.forward) <= .01)
+          return;
+        const auto center = project(point);
+        const auto across = project(
+            s.local(body.position +
+                    normalAt(colat + sigmaAngle) * (body.radius + altitude) -
+                    s.observer));
+        const double mu = std::abs(dot(s.local(normal), normalized(-point)));
+        // Finite emitting-layer thickness bounds tangent-path enhancement.
+        const double path = 1 / std::sqrt(mu * mu + 2 * 35. / 71492.);
+        const double structure =
+            .75 + .15 * std::sin(5 * longitude + frame.seconds / 43.) +
+            .10 * std::sin(13 * longitude - frame.seconds / 29.);
+        samples[i] = {center,
+                      {across.x - center.x, across.y - center.y},
+                      point,
+                      Vec3{1.6, .65, .75} * (baseRadiance * path * structure),
+                      0};
+      }
+      // Filter segment endpoints too: short bright tangent sections otherwise
+      // disappear between pixels even with perfect cross-arc filtering.
+      for (int i = 0; i < segments; ++i) {
+        const auto &a = samples[i], &b = samples[i + 1];
+        Pixel tangent{b.screen.x - a.screen.x, b.screen.y - a.screen.y};
+        const double length = std::hypot(tangent.x, tangent.y);
+        if (length < 1.e-6)
+          continue;
+        tangent.x /= length;
+        tangent.y /= length;
+        const Pixel side{-tangent.y, tangent.x};
+        const double sigma = std::max(
+            .0001, .5 * (std::abs(side.x * a.offset.x + side.y * a.offset.y) +
+                         std::abs(side.x * b.offset.x + side.y * b.offset.y)));
+        const Pixel center{.5 * (a.screen.x + b.screen.x),
+                           .5 * (a.screen.y + b.screen.y)};
+        for (int corner : {0, 1, 2, 2, 1, 3}) {
+          const double across = (corner & 1 ? 1 : -1) * (4 * sigma + 1.5);
+          const double along = (corner & 2 ? 1 : -1) * (length * .5 + 1.5);
+          vertex({center.x + side.x * across + tangent.x * along,
+                  center.y + side.y * across + tangent.y * along},
+                 (a.point + b.point) * .5, (a.light + b.light) * .5,
+                 {across / sigma, along, 0}, length * .5);
+        }
+      }
+    }
+
+  common(emissionProgram, s, w, h, frame.seconds);
+  rings(emissionProgram, s, ringsEnabled);
+  std::vector<float> blockers;
+  for (const auto &b : s.bodies) {
+    const auto point = s.local(b.position - s.observer);
+    blockers.insert(blockers.end(), {float(point.x), float(point.y),
+                                     float(point.z), float(b.radius)});
+  }
+  integer(emissionProgram, "uEmissionOccluderCount", blockers.size() / 4);
+  glUniform4fv(glGetUniformLocation(emissionProgram, "uEmissionOccluders"),
+               blockers.size() / 4, blockers.data());
+  glBindVertexArray(emissionVao);
+  glBindBuffer(GL_ARRAY_BUFFER, emissionBuffer);
+  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
+               vertices.data(), GL_STREAM_DRAW);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ONE);
+  glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 12);
+  glDisable(GL_BLEND);
 }
 void savePng(const std::string &path, int w, int h) {
   std::vector<unsigned char> pixels(w * h * 4), flipped(w * h * 4);

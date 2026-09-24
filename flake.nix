@@ -33,7 +33,7 @@
       ];
       postPatch = (old.postPatch or "") + ''
         mkdir -p src/observatory
-        cp ${./src}/{renderer,system}.{cpp,hpp} src/observatory/
+        cp ${./src}/{renderer,system,emissions}.{cpp,hpp} src/observatory/
         cp ${./hyprlock}/Observatory.{cpp,hpp} src/renderer/widgets/
         cat >> CMakeLists.txt <<'CMAKE'
         find_package(PNG REQUIRED)

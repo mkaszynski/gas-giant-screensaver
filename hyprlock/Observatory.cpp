@@ -22,6 +22,7 @@ void CObservatory::configure(
                        std::chrono::system_clock::now().time_since_epoch())
                        .count(),
                    day * 365.);
+  weatherTime = time;
   last = std::chrono::steady_clock::now();
 }
 bool CObservatory::draw(const SRenderData &data) {
@@ -34,7 +35,9 @@ bool CObservatory::draw(const SRenderData &data) {
       double dt = std::chrono::duration<double>(now - last).count();
       last = now;
       time += std::min(dt, .25) * data.motionScale;
-      renderer->render(viewport.x, viewport.y, time, day, data.opacity);
+      weatherTime += dt;
+      renderer->render(viewport.x, viewport.y, time, day, data.opacity, true,
+                       true, {weatherTime, 1. / fps});
     } catch (const std::exception &e) {
       Debug::log(ERR, "Observatory: {}; using opaque fallback", e.what());
       failed = true;

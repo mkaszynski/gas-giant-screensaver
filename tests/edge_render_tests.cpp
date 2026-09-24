@@ -41,7 +41,7 @@ struct Fixture {
       append("body.frag", "\n#ifdef "
                           "GIANT_ATMOSPHERE\ncolor=vec4(vec3(color.a),color.a);"
                           "\n#else\ndiscard;\n#endif\n");
-      append("post.frag", "color=vec4(texture(uScene,uv).rgb,1.);\n");
+      append("post.frag", "color=vec4(sceneColor(uv),1.);\n");
     } else if (mountains) {
       std::ifstream input(path / "shaders/post.frag");
       std::ostringstream buffer;
@@ -59,7 +59,7 @@ struct Fixture {
       append("background.frag", "color=vec4(0.);\n");
       append("stars.frag", "color=vec4(0.);\n");
       append("body.frag", "discard;\n");
-      append("post.frag", "color=vec4(texture(uScene,uv).rgb,1.);\n");
+      append("post.frag", "color=vec4(sceneColor(uv),1.);\n");
       // Isolate geometric annulus coverage, independent of density/lighting.
       auto target = path / "shaders/ring_layer.glsl";
       std::ifstream input(target);
