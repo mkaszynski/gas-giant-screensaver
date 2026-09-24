@@ -50,7 +50,8 @@ private:
   void common(GLuint, const Scene &, int, int, double);
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
-  void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled);
+  void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,
+                 double daySeconds);
 };
 void savePng(const std::string &path, int w, int h);
 } // namespace observatory

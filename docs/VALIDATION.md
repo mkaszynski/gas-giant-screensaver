@@ -248,11 +248,18 @@ At 1920x1080/30 fps on the AMD integrated GPU, 120-frame median GPU time was
 this sample. CPU+GPU medians were 6.445 and 6.745 ms. These are shared-desktop
 measurements, not exclusive GPU measurements or power readings.
 
-A 120-second real-weather sample at fixed 1080p views found 24 faint flashes
+Before enabling orbital compression for lightning, a 120-second real-weather
+sample at fixed 1080p views found 24 faint flashes
 (at least 2/255 display-channel change) during total eclipse at scene 430350,
 with four at least 8/255. At evening scene 550, eight exceeded 2/255 and one
 exceeded 8/255. At night scene 900 the nearly full giant hid all flashes below
-2/255. These thresholds describe rendered pixels, not human detection limits.
+2/255. These thresholds describe rendered pixels, not human detection limits, and the
+old rates are not predictions for the final accelerated model.
 Actual full-resolution night/eclipse captures and a six-second 30-fps sequence
 were generated for review. The aurora is intentionally extremely subtle at
 the existing exposure and low-latitude viewpoint.
+
+After switching lightning to orbital time, tests also integrate complete event
+windows at 15/30/60 fps for 30-second, 30-minute and 24-hour solar days. All
+recover the same physical energy for their respective windows, including the
+fastest setting where many complete events occur within one display frame.

@@ -578,7 +578,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   }
   glDisable(GL_DEPTH_TEST);
   if (drawBodies && emission.seconds >= 0)
-    emissions(s, w, h, emission, drawRings);
+    emissions(s, w, h, emission, drawRings, day);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h, seconds);
@@ -589,7 +589,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   quad(postProgram);
 }
 void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
-                         bool ringsEnabled) {
+                         bool ringsEnabled, double daySeconds) {
   const auto &body = s.bodies[0];
   const double focal = h / (2 * std::tan(29 * pi / 180));
   struct Pixel {
@@ -610,7 +610,8 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
       vertices.push_back(float(value));
   };
   for (const auto &flash :
-       (frame.lightning ? lightningAt(frame) : std::vector<LightningFlash>{})) {
+       (frame.lightning ? lightningAt(acceleratedLightning(frame, daySeconds))
+                        : std::vector<LightningFlash>{})) {
     const Vec3 normal = bodyDirection(flash.normal, body);
     const Vec3 world = body.position + normal * body.radius;
     const Vec3 point = s.local(world - s.observer);

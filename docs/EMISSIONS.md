@@ -8,12 +8,14 @@ cloud opacity, storm activity, magnetic field, or magnetospheric plasma supply.
 ## Lightning
 
 Twenty-four persistent storm regions at 18–61 degrees latitude rotate with
-the cloud texture. Each has one jittered event per 7–16 real seconds. Events
+the cloud texture. Each has one jittered event per 7–16 physical seconds. Events
 contain one to three optical pulses separated by 47 ms, with 12–20 ms decay
-times and a finite cutoff. Their integrated energy is identical at 15, 30 and
-60 fps. This weather clock does not use the orbital compression factor or
-Hyprlock's unlock motion slowdown. A sleeping output skips elapsed events;
-it does not replay a backlog.
+times and a finite cutoff. The same time compression used for the orbit applies to both event rates and
+pulse durations: about 17.8× at a 30-minute day. Their integrated physical energy
+is identical at 15, 30 and 60 fps, including accelerated pulses shorter than a
+frame. Exposure integration divides that energy by the physical shutter length;
+it does not artificially brighten sub-frame flashes. Hyprlock uses its existing
+scene clock and unlock slowdown. Paused rendering does not replay a backlog.
 
 The model uses 10^7–10^9.5 J of upward escaping visible energy, weighted toward
 weaker events. This is an assumed distribution within Jovian optical estimates,
@@ -68,9 +70,10 @@ values are bounded before half-float overflow; the solar disk remains far above
 display white. Exposure shown to the user is unchanged. GPU tests compare actual
 linear radiance with 8×-per-axis references and fractional-pixel camera motion.
 
-`--weather-time SECONDS` sets the independent starting weather clock for
-repeatable reviews. It defaults to the starting scene time and advances in real
-seconds. `--no-emissions` disables both effects for comparisons. Screenshots
+`--weather-time SECONDS` sets the starting weather clock for repeatable previews.
+It defaults to the starting scene time. Lightning converts this display-clock
+time to physical time using the orbital compression factor; aurora variation
+uses display-clock time directly. `--no-emissions` disables both effects for comparisons. Screenshots
 freeze both clocks. Recording advances each clock by `--time-step`; use
 `--time-step 0.033333333 --fps 30` for real-time 30 fps sequences.
 

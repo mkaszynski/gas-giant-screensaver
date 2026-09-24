@@ -49,6 +49,30 @@ int main() {
                 "same events/energy independent of fps");
       reference = energy;
     }
+    require(lightningTimeScale(1800) > 17.7 && lightningTimeScale(1800) < 17.9,
+            "lightning uses orbital compression");
+    require(std::abs(lightningTimeScale(900) / lightningTimeScale(1800) - 2) <
+                1.e-12,
+            "shorter day accelerates flash rate and duration equally");
+    for (double day : {30., 1800., 86400.}) {
+      double previous = 0;
+      for (int fps : {15, 30, 60}) {
+        double energy = 0;
+        for (int i = 1; i <= 20 * fps; ++i) {
+          const auto frame =
+              acceleratedLightning({1000. + double(i) / fps, 1. / fps}, day);
+          auto flashes = lightningAt(frame);
+          require(flashes.size() < 500, "accelerated frame work is bounded");
+          for (auto f : flashes)
+            energy += f.powerWatts * frame.exposure;
+        }
+        if (previous)
+          require(
+              std::abs(energy / previous - 1) < 1.e-7,
+              "accelerated shutter retains complete event energy at all fps");
+        previous = energy;
+      }
+    }
     require(lightningAt({-1, .033}).empty(), "disabled frame");
     require(lightningAt({900, 0}).empty(), "invalid exposure");
     for (int t = 0; t < 10000; t++)

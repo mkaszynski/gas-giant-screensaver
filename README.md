@@ -154,8 +154,9 @@ speed of the system. See `--help` for recording options.
 
 ## Lightning and auroras
 
-Water-cloud thunderstorms produce small, brief glows on the giant. Flash timing
-runs in real seconds independently of the accelerated orbit and unlock slowdown.
+Water-cloud thunderstorms produce small, brief glows on the giant. Flash frequency and
+duration follow the orbital simulation speed (about 17.8× at the default
+30-minute day). Sub-frame pulses retain their energy through exposure integration.
 Persistent, thin polar auroras use visible-light brightness estimates; they are
 intentionally faint and usually lost against daylight. Geometry, foreground
 moons, translucent rings, local clouds and mountains control their visibility.

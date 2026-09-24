@@ -31,20 +31,38 @@ double lightningEnergyFraction(double begin, double end, int strokes) {
   }
   return energy / weightSum;
 }
+double lightningTimeScale(double daySeconds) {
+  const double orbitalSeconds =
+      2 * pi * std::sqrt(std::pow(homeA * 71492000., 3) / (3 * 1.26686534e17));
+  const double solarDay =
+      orbitalSeconds / (1 - orbitalSeconds / (365.256 * 86400));
+  return solarDay / std::clamp(daySeconds, 30., 86400.);
+}
+EmissionFrame acceleratedLightning(EmissionFrame frame, double daySeconds) {
+  if (frame.seconds < 0)
+    return frame;
+  const double rate = lightningTimeScale(daySeconds);
+  frame.seconds *= rate;
+  frame.exposure = std::clamp(frame.exposure, 1. / 1000, .1) * rate;
+  return frame;
+}
 std::vector<LightningFlash> lightningAt(EmissionFrame frame) {
   std::vector<LightningFlash> flashes;
   if (!std::isfinite(frame.seconds) || frame.seconds < 0 ||
       !std::isfinite(frame.exposure) || frame.exposure <= 0)
     return flashes;
-  // A short shutter, not the full duration of a suspended display.
-  const double exposure = std::clamp(frame.exposure, 1. / 1000, .1);
+  // Includes the whole accelerated shutter, including events in earlier slots.
+  // 120 physical seconds bounds work at the fastest supported orbital speed.
+  const double exposure = std::clamp(frame.exposure, 1.e-6, 120.);
   for (int storm = 0; storm < stormCount; ++storm) {
     const std::uint64_t seed = 0x671a23ULL + storm * 7919;
     const double interval = 7 + 9 * random(seed),
                  phase = interval * random(seed + 1);
     const auto epoch = static_cast<std::int64_t>(
         std::floor((frame.seconds + phase) / interval));
-    for (auto slot = epoch - 1; slot <= epoch; ++slot) {
+    const auto first = static_cast<std::int64_t>(
+        std::floor((frame.seconds - exposure - .3 + phase) / interval));
+    for (auto slot = first; slot <= epoch; ++slot) {
       if (slot < 0)
         continue;
       const std::uint64_t key = seed + std::uint64_t(slot) * 104729;

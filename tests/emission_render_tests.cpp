@@ -80,7 +80,8 @@ std::vector<float> render(Renderer &r, const Scene &s, EmissionFrame frame,
                          tex, 0);
   require(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
           "HDR framebuffer");
-  r.renderScene(w, h, s, 0, 1800, 1, true, rings, frame);
+  r.renderScene(w, h, s, 0, lightningTimeScale(1800) * 1800, 1, true, rings,
+                frame);
   std::vector<float> p(w * h * 4);
   glReadPixels(0, 0, w, h, GL_RGBA, GL_FLOAT, p.data());
   glBindFramebuffer(GL_FRAMEBUFFER, 0);

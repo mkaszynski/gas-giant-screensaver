@@ -149,6 +149,6 @@ subpixel rim. The existing moon-sky eclipse approximation remains unchanged.
 
 ## Electrical emission
 
-[Lightning and visible auroras](EMISSIONS.md) use an independent real-time clock,
+[Lightning and visible auroras](EMISSIONS.md) use the orbital time compression for lightning,
 physically normalized emission, and a bounded additive geometry pass before
-foreground composition. Their timing is not multiplied by orbital speed.
+foreground composition. Flash rates and durations scale together; auroral variation remains slow.
