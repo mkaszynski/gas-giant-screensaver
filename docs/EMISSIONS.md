@@ -33,37 +33,36 @@ resolving a foreshortened three-dimensional cloud is outside this approximation.
 
 ## Aurora
 
-A pair of persistent irregular magnetic ovals corotates with the giant. The
-assumed northern/southern magnetic offsets are 10/3 degrees and the oval is
-about 20 degrees from its magnetic pole, with modest longitude variation.
-Its 350 km FWHM width follows the scale of Galileo's visible arcs. A nominal
-120 km height above the cloud deck and 35 km emitting-layer thickness are
-assumptions for the warmer, higher-gravity planet, rather than copied Jovian
-altitudes relative to the 1-bar level.
+Two irregular magnetic ovals corotate with the giant. Their northern/southern
+magnetic offsets are 10/3 degrees; their centers lie about 20 degrees from the
+magnetic poles. Traveling waves gently deform each oval and vary its width,
+while brighter patches drift along it. Motion is continuous and deterministic,
+using the displayed weather clock rather than random frame-to-frame jumps.
 
-Normal-view broadband brightness varies slowly around 160 kR, within the
-80–300 kR scale measured by Galileo. Photon radiance is converted with a
-representative 650 nm photon energy. The restrained reddish RGB mixture is an
-approximation to hydrogen lines plus continuum, not a measured spectrum of
-this fictional planet. Finite layer thickness limits limb brightening. The
-main ovals remain active in sunlight but are overwhelmed by reflected light.
-Neither eclipses nor ring shadows turn electrical emission off.
+The requested visual style uses **2800 km FWHM ribbons**, eight times the
+original width, a **whitish lavender** tint, and **1000× baseline brightness** (200× the earlier default of 5).
+These are deliberate artistic choices for readable moving bands. The underlying
+160 kR baseline remains a Jovian visible-light reference; the resulting wider,
+brighter, recolored display is not a calibrated naked-eye prediction.
 
-No bright UV dawn-storm power is added to RGB. Moon footprints require an
-assumed plasma interaction model and are not synthesized for all 20 moons.
-The low-latitude, nearby observer makes these visible-light ovals very faint;
-much of an oval can lie behind the planet. At the ordinary display exposure
-they can quantize to zero. Favorable eclipse views retain a faint arc, not a
-prominent colorful curtain. Shader-level nonzero radiance alone is not evidence
-of perceptible visibility.
+A nominal 120 km height above the cloud deck and 35 km emitting-layer thickness
+bound limb brightening. Planet/moon occlusion and ring transmission still apply.
+Sunlight can overwhelm the effect; eclipses and ring shadows do not switch it
+off. Large parts of an oval can lie behind the planet from this nearby view.
+No separate UV dawn-storm power or synthesized moon-footprint model is added.
 
 ## Rendering and review
 
-Both effects now receive an explicit **5× visible-radiance boost** at rendering,
-as requested for visibility. The physical baseline below the gain, event rate,
-pulse duration, geometry, filtering and occlusion are unchanged. This is an
-artistic brightness adjustment, not a revised Jovian measurement. Tone mapping
-means final display-code values do not increase by exactly five.
+Brightness is independently adjustable with `--lightning-brightness N` and
+`--aurora-brightness N`, from 0 to 1,000,000. Defaults are **5 for lightning**
+and **1000 for auroras**. Values multiply modeled radiance: 1 is baseline, and
+0 disables the selected effect. `--no-emissions` overrides both.
+Hyprlock exposes the same controls as `lightning_brightness` and
+`aurora_brightness` in its `observatory` block, with the same defaults.
+CLI rejects out-of-range or nonfinite values. Native rendering clamps the range
+and uses the effect's default for nonfinite values. Restart the preview or start
+a new lock session after changing settings. Brightness controls do not change
+geometry or timing; tone mapping means display codes do not scale linearly.
 
 One additive geometry batch contains only the active flash patches and two
 256-segment auroral strips. No extra framebuffer, shadow map, fullscreen blur,

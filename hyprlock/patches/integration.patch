@@ -13,7 +13,7 @@
  
      m_config.addConfigValue("auth:pam:enabled", Hyprlang::INT{1});
      m_config.addConfigValue("auth:pam:module", Hyprlang::STRING{"hyprlock"});
-@@ -244,6 +250,12 @@
+@@ -244,6 +250,14 @@
      m_config.addSpecialConfigValue("background", "reload_time", Hyprlang::INT{-1});
      m_config.addSpecialConfigValue("background", "reload_cmd", Hyprlang::STRING{""});
      m_config.addSpecialConfigValue("background", "crossfade_time", Hyprlang::FLOAT{-1.0});
@@ -22,11 +22,13 @@
 +    m_config.addSpecialConfigValue("observatory", "monitor", Hyprlang::STRING{""});
 +    m_config.addSpecialConfigValue("observatory", "fps", Hyprlang::INT{30});
 +    m_config.addSpecialConfigValue("observatory", "day_seconds", Hyprlang::INT{1800});
++    m_config.addSpecialConfigValue("observatory", "lightning_brightness", Hyprlang::FLOAT{5.0});
++    m_config.addSpecialConfigValue("observatory", "aurora_brightness", Hyprlang::FLOAT{1000.0});
 +    m_config.addSpecialConfigValue("observatory", "zindex", Hyprlang::INT{-1});
  
      m_config.addSpecialCategory("shape", Hyprlang::SSpecialCategoryOptions{.key = nullptr, .anonymousKeyBased = true});
      m_config.addSpecialConfigValue("shape", "monitor", Hyprlang::STRING{""});
-@@ -285,6 +297,7 @@
+@@ -285,6 +299,7 @@
      m_config.addSpecialConfigValue("input-field", "outer_color", GRADIENTCONFIG("0xFF111111"));
      m_config.addSpecialConfigValue("input-field", "outline_thickness", Hyprlang::INT{4});
      m_config.addSpecialConfigValue("input-field", "dots_size", Hyprlang::FLOAT{0.25});
@@ -34,7 +36,7 @@
      m_config.addSpecialConfigValue("input-field", "dots_center", Hyprlang::INT{1});
      m_config.addSpecialConfigValue("input-field", "dots_spacing", Hyprlang::FLOAT{0.2});
      m_config.addSpecialConfigValue("input-field", "dots_rounding", Hyprlang::INT{-1});
-@@ -293,6 +306,7 @@
+@@ -293,6 +308,7 @@
      m_config.addSpecialConfigValue("input-field", "fade_timeout", Hyprlang::INT{2000});
      m_config.addSpecialConfigValue("input-field", "font_color", Hyprlang::INT{0xFF000000});
      m_config.addSpecialConfigValue("input-field", "font_family", Hyprlang::STRING{"Sans"});
@@ -42,7 +44,7 @@
      m_config.addSpecialConfigValue("input-field", "halign", Hyprlang::STRING{"center"});
      m_config.addSpecialConfigValue("input-field", "valign", Hyprlang::STRING{"center"});
      m_config.addSpecialConfigValue("input-field", "position", LAYOUTCONFIG("0,0"));
-@@ -403,6 +417,18 @@
+@@ -403,6 +419,20 @@
      }
  
      //
@@ -54,6 +56,8 @@
 +            .values = {
 +                {"fps", m_config.getSpecialConfigValue("observatory", "fps", k.c_str())},
 +                {"day_seconds", m_config.getSpecialConfigValue("observatory", "day_seconds", k.c_str())},
++                {"lightning_brightness", m_config.getSpecialConfigValue("observatory", "lightning_brightness", k.c_str())},
++                {"aurora_brightness", m_config.getSpecialConfigValue("observatory", "aurora_brightness", k.c_str())},
 +                {"zindex", m_config.getSpecialConfigValue("observatory", "zindex", k.c_str())},
 +            }
 +        });
@@ -61,7 +65,7 @@
      keys = m_config.listKeysForSpecialCategory("shape");
      for (auto& k : keys) {
          // clang-format off
-@@ -467,6 +493,7 @@
+@@ -467,6 +497,7 @@
                  {"outer_color", m_config.getSpecialConfigValue("input-field", "outer_color", k.c_str())},
                  {"outline_thickness", m_config.getSpecialConfigValue("input-field", "outline_thickness", k.c_str())},
                  {"dots_size", m_config.getSpecialConfigValue("input-field", "dots_size", k.c_str())},
@@ -69,7 +73,7 @@
                  {"dots_spacing", m_config.getSpecialConfigValue("input-field", "dots_spacing", k.c_str())},
                  {"dots_center", m_config.getSpecialConfigValue("input-field", "dots_center", k.c_str())},
                  {"dots_rounding", m_config.getSpecialConfigValue("input-field", "dots_rounding", k.c_str())},
-@@ -475,6 +502,7 @@
+@@ -475,6 +506,7 @@
                  {"fade_timeout", m_config.getSpecialConfigValue("input-field", "fade_timeout", k.c_str())},
                  {"font_color", m_config.getSpecialConfigValue("input-field", "font_color", k.c_str())},
                  {"font_family", m_config.getSpecialConfigValue("input-field", "font_family", k.c_str())},

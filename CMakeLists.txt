@@ -47,3 +47,11 @@ add_test(NAME cli-invalid-weather COMMAND gas-giant-screensaver --weather-time n
 set_tests_properties(cli-invalid-weather PROPERTIES WILL_FAIL TRUE)
 add_executable(emission-render-tests tests/emission_render_tests.cpp)
 target_link_libraries(emission-render-tests PRIVATE observatory PkgConfig::GLFW)
+
+foreach(effect IN ITEMS lightning aurora)
+  add_test(NAME cli-${effect}-brightness-range COMMAND gas-giant-screensaver --${effect}-brightness 1000001)
+  add_test(NAME cli-${effect}-brightness-negative COMMAND gas-giant-screensaver --${effect}-brightness -1)
+  add_test(NAME cli-${effect}-brightness-nonfinite COMMAND gas-giant-screensaver --${effect}-brightness nan)
+  set_tests_properties(cli-${effect}-brightness-range cli-${effect}-brightness-negative cli-${effect}-brightness-nonfinite PROPERTIES WILL_FAIL TRUE)
+  add_test(NAME cli-${effect}-brightness-valid COMMAND gas-giant-screensaver --${effect}-brightness 0 --${effect}-brightness 0.5 --${effect}-brightness 1000000 --help)
+endforeach()

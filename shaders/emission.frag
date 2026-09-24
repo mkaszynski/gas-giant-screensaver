@@ -55,6 +55,8 @@ void main(){
        // antialiasing vertices: inward subpixels hit the shell sooner.
        bool front=dot(point-body.xyz,d)<0.;
        float shell=body.w+120./71492.;
+       // Wide, filtered ribbons must stay inside the emitting shell silhouette.
+       visible*=1.-smoothstep(shell-.5*width,shell+.5*width,impact);
        float halfPath=sqrt(max(0.,shell*shell-impact*impact));
        dist=along+(front?-halfPath:halfPath);
        if(!front)visible*=1.-coverage;
@@ -76,6 +78,5 @@ void main(){
  float coverage=max(0.,smoothstep(-.5*max(fwidth(outer),1.e-12),.5*max(fwidth(outer),1.e-12),outer)-smoothstep(-.5*max(fwidth(inner),1.e-12),.5*max(fwidth(inner),1.e-12),inner));
  if(uRingsEnabled&&abs(denom)>1.e-7&&ringHit>0.&&ringHit<dist)
    visible*=1.-coverage+coverage*exp(-ringTau(clamp(radius,uRingBounds.x,uRingBounds.y),lod)/max(abs(denom),.0001));
- // Requested visibility boost: five times the modeled visible radiance.
- color=vec4(5.*radiance*max(0.,shape)*visible*viewT(d),0.);
+ color=vec4(radiance*max(0.,shape)*visible*viewT(d),0.);
 }
