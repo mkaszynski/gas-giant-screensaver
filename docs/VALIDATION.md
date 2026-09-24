@@ -220,3 +220,59 @@ sequence at 0.1-second simulation steps. At 1920x1080, 180 frames and the same
 at eclipse contact (376368). The correction adds no texture allocation, blur,
 multisampled framebuffer or fullscreen pass. These remain shared-desktop
 timing measurements rather than power measurements.
+
+## Lightning and visible auroras
+
+The new CPU gate integrates a complete flash train at 15, 30 and 60 fps. All
+three recover the same 9.33962e10 J over the 120-second deterministic fixture;
+short pulses retain their energy without longer artificial lifetimes. It also
+checks physical footprint bounds, finite power, corotation and visible auroral
+radiance limits.
+
+Actual GPU emission is compared with 2560x1440 reference frames reduced to
+320x180. Lightning flux agrees within 1%; quarter-pixel motion variation is
+below 1%. Auroral flux differs by less than 5% with under 3% motion variation
+in the fixture. These tests exposed half-float/texture-sampling precision loss
+and missing endpoint coverage in an initial narrow-ribbon implementation.
+
+Further checks verify that darkness does not turn off electrical emission,
+foreground moons block it, background moons do not, the giant hides far-side
+lightning, and real foreground ring geometry transmits some light while
+attenuating it. The ring fixture transmits 0.739 versus 0.668 at its analytic
+center ray; pixel filtering averages neighboring ringlets. The actual opaque
+mountain compositor is checked separately. Existing ring, mountain, atmosphere,
+longitude-seam and host-GL-state regressions pass.
+
+At 1920x1080/30 fps on the AMD integrated GPU, 120-frame median GPU time was
+5.115 ms before and 5.238 ms with emissions: about 0.12 ms additional work in
+this sample. CPU+GPU medians were 6.445 and 6.745 ms. These are shared-desktop
+measurements, not exclusive GPU measurements or power readings.
+
+Before enabling orbital compression for lightning, a 120-second real-weather
+sample at fixed 1080p views found 24 faint flashes
+(at least 2/255 display-channel change) during total eclipse at scene 430350,
+with four at least 8/255. At evening scene 550, eight exceeded 2/255 and one
+exceeded 8/255. At night scene 900 the nearly full giant hid all flashes below
+2/255. These thresholds describe rendered pixels, not human detection limits, and the
+old rates are not predictions for the final accelerated model.
+Actual full-resolution night/eclipse captures and a six-second 30-fps sequence
+were generated for review. The aurora is intentionally extremely subtle at
+the low-latitude viewpoint. Subsequent final-output checks exposed near-zero
+visibility at the original exposure; the dark-scene adaptation described below
+addresses lightning without changing its physical energy.
+
+After switching lightning to orbital time, tests also integrate complete event
+windows at 15/30/60 fps for 30-second, 30-minute and 24-hour solar days. All
+recover the same physical energy for their respective windows, including the
+fastest setting where many complete events occur within one display frame.
+
+### Final display visibility regression
+
+The complete 1920x1080 RGBA8 output is compared with emissions disabled. At
+scene 430350 and accelerated weather 430354.833333333, a lightning flash changes
+the peak channel by 49/255 after bounded dark-scene adaptation (previously
+5/255). At scene 437625 and weather 103.04, aurora changes the peak channel by
+4/255. Tests require at least 20 and 2 respectively, and verify daylight still
+washes out the flash. The aurora check proves survival through the compositor,
+not naked-eye perceptibility; it remains extremely subtle. All six GPU suites
+continue to check ring shadows, silhouettes, terrain, and scattering edges.

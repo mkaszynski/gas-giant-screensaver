@@ -71,7 +71,7 @@ struct ShaderFixture {
     // If either stage moves in front of the ridge, its interior must fail
     // below.
     for (const std::string needle :
-         {"vec3 L=texture(uScene,uv).rgb;",
+         {"vec3 L=sceneColor(uv);",
           "L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;"}) {
       auto at = shader.find(needle);
       require(at != std::string::npos, "sky/glare injection stage");

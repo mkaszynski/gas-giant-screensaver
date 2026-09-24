@@ -53,7 +53,7 @@ struct Fixture {
       s.insert(at, darkCloud ? " albedo=vec3(0.);\n" : " albedo=vec3(.3);\n");
     });
     edit("post.frag", [](auto &s) {
-      s.insert(s.rfind('}'), "color=vec4(texture(uScene,uv).rgb,1.);\n");
+      s.insert(s.rfind('}'), "color=vec4(sceneColor(uv),1.);\n");
     });
   }
   ~Fixture() { std::filesystem::remove_all(path); }

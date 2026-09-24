@@ -35,8 +35,9 @@ int integerArgument(const char *text, int low, int high) {
 int main(int argc, char **argv) {
   try {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
-    double day = 1800, time = -1, timeout = 0, timeStep = 1.0 / 30;
-    bool fullscreen = false, drawRings = true;
+    double day = 1800, time = -1, weatherTime = -1, timeout = 0,
+           timeStep = 1.0 / 30;
+    bool fullscreen = false, drawRings = true, drawEmissions = true;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
       std::string a = argv[i];
@@ -55,12 +56,20 @@ int main(int argc, char **argv) {
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
                "frame\n  --no-rings             Disable rings for comparison\n"
+               "  --weather-time SECONDS  Starting weather clock (lightning "
+               "follows orbital speed)\n"
+               "  --no-emissions         Disable lightning and auroras for "
+               "comparison\n"
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
       }
       if (a == "--fullscreen") {
         fullscreen = true;
+        continue;
+      }
+      if (a == "--no-emissions") {
+        drawEmissions = false;
         continue;
       }
       if (a == "--no-rings") {
@@ -74,6 +83,8 @@ int main(int argc, char **argv) {
         timeout = number(v, 0, 86400);
       else if (a == "--time")
         time = number(v, 0, 1e9);
+      else if (a == "--weather-time")
+        weatherTime = number(v, 0, 1e9);
       else if (a == "--day-seconds")
         day = number(v, 30, 86400);
       else if (a == "--fps")
@@ -148,6 +159,8 @@ int main(int argc, char **argv) {
                           std::chrono::system_clock::now().time_since_epoch())
                           .count(),
                       day * 365.);
+      if (weatherTime < 0)
+        weatherTime = time;
       int frames = 0;
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
@@ -169,11 +182,15 @@ int main(int argc, char **argv) {
         auto measure = Clock::now();
         if (query)
           glBeginQuery(0x88BF, query);
-        renderer.render(w, h,
-                        time + (!record.empty()
-                                    ? frames * timeStep
+        const double weatherElapsed = !record.empty()
+                                          ? frames * timeStep
+                                          : (capture.empty() ? elapsed : 0);
+        renderer.render(
+            w, h,
+            time + (!record.empty() ? frames * timeStep
                                     : (capture.empty() ? elapsed : 0)),
-                        day, 1, true, drawRings);
+            day, 1, true, drawRings,
+            {drawEmissions ? weatherTime + weatherElapsed : -1, 1. / fps});
         if (benchmark) {
           if (query)
             glEndQuery(0x88BF);
