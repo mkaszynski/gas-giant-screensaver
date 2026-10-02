@@ -1,4 +1,5 @@
 #include "system.hpp"
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 using namespace observatory;
@@ -7,6 +8,48 @@ void require(bool b, const char *msg) {
     throw std::runtime_error(msg);
 }
 int main() {
+  const double before = std::chrono::duration<double>(
+                            std::chrono::system_clock::now().time_since_epoch())
+                            .count();
+  const double clock = sceneClockNow();
+  const double after = std::chrono::duration<double>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+  require(clock >= before && clock <= after,
+          "startup clock preserves full Unix time");
+  for (double day : {30., 1800., 86400.}) {
+    const double year = stellarYearSeconds / simulationTimeScale(day);
+    require(year > 980 * day && year < 990 * day,
+            "stellar year contains about 985 moon solar days, not 365");
+    // Cover the entire stellar orbit, including the previously skipped 63%.
+    const double start = 1790900000.;
+    const auto first = sceneAt(start, day);
+    const double startAngle = std::atan2(first.sun.x, first.sun.z);
+    for (int i = 1; i <= 100; ++i) {
+      const auto s = sceneAt(start + year * i / 100., day);
+      const double angle = std::atan2(s.sun.x, s.sun.z);
+      require(std::abs(std::remainder(angle - startAngle - 2 * pi * i / 100.,
+                                      2 * pi)) < 1.e-8,
+              "Sun advances uniformly through every part of the stellar year");
+    }
+    // A running scene and a new launch must agree across both former and
+    // actual year boundaries. Outer moons must never reset with the Sun.
+    for (double boundary :
+         {day * 365., year, std::ceil(start / (day * 365.)) * day * 365.,
+          std::ceil(start / year) * year, 1.e10}) {
+      const auto a = sceneAt(boundary - .001, day);
+      const auto b = sceneAt(boundary + .001, day);
+      require(length(a.sun - b.sun) < 1.e-5, "continuous stellar phase");
+      require(length(a.up - b.up) < .001, "continuous ground frame");
+      for (int i = 0; i < 21; ++i) {
+        require(length(a.bodies[i].position - b.bodies[i].position) < .003,
+                "all moon positions remain continuous across clock boundaries");
+        require(std::abs(std::remainder(b.bodies[i].spin - a.bodies[i].spin,
+                                        2 * pi)) < .002,
+                "all surface textures rotate continuously");
+      }
+    }
+  }
   Orbit o{homeA, homeE, 0, 0, 0, 0};
   require(std::abs(length(orbitPosition(o, .5)) / length(orbitPosition(o, 0)) -
                    1.25) < 1e-12,

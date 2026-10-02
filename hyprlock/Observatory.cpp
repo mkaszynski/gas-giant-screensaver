@@ -22,10 +22,8 @@ void CObservatory::configure(
       std::any_cast<Hyprlang::FLOAT>(props.at("lightning_brightness"));
   auroraBrightness =
       std::any_cast<Hyprlang::FLOAT>(props.at("aurora_brightness"));
-  time = std::fmod(std::chrono::duration<double>(
-                       std::chrono::system_clock::now().time_since_epoch())
-                       .count(),
-                   day * 365.);
+  time = observatory::sceneClockNow();
+  elapsed = 0;
   last = std::chrono::steady_clock::now();
 }
 bool CObservatory::draw(const SRenderData &data) {
@@ -37,10 +35,15 @@ bool CObservatory::draw(const SRenderData &data) {
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
       last = now;
-      time += std::min(dt, .25) * data.motionScale;
-      renderer->render(viewport.x, viewport.y, time, day, data.opacity, true,
+      // Catch up after a suspended output; dropping elapsed time desynchronizes
+      // the sky from a freshly opened preview or another monitor.
+      // Accumulate a small elapsed value instead of rounding every frame
+      // into a Unix-scale number.
+      elapsed += dt * data.motionScale;
+      const double seconds = time + elapsed;
+      renderer->render(viewport.x, viewport.y, seconds, day, data.opacity, true,
                        true,
-                       {time, std::max(.001, double(data.motionScale) / fps),
+                       {seconds, std::max(.001, double(data.motionScale) / fps),
                         true, true, lightningBrightness, auroraBrightness});
     } catch (const std::exception &e) {
       Debug::log(ERR, "Observatory: {}; using opaque fallback", e.what());

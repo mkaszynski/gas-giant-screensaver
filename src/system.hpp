@@ -39,6 +39,13 @@ struct Scene {
 // periods.
 constexpr double homeA = 3.0, homeE = 1.0 / 9.0, sunRadius = 0.00465047;
 constexpr double ringInner = 1.235, ringOuter = 1.780;
+// Scene seconds use the Unix epoch without a global modulo. Individual orbital
+// angles are reduced in double precision; unrelated periods never reset
+// together.
+constexpr double stellarYearSeconds = 365.256 * 86400;
+double sceneClockNow();
+double homeOrbitalSeconds();
+double simulationTimeScale(double daySeconds);
 Vec3 giantPole();
 Vec3 equatorialToWorld(Vec3);
 Vec3 orbitNormal(const Orbit &);

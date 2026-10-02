@@ -1,5 +1,6 @@
 #include "system.hpp"
 #include <algorithm>
+#include <chrono>
 namespace observatory {
 namespace {
 Vec3 ry(Vec3 v, double a) {
@@ -14,6 +15,20 @@ Vec3 orbitToWorld(Vec3 v, const Orbit &o) {
   return equatorialToWorld(ry(rx(ry(v, o.periapsis), o.inclination), o.node));
 }
 } // namespace
+double sceneClockNow() {
+  return std::chrono::duration<double>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count();
+}
+double homeOrbitalSeconds() {
+  return 2 * pi *
+         std::sqrt(std::pow(homeA * 71492000., 3) / (3 * 1.26686534e17));
+}
+double simulationTimeScale(double daySeconds) {
+  const double orbit = homeOrbitalSeconds();
+  return orbit / (1 - orbit / stellarYearSeconds) /
+         std::clamp(daySeconds, 30., 86400.);
+}
 Vec3 equatorialToWorld(Vec3 v) {
   const Vec3 y = giantPole(), x = normalized(cross(y, {0, 0, 1}));
   return x * v.x + y * v.y + cross(x, y) * v.z;
@@ -136,13 +151,13 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
   // Giant: 3 Jupiter masses; 1 solar mass star at 1 AU. Observer period ~8.9
   // h. Sidereal rotation is synchronous with mean anomaly. Solar and sidereal
   // days differ.
-  const double orbitalSeconds =
-      2 * pi * std::sqrt(std::pow(homeA * 71492000.0, 3) / (3 * 1.26686534e17));
-  constexpr double yearSeconds = 365.256 * 86400;
-  const double orbitPhase =
-      seconds / daySeconds / (1 - orbitalSeconds / yearSeconds);
+  const double physicalSeconds = seconds * simulationTimeScale(daySeconds);
+  const double orbitPhase = physicalSeconds / homeOrbitalSeconds();
   const auto orbits = makeOrbits();
-  s.bodies[0] = {{0, 0, 0}, 1, 0, orbitPhase * orbitalSeconds / 36000 * 2 * pi};
+  s.bodies[0] = {{0, 0, 0},
+                 1,
+                 0,
+                 std::remainder(physicalSeconds / 36000 * 2 * pi, 2 * pi)};
   s.bodies[0].pole = giantPole();
   for (int i = 0; i < 20; ++i) {
     double radius = i == 0 ? 6371.0 / 71492.0
@@ -151,10 +166,13 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
                                               : 0.008 + 0.004 * (i % 5)));
     s.bodies[i + 1] = {
         orbitPosition(orbits[i], orbitPhase), radius * (i == 0 ? 1.0 : 3.0),
-        1 + (i % 4), orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5)};
+        1 + (i % 4),
+        std::remainder(orbitPhase * 2 * pi * std::pow(homeA / orbits[i].a, 1.5),
+                       2 * pi)};
     s.bodies[i + 1].pole = orbitNormal(orbits[i]);
   }
-  const double rotation = 2 * pi * orbitPhase + orbits[0].phase;
+  const double rotation =
+      std::remainder(2 * pi * orbitPhase + orbits[0].phase, 2 * pi);
   // 38 N, 50 degrees from the subplanet meridian: giant stays low, with
   // libration.
   const double lat = 38 * pi / 180, lon = 50 * pi / 180;
@@ -166,8 +184,9 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
   s.north = normalized(cross(s.east, s.up));
   s.observer =
       s.bodies[1].position + s.up * (s.bodies[1].radius + 0.2 / 71492.0);
-  s.sun = normalized(ry({0.65, 0.08, 0.76},
-                        2 * pi * orbitPhase * orbitalSeconds / yearSeconds));
+  s.sun = normalized(ry(
+      {0.65, 0.08, 0.76},
+      std::remainder(2 * pi * physicalSeconds / stellarYearSeconds, 2 * pi)));
   s.sunLocal = s.local(s.sun);
   // Fixed azimuth points at the mean giant bearing. 28-degree elevation,
   // 58-degree vertical FOV.

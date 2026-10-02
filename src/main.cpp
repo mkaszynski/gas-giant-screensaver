@@ -87,9 +87,9 @@ int main(int argc, char **argv) {
       if (a == "--timeout")
         timeout = number(v, 0, 86400);
       else if (a == "--time")
-        time = number(v, 0, 1e9);
+        time = number(v, 0, 1e10);
       else if (a == "--weather-time")
-        weatherTime = number(v, 0, 1e9);
+        weatherTime = number(v, 0, 1e10);
       else if (a == "--lightning-brightness")
         lightningBrightness = number(v, 0, 1e6);
       else if (a == "--aurora-brightness")
@@ -163,11 +163,7 @@ int main(int argc, char **argv) {
       if (benchmark && hasTimer)
         glGenQueries(1, &query);
       if (time < 0)
-        time =
-            std::fmod(std::chrono::duration<double>(
-                          std::chrono::system_clock::now().time_since_epoch())
-                          .count(),
-                      day * 365.);
+        time = sceneClockNow();
       if (weatherTime < 0)
         weatherTime = time;
       int frames = 0;
