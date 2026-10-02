@@ -32,11 +32,7 @@ double lightningEnergyFraction(double begin, double end, int strokes) {
   return energy / weightSum;
 }
 double lightningTimeScale(double daySeconds) {
-  const double orbitalSeconds =
-      2 * pi * std::sqrt(std::pow(homeA * 71492000., 3) / (3 * 1.26686534e17));
-  const double solarDay =
-      orbitalSeconds / (1 - orbitalSeconds / (365.256 * 86400));
-  return solarDay / std::clamp(daySeconds, 30., 86400.);
+  return simulationTimeScale(daySeconds);
 }
 EmissionFrame acceleratedLightning(EmissionFrame frame, double daySeconds) {
   if (frame.seconds < 0)

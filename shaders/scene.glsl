@@ -1,7 +1,7 @@
 uniform vec2 uResolution;
 uniform vec3 uForward,uRight,uUp,uSun;
 uniform sampler2D uSky,uTrans;
-uniform float uTanFov,uExposure,uTime,uPlanetLight,uEclipse,uDarkGain;
+uniform float uTanFov,uExposure,uPlanetLight,uEclipse,uDarkGain;
 vec3 ray(){vec2 p=(gl_FragCoord.xy/uResolution*2.-1.)*vec2(uResolution.x/uResolution.y,1.)*uTanFov;return normalize(uForward+uRight*p.x+uUp*p.y);}
 // Decorative night lift is kept in display space; it must not drown physical
 // emission or grow brighter when the dark-scene exposure increases.

@@ -395,7 +395,7 @@ Renderer::~Renderer() {
   glDeleteVertexArrays(1, &starVao);
   glDeleteVertexArrays(1, &vao);
 }
-void Renderer::common(GLuint p, const Scene &s, int w, int h, double seconds) {
+void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   glUseProgram(p);
   glUniform2f(glGetUniformLocation(p, "uResolution"), w, h);
   vector(p, "uForward", s.forward);
@@ -403,7 +403,6 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h, double seconds) {
   vector(p, "uUp", s.cameraUp);
   vector(p, "uSun", s.sunLocal);
   scalar(p, "uTanFov", std::tan(29 * pi / 180));
-  scalar(p, "uTime", std::fmod(seconds, 100000.));
   scalar(p, "uPlanetLight", s.giantLight);
   scalar(p, "uEclipse", s.sunVisibility);
   // Stable exposure driven by daylight, not by passing bright bodies (no
@@ -477,9 +476,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDepthMask(GL_TRUE);
   glClearDepthf(1);
   glClear(GL_DEPTH_BUFFER_BIT);
-  common(backgroundProgram, s, w, h, seconds);
+  common(backgroundProgram, s, w, h);
   quad(backgroundProgram);
-  common(starProgram, s, w, h, seconds);
+  common(starProgram, s, w, h);
   float matrix[9] = {float(s.east.x), float(s.up.x), float(s.north.x),
                      float(s.east.y), float(s.up.y), float(s.north.y),
                      float(s.east.z), float(s.up.z), float(s.north.z)};
@@ -492,7 +491,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDisable(GL_BLEND);
   std::vector<float> ringOccluders;
   if (drawBodies && drawRings) {
-    common(ringProgram, s, w, h, seconds);
+    common(ringProgram, s, w, h);
     rings(ringProgram, s, true);
     for (const auto &body : s.bodies) {
       const double along = dot(body.position, s.sun);
@@ -548,7 +547,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       const GLuint bodyShader =
           b.material == 0 ? (pass == 0 ? giantProgram : giantLimbProgram)
                           : bodyProgram;
-      common(bodyShader, s, w, h, seconds);
+      common(bodyShader, s, w, h);
       rings(bodyShader, s, drawRings);
       integer(bodyShader, "uRingOccluderCount", ringOccluders.size() / 4);
       if (!ringOccluders.empty())
@@ -599,7 +598,18 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     emissions(s, w, h, emission, drawRings, day);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
-  common(postProgram, s, w, h, seconds);
+  common(postProgram, s, w, h);
+  // Reduce each octave separately at the repeating noise texture's period.
+  // A single wrapped clock cannot preserve noninteger octave frequencies.
+  // Upload small offsets so Unix-scale time never loses subframe precision
+  // in a float shader. Same five texture samples and no new render pass.
+  const double frequencies[] = {1., 2.01, 4.03, 8.07, .045};
+  float offsets[10];
+  for (int i = 0; i < 5; ++i) {
+    offsets[2 * i] = std::remainder(seconds * .007 * frequencies[i], 256.);
+    offsets[2 * i + 1] = std::remainder(seconds * .003 * frequencies[i], 256.);
+  }
+  glUniform2fv(glGetUniformLocation(postProgram, "uCloudOffset[0]"), 5, offsets);
   bind(postProgram, 2, "uScene", scene.texture);
   bind(postProgram, 3, "uMountains", mountains);
   bind(postProgram, 4, "uNoise", noise);
@@ -749,7 +759,7 @@ void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
       }
     }
 
-  common(emissionProgram, s, w, h, frame.seconds);
+  common(emissionProgram, s, w, h);
   rings(emissionProgram, s, ringsEnabled);
   std::vector<float> blockers;
   for (const auto &b : s.bodies) {

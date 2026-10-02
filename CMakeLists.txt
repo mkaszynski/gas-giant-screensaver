@@ -55,3 +55,5 @@ foreach(effect IN ITEMS lightning aurora)
   set_tests_properties(cli-${effect}-brightness-range cli-${effect}-brightness-negative cli-${effect}-brightness-nonfinite PROPERTIES WILL_FAIL TRUE)
   add_test(NAME cli-${effect}-brightness-valid COMMAND gas-giant-screensaver --${effect}-brightness 0 --${effect}-brightness 0.5 --${effect}-brightness 1000000 --help)
 endforeach()
+
+add_test(NAME cli-unix-time COMMAND gas-giant-screensaver --time 1790900000 --weather-time 1790900000 --help)

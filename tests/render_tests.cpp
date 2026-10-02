@@ -157,6 +157,37 @@ int main() {
       auto repeat = pixels(640, 360);
       require(repeat == day,
               "resize and time changes must return to deterministic output");
+      // Old 100000-second shader reset, old startup cycle, true year, Unix
+      // epoch scale and each independent cloud octave's texture wrap.
+      std::vector<double> boundaries{
+          100000., 1800. * 365.,
+          stellarYearSeconds / simulationTimeScale(1800.), 1790900000., 1.e10};
+      for (double frequency : {1., 2.01, 4.03, 8.07, .045})
+        for (double wind : {.007, .003})
+          boundaries.push_back(128. / (frequency * wind));
+      const auto fixedCloudScene = sceneAt(550.);
+      r.renderScene(640, 360, fixedCloudScene, 1790900000.);
+      auto cloudsBefore = pixels(640, 360);
+      r.renderScene(640, 360, fixedCloudScene, 1790900060.);
+      auto cloudsAfter = pixels(640, 360);
+      long cloudMotion = 0;
+      for (size_t i = 0; i < cloudsBefore.size(); ++i)
+        cloudMotion += std::abs(int(cloudsBefore[i]) - int(cloudsAfter[i]));
+      require(cloudMotion > 10000, "clouds keep moving at Unix-scale time");
+      for (double boundary : boundaries) {
+        // Freeze geometry to isolate cloud continuity from moving shadows.
+        const auto fixed = sceneAt(550.);
+        r.renderScene(640, 360, fixed, boundary - .001);
+        auto a = pixels(640, 360);
+        r.renderScene(640, 360, fixed, boundary + .001);
+        auto b = pixels(640, 360);
+        int maximum = 0;
+        for (size_t i = 0; i < a.size(); ++i)
+          maximum = std::max(maximum, std::abs(int(a[i]) - int(b[i])));
+        std::cout << "Cloud continuity at " << boundary << ": " << maximum
+                  << '\n';
+        require(maximum <= 2, "clouds must not jump at a clock/texture wrap");
+      }
       {
         ShaderFixture fixture;
         Renderer brightSky(fixture.path.string());

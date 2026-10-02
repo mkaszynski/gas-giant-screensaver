@@ -148,9 +148,19 @@ nix run . -- --capture twilight.png --time 1180 --width 1920 --height 1080
 nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 ```
 
-`--time` sets the starting scene time; `--capture` freezes it. Normal launches
-continue from wall-clock-derived celestial time. `--day-seconds` changes the
-speed of the system. See `--help` for recording options.
+`--time` sets the starting scene time in seconds; `--capture` freezes it.
+Normal launches use continuous Unix seconds (since 1970-01-01 UTC), then advance
+with a monotonic clock. Restarting resumes the same celestial timeline. There
+is no global loop: the moons, giant rotation and stellar year have different
+periods. `--day-seconds` changes the speed of the system. At the default 1800-second
+solar day, one complete stellar year takes about **20.52 real days**, not 365
+moon days (7.60 real days). Clouds wrap each texture octave seamlessly in double
+precision before uploading small offsets to the GPU.
+
+This corrects the former startup reset at 365 moon days, which skipped about
+63% of the year; upgrading changes the current celestial phase once. Previously
+published wall-clock eclipse dates no longer apply. Explicit `--time` review
+instants retain their orbital geometry. See `--help` for recording options.
 
 ## Lightning and auroras
 
