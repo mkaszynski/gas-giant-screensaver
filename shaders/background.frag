@@ -3,7 +3,7 @@ precision highp float;
 in vec2 uv;out vec4 color;
 #include "atmosphere.glsl"
 #include "scene.glsl"
-uniform samplerCube uGalaxy;
+uniform highp samplerCube uGalaxy;
 uniform mat3 uStarFrame;
 uniform bool uGalaxyEnabled;
 uniform float uCelestialGain;
