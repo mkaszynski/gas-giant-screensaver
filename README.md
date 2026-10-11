@@ -7,6 +7,36 @@ tilted equator. Sunlight, phases and eclipse shadows follow that
 geometry. The sky changes through a 30-minute solar day, with thin drifting
 clouds and stars emerging at dusk.
 
+## Galaxy beta (`feat/galaxy`)
+
+The review branch adds Earth's J2000 sky: 8,920 catalog stars with measured
+magnitudes and color indices, plus NASA's Milky Way star clouds and dust lanes.
+Coordinates and colors are baked once; one cached cubemap sample in the existing
+sky pass supplies the diffuse galaxy. Local atmosphere, clouds, mountains and
+celestial bodies determine visibility. A brightly illuminated giant suppresses
+the faint sky; total eclipse is a useful review instant.
+
+Preview the beta without changing the installed screensaver:
+
+```sh
+nix run github:mkaszynski/gas-giant-screensaver/feat/galaxy -- \
+  --fullscreen --time 437625
+```
+
+From this checkout, `nix run . -- --fullscreen --time 437625` builds the current
+branch. For a frozen review image:
+
+```sh
+nix run . -- --capture galaxy.png --time 437625 --width 1920 --height 1080
+```
+
+Compare with `--no-galaxy`, `--no-stars`, or both. See
+[sky sources, calibration, efficiency and limitations](docs/GALAXY.md).
+This beta remains on its feature branch until operator review.
+
+[Eclipse sky capture](docs/images/galaxy-eclipse.png) ·
+[Sky beside the sunlit giant](docs/images/galaxy-night.png)
+
 ![Twilight from the observer moon](assets/preview-twilight.png)
 
 [Animated preview](assets/preview.webp) · [MP4](assets/preview.mp4) · [Daylight](assets/preview-day.png) · [Eclipse](assets/preview-eclipse.png)
@@ -206,3 +236,6 @@ integration; overlapping penumbras use an approximation. See
 The original renderer is released under the standard [MIT License](LICENSE). Hyprlock integration incorporates BSD-3-Clause upstream
 code and attributed UX patches. Generated assets: CC0-1.0 to the extent rights
 exist. See [LICENSE](LICENSE) and [attribution](docs/ASSETS.md).
+The HYG-derived star catalog has a separate CC BY-SA 4.0 data license; the NASA
+Milky Way visualization is credited separately. See
+[sky attribution and included data license](assets/sky/ATTRIBUTION.md).

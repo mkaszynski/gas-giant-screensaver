@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "sky_catalog.hpp"
 #include <GLES2/gl2ext.h>
 #include <algorithm>
 #include <cstdlib>
@@ -9,6 +10,9 @@
 #include <sstream>
 #include <stdexcept>
 namespace observatory {
+#ifdef OBSERVATORY_SKY_PROFILE
+extern GLuint skyProfileQueries[2];
+#endif
 namespace {
 // Restore the host lock renderer's state, including on shader/asset exceptions.
 struct GLState {
@@ -243,6 +247,48 @@ GLuint Renderer::imageTexture(const std::string &file) {
   textures.push_back(t);
   return t;
 }
+GLuint Renderer::galaxyTexture() {
+  GLuint texture;
+  glGenTextures(1, &texture);
+  textures.push_back(texture);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+  const char *faces[] = {"px", "nx", "py", "ny", "pz", "nz"};
+  unsigned size = 0;
+  for (int face = 0; face < 6; ++face) {
+    const auto file = root + "/assets/sky/galaxy-" + faces[face] + ".png";
+    png_image img{};
+    img.version = PNG_IMAGE_VERSION;
+    if (!png_image_begin_read_from_file(&img, file.c_str()))
+      throw std::runtime_error("Cannot load galaxy face: " + file);
+    img.format = PNG_FORMAT_RGBA;
+    const bool valid = img.width == img.height && img.width >= 256 &&
+                       img.width <= 2048 && !(img.width & (img.width - 1)) &&
+                       (!size || size == img.width);
+    if (!valid) {
+      png_image_free(&img);
+      throw std::runtime_error("Invalid galaxy cube dimensions: " + file);
+    }
+    size = img.width;
+    std::vector<unsigned char> pixels(PNG_IMAGE_SIZE(img));
+    if (!png_image_finish_read(&img, nullptr, pixels.data(), 0, nullptr)) {
+      auto message = std::string(img.message);
+      png_image_free(&img);
+      throw std::runtime_error(message);
+    }
+    // Hardware sRGB decode reconstructs linear diffuse radiance before
+    // seamless cube filtering; bright catalog stars are a separate layer.
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_SRGB8_ALPHA8,
+                 size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    png_image_free(&img);
+  }
+  glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  for (GLenum wrap : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, wrap, GL_CLAMP_TO_EDGE);
+  return texture;
+}
 void Renderer::bind(GLuint p, int unit, const char *name, GLuint t) {
   glActiveTexture(GL_TEXTURE0 + unit);
   glBindTexture(GL_TEXTURE_2D, t);
@@ -253,7 +299,8 @@ void Renderer::quad(GLuint p) {
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 }
-Renderer::Renderer(std::string dir) : root(std::move(dir)) {
+Renderer::Renderer(std::string dir, StarfieldOptions options)
+    : root(std::move(dir)), starfield(options) {
   const GLState state;
   glGenVertexArrays(1, &vao);
   transProgram = program("transmittance.frag");
@@ -351,21 +398,20 @@ Renderer::Renderer(std::string dir) : root(std::move(dir)) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  std::vector<float> catalog;
-  for (int i = 0; i < stars; ++i) {
-    float y = unit(rng) * 2 - 1, a = unit(rng) * 2 * pi,
-          r = std::sqrt(1 - y * y);
-    catalog.insert(catalog.end(), {r * std::cos(a), y, r * std::sin(a),
-                                   .25f + .75f * unit(rng)});
-  }
+  const auto catalog = loadStarCatalog(root + "/assets/sky/stars.bin");
+  stars = static_cast<int>(catalog.size());
+  galaxy = galaxyTexture();
   glGenVertexArrays(1, &starVao);
   glBindVertexArray(starVao);
   glGenBuffers(1, &starBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, starBuffer);
-  glBufferData(GL_ARRAY_BUFFER, catalog.size() * sizeof(float), catalog.data(),
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, catalog.size() * sizeof(CatalogStar),
+               catalog.data(), GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+  glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(CatalogStar), nullptr);
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(CatalogStar),
+                        reinterpret_cast<void *>(4 * sizeof(float)));
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glDisable(GL_BLEND);
@@ -426,6 +472,10 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   const double gain = 1 + 255 * std::pow(dark, 4) * dimPlanet * dimPlanet /
                               (1 + planet * 50000);
   scalar(p, "uDarkGain", gain);
+  // The enormous nearby giant lights the observer far more than Earth's Moon.
+  // Its phase controls contrast adaptation: the galaxy emerges when it is dim.
+  // This is a bounded display adaptation model, not absolute eye photometry.
+  scalar(p, "uCelestialGain", 1. / (1. + planet * 2500.));
   scalar(p, "uExposure",
          gain * std::exp(std::log(18.) * (1 - daylight) +
                          std::log(12.) * daylight));
@@ -476,19 +526,41 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDepthMask(GL_TRUE);
   glClearDepthf(1);
   glClear(GL_DEPTH_BUFFER_BIT);
-  common(backgroundProgram, s, w, h);
-  quad(backgroundProgram);
-  common(starProgram, s, w, h);
   float matrix[9] = {float(s.east.x), float(s.up.x), float(s.north.x),
                      float(s.east.y), float(s.up.y), float(s.north.y),
                      float(s.east.z), float(s.up.z), float(s.north.z)};
-  glUniformMatrix3fv(glGetUniformLocation(starProgram, "uStarFrame"), 1,
+#ifdef OBSERVATORY_SKY_PROFILE
+  glBeginQuery(GL_TIME_ELAPSED_EXT, skyProfileQueries[0]);
+#endif
+  common(backgroundProgram, s, w, h);
+  glUniformMatrix3fv(glGetUniformLocation(backgroundProgram, "uStarFrame"), 1,
                      GL_FALSE, matrix);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_ONE, GL_ONE);
-  glBindVertexArray(starVao);
-  glDrawArrays(GL_POINTS, 0, stars);
-  glDisable(GL_BLEND);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, galaxy);
+  integer(backgroundProgram, "uGalaxy", 2);
+  integer(backgroundProgram, "uGalaxyEnabled", starfield.galaxy);
+  quad(backgroundProgram);
+#ifdef OBSERVATORY_SKY_PROFILE
+  glEndQuery(GL_TIME_ELAPSED_EXT);
+  glBeginQuery(GL_TIME_ELAPSED_EXT, skyProfileQueries[1]);
+#endif
+  if (starfield.stars) {
+    common(starProgram, s, w, h);
+    glUniformMatrix3fv(glGetUniformLocation(starProgram, "uStarFrame"), 1,
+                       GL_FALSE, matrix);
+    const double sigma = std::max(.4, .55 * h / 1080.);
+    scalar(starProgram, "uStarSigma", sigma);
+    scalar(starProgram, "uStarFluxScale", .08 * std::pow(h / 1080., 2));
+    scalar(starProgram, "uStarSize", 2 * std::ceil(4 * sigma));
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glBindVertexArray(starVao);
+    glDrawArrays(GL_POINTS, 0, stars);
+    glDisable(GL_BLEND);
+  }
+#ifdef OBSERVATORY_SKY_PROFILE
+  glEndQuery(GL_TIME_ELAPSED_EXT);
+#endif
   std::vector<float> ringOccluders;
   if (drawBodies && drawRings) {
     common(ringProgram, s, w, h);
@@ -609,7 +681,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     offsets[2 * i] = std::remainder(seconds * .007 * frequencies[i], 256.);
     offsets[2 * i + 1] = std::remainder(seconds * .003 * frequencies[i], 256.);
   }
-  glUniform2fv(glGetUniformLocation(postProgram, "uCloudOffset[0]"), 5, offsets);
+  glUniform2fv(glGetUniformLocation(postProgram, "uCloudOffset[0]"), 5,
+               offsets);
   bind(postProgram, 2, "uScene", scene.texture);
   bind(postProgram, 3, "uMountains", mountains);
   bind(postProgram, 4, "uNoise", noise);

@@ -1,5 +1,68 @@
 # Validation
 
+## Earth sky beta
+
+The galaxy beta has 20 CPU/CLI tests and seven GPU behavior suites, including
+new catalog and sky tests. The new checks verify named J2000 star positions
+(Sirius, Rigel, Betelgeuse), V-magnitude flux ratios, B-V color differences,
+malformed catalog rejection, stable integrated star flux across fractional pixel
+movement and 4x linear resolution, continuous cube edges, galaxy/pole contrast,
+daylight washout and mountain occlusion. A solar regression compares the optimized
+cosine-bound disk against the original ungated angular calculation. Both sky
+layers can be disabled independently for review.
+
+The offline bake was repeated from the pinned source checksums. All catalog
+bytes and all six cubemap pixel arrays reproduced exactly. NASA's celestial
+orientation and the requested PyVista reference faces were inspected; the
+reference's different JPEG exposure is not used as a naked-eye brightness scale.
+Actual 1920x1080 eclipse and planetlit-night captures were reviewed.
+
+On AMD Radeon integrated graphics (radeonsi/renoir/ACO, kernel 6.18.6), each
+measurement below is the median of three 180-frame runs after 40 warmup frames.
+Baseline and beta were alternated on the same desktop. Baseline is `8d50bba`
+with timer instrumentation only. Production builds do not include those calls.
+
+| Scene | Baseline sky median / p95 | Beta sky median / p95 | Median change |
+|---|---:|---:|---:|
+| Day, time 0, 1080p | 0.760 / 0.803 ms | 0.688 / 0.717 ms | -9.5% |
+| Planetlit night, time 900, 1080p | 0.761 / 0.795 ms | 0.833 / 0.877 ms | +9.5% |
+| Eclipse, time 437625, 1080p | 0.793 / 0.833 ms | 0.881 / 0.906 ms | +11.1% |
+| Eclipse, time 437625, 4K | 3.329 / 3.441 ms | 3.622 / 3.774 ms | +8.8% |
+
+**Sky means background plus point stars**, where the diffuse galaxy is added.
+Both median and p95 stay below +20% in these samples. Separately, the eclipse
+point-star pass grows from 0.021 to 0.031 ms at 1080p and from 0.021 to 0.070 ms
+at 4K: more catalog points and integrated filtering are not free. The 20% result
+is for the complete sky, not that small point-star pass alone. The conservative
+solar bound offsets part of the cube-sampling cost, particularly in daylight.
+These are shared-desktop GPU timings, not power-consumption measurements or a
+guarantee for all graphics drivers. Raw repeated measurements are recorded in
+[galaxy-benchmark.json](galaxy-benchmark.json).
+
+A separate 180-frame full-scene 1080p eclipse comparison measured GPU medians
+of **4.529 ms baseline / 4.630 ms beta** (+2.2%), with GPU p95 **5.340 / 5.175 ms**.
+Synchronized CPU+GPU medians were **5.849 / 6.040 ms**. Both Nix packages built,
+all four flake checks passed, and the packaged Hyprlock renderer was exercised
+in an isolated headless Hyprland session: native capture, cyan password input
+and unlock transition passed. The real desktop was not locked or reconfigured.
+
+```sh
+nix develop --command cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+nix develop --command cmake --build build --parallel 3
+ctest --test-dir build --output-on-failure
+./build/render-tests
+./build/ring-render-tests
+./build/edge-render-tests
+./build/atmosphere-render-tests
+./build/scattering-edge-tests
+./build/emission-render-tests
+./build/sky-render-tests
+```
+
+CI runs the same CPU and seven GPU suites using Mesa llvmpipe/Xvfb, builds the
+Nix packages and validates the native lock configuration. The feature remains
+unmerged for operator review.
+
 ## Automated checks
 
 The local CMake/CTest gate covers the 1.25 apocenter/pericenter ratio, closed

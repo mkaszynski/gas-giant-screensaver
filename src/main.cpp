@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
            timeStep = 1.0 / 30, lightningBrightness = 5,
            auroraBrightness = 1000;
     bool fullscreen = false, drawRings = true, drawEmissions = true;
+    StarfieldOptions starfield;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
       std::string a = argv[i];
@@ -63,6 +64,9 @@ int main(int argc, char **argv) {
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
                "(default 1000)\n"
+               "  --no-galaxy            Disable diffuse Milky Way for "
+               "comparison\n"
+               "  --no-stars             Disable catalog stars for comparison\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"
                "Escape or Q closes the preview. This preview does "
@@ -71,6 +75,14 @@ int main(int argc, char **argv) {
       }
       if (a == "--fullscreen") {
         fullscreen = true;
+        continue;
+      }
+      if (a == "--no-galaxy") {
+        starfield.galaxy = false;
+        continue;
+      }
+      if (a == "--no-stars") {
+        starfield.stars = false;
         continue;
       }
       if (a == "--no-emissions") {
@@ -148,7 +160,7 @@ int main(int argc, char **argv) {
     glfwSwapInterval(0);
     std::cerr << "Renderer: " << glGetString(GL_RENDERER) << "\n";
     {
-      Renderer renderer(data);
+      Renderer renderer(data, starfield);
       using Clock = std::chrono::steady_clock;
       auto start = Clock::now();
       std::vector<double> durations, gpuDurations;

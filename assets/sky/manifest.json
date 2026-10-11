@@ -1,0 +1,11 @@
+{
+  "stars": 8920,
+  "missing_color_indices": 40,
+  "limiting_magnitude": 6.5,
+  "face_size": 1024,
+  "obliquity_degrees": 23.4392911,
+  "sources": {
+    "hyg_v41.csv": "d9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd",
+    "milkyway_2020_4k.exr": "2eb802d6e68d170b410f766c7fec07f7518619f6b6708fdc81e9302d93e74fdb"
+  }
+}
