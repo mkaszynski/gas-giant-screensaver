@@ -1,0 +1,23 @@
+{
+  "model": "deterministic disk/bar stellar radiance with measured local 3D + all-sky dust",
+  "face_size": 2048,
+  "integration_steps": 96,
+  "resolved_limit": 6.5,
+  "radiance_units": "V-zero-point-relative flux per steradian",
+  "gpu_format": "BC6H unsigned linear HDR",
+  "encoder": {
+    "name": "ispc_texcomp",
+    "version": "1.0.1",
+    "profile": "slow",
+    "mip_filter": "linear radiance box"
+  },
+  "sources": {
+    "csfd_ebv.fits": "379017a424b6f50e98d03df1eac7417750dc0ceba31a34441c63ea182ce01f6e",
+    "dust-profiles.npz": "fe42392846ad8fb786b523d9edb4bd0f565253ecef063c25b7602513f9427e0d"
+  },
+  "dust_zero_column_repairs": 496,
+  "input_subsets": {
+    "Edenhofer_primary_and_MEAN_sha256": "4bad79d417107c1a090779bb60d45b1fd4a2f5716797f34b58b5180f69cbf984",
+    "Edenhofer_radial_and_inner_metadata_sha256": "397bcb45b72d444ec20ac33e5f1f3d6c12162d512add1a5a5251890be9d43cac"
+  }
+}

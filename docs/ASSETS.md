@@ -41,6 +41,11 @@ stripes. Balanced desaturated colors, natural scientific beauty.
 
 ## Source attribution
 
+The Earth star catalog and Milky Way cubemap are based on astronomical data,
+with separate provenance and licensing described in
+[sky attribution](../assets/sky/ATTRIBUTION.md) and [the galaxy design](GALAXY.md).
+They are not covered by the generated-asset CC0 statement above.
+
 The standalone renderer and observatory widget are original MIT-licensed code.
 The input-trace, unlock-transition and failure-halo patches originate in
 [Hyperspace Starfield](https://github.com/akaszynski/hyperspace-starfield), pinned

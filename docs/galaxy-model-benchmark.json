@@ -1,0 +1,186 @@
+{
+  "baseline": "8d50bba starfield, timer instrumentation only",
+  "hardware": "AMD Radeon Graphics (radeonsi, renoir, ACO, kernel 6.18.6)",
+  "frames": 180,
+  "warmup": 40,
+  "runs_per_variant": 3,
+  "method": "Alternating baseline/model on shared desktop; combined background and point-star GPU elapsed time",
+  "scenes": [
+    {
+      "scene": "day",
+      "time": 0,
+      "width": 1920,
+      "height": 1080,
+      "baseline": {
+        "runs": [
+          {
+            "median_ms": 0.79128,
+            "p95_ms": 0.86476
+          },
+          {
+            "median_ms": 0.78308,
+            "p95_ms": 0.86304
+          },
+          {
+            "median_ms": 0.79964,
+            "p95_ms": 0.83692
+          }
+        ],
+        "median_ms": 0.79128,
+        "p95_ms": 0.86304
+      },
+      "model": {
+        "runs": [
+          {
+            "median_ms": 0.70364,
+            "p95_ms": 0.79484
+          },
+          {
+            "median_ms": 0.69528,
+            "p95_ms": 0.7244
+          },
+          {
+            "median_ms": 0.695,
+            "p95_ms": 0.74516
+          }
+        ],
+        "median_ms": 0.69528,
+        "p95_ms": 0.74516
+      },
+      "median_change_percent": -12.132241431604484,
+      "p95_change_percent": -13.658694846125318
+    },
+    {
+      "scene": "night",
+      "time": 900,
+      "width": 1920,
+      "height": 1080,
+      "baseline": {
+        "runs": [
+          {
+            "median_ms": 0.79524,
+            "p95_ms": 0.87188
+          },
+          {
+            "median_ms": 0.79576,
+            "p95_ms": 0.8376
+          },
+          {
+            "median_ms": 0.78792,
+            "p95_ms": 0.83292
+          }
+        ],
+        "median_ms": 0.79524,
+        "p95_ms": 0.8376
+      },
+      "model": {
+        "runs": [
+          {
+            "median_ms": 0.83104,
+            "p95_ms": 0.87236
+          },
+          {
+            "median_ms": 0.8322,
+            "p95_ms": 0.87592
+          },
+          {
+            "median_ms": 0.83412,
+            "p95_ms": 0.87636
+          }
+        ],
+        "median_ms": 0.8322,
+        "p95_ms": 0.87592
+      },
+      "median_change_percent": 4.647653538554408,
+      "p95_change_percent": 4.57497612225406
+    },
+    {
+      "scene": "eclipse",
+      "time": 437625,
+      "width": 1920,
+      "height": 1080,
+      "baseline": {
+        "runs": [
+          {
+            "median_ms": 0.81848,
+            "p95_ms": 0.87428
+          },
+          {
+            "median_ms": 0.81036,
+            "p95_ms": 0.88468
+          },
+          {
+            "median_ms": 0.8166,
+            "p95_ms": 0.85672
+          }
+        ],
+        "median_ms": 0.8166,
+        "p95_ms": 0.87428
+      },
+      "model": {
+        "runs": [
+          {
+            "median_ms": 0.86524,
+            "p95_ms": 0.90948
+          },
+          {
+            "median_ms": 0.86588,
+            "p95_ms": 0.90052
+          },
+          {
+            "median_ms": 0.8716,
+            "p95_ms": 0.90488
+          }
+        ],
+        "median_ms": 0.86588,
+        "p95_ms": 0.90488
+      },
+      "median_change_percent": 6.034778349252989,
+      "p95_change_percent": 3.500022875966513
+    },
+    {
+      "scene": "eclipse-4k",
+      "time": 437625,
+      "width": 3840,
+      "height": 2160,
+      "baseline": {
+        "runs": [
+          {
+            "median_ms": 3.365,
+            "p95_ms": 3.67016
+          },
+          {
+            "median_ms": 3.34464,
+            "p95_ms": 3.54028
+          },
+          {
+            "median_ms": 3.434,
+            "p95_ms": 3.66768
+          }
+        ],
+        "median_ms": 3.365,
+        "p95_ms": 3.66768
+      },
+      "model": {
+        "runs": [
+          {
+            "median_ms": 3.58296,
+            "p95_ms": 3.92916
+          },
+          {
+            "median_ms": 3.5342,
+            "p95_ms": 3.90976
+          },
+          {
+            "median_ms": 3.79736,
+            "p95_ms": 3.96384
+          }
+        ],
+        "median_ms": 3.58296,
+        "p95_ms": 3.92916
+      },
+      "median_change_percent": 6.477265973254087,
+      "p95_change_percent": 7.12930244732366
+    }
+  ]
+}

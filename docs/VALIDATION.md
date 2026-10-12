@@ -1,5 +1,192 @@
 # Validation
 
+## Rendered HDR galaxy
+
+The current beta replaces the flattened star map with deterministic stellar-
+emissivity integration through measured CSFD and local Edenhofer 3D extinction.
+It retains the same 8,920 cached HYG stars, but treats unresolved light as a
+continuous radiance field. Six 2048-pixel BC6H faces and complete HDR mipmaps
+use **32 MiB**, versus 128 MiB for the preceding photographic cube. Original
+8-bit/BC7 assets and their image-conversion pipeline are removed.
+
+All **21 CPU/CLI checks, 11 offline model tests and seven GPU suites** pass on
+the local AMD GPU. The diffuse 1080p Galactic-center variation proxy is
+**0.01959**, versus 0.49425 for the unfiltered raster and 0.22015 after its mip
+bias: approximately **96% / 91% lower**, respectively. This is a normalized
+pixel-scale variation measure, not a claim of exactly reproducing every measured
+stellar association. Band/pole contrast remains **8.25x**. The eclipse regression
+detects **400 visible catalog stars**, with 195/255 peak contrast.
+
+The data check found 496 exact-zero conversion-seam dust entries. Treating them
+as transparent produced false bright patches; deterministic neighboring-column
+reconstruction removes them. A regression preserves measured nonzero values and
+rejects holes with no valid neighbors. The model tests also check coordinate
+alignment, distance/magnitude selection, deterministic output, quadrature
+convergence, spectral reddening, cumulative dust budgets and HDR mip averages.
+
+The existing RGBA16F scene now uses a reversible 4096x storage scale, without a
+new target or pass. A dim 2048-pixel test gradient retains **1024 distinct levels**
+with **0.091%** worst relative error. Explicit high-precision atmospheric sampling
+avoids horizontal bands exposed by the new continuous sky; its test gradient
+retains **984 levels**. Solar clipping remains far above display white, and all
+solar, body, ring, atmosphere, emission and foreground regressions pass.
+
+Uncompressed RGB16F model references were rendered through the same GLES path.
+Compared with BC6H, normal-exposure output differs by **0.0035/255 on average**,
+with **1/255 maximum**. At 10x and 100x exposure, mean error is **0.0178/255** and
+**0.0314/255**, respectively; their 99.9th-percentile error is 1/255 and maxima
+4/255 and 3/255. These elevated exposures are stress tests, not the normal preset.
+Portable and GPU BC6H decoding produce zero display difference in the tested
+eclipse. Raw comparisons are in
+[galaxy-model-image-quality.json](galaxy-model-image-quality.json).
+
+Each performance value below is the median of three alternating 180-frame runs,
+after 40 warmup frames. Baseline is the original starfield at `8d50bba` with
+profiling only. Both median and p95 stay within the +20% combined-sky budget.
+The instrumented benchmark is separate from production. These are measurements
+on a shared desktop, not watt readings or guarantees for every graphics driver.
+
+| Scene | Baseline sky median | Model sky median | Change |
+|---|---:|---:|---:|
+| Day, 1080p | 0.791 ms | 0.695 ms | -12.1% |
+| Planetlit night, 1080p | 0.795 ms | 0.832 ms | +4.6% |
+| Eclipse, 1080p | 0.817 ms | 0.866 ms | +6.0% |
+| Eclipse, 4K | 3.365 ms | 3.583 ms | +6.5% |
+
+Raw medians, p95 values and individual runs are in
+[galaxy-model-benchmark.json](galaxy-model-benchmark.json).
+
+Review images are actual framebuffer captures:
+
+- [Normal fixed-camera eclipse](images/galaxy-eclipse.png).
+- [Planetlit night](images/galaxy-night.png).
+- [Galactic-center diagnostic camera](images/galaxy-model-reference.png).
+- [The same diagnostic camera at 10x exposure](images/galaxy-model-exposure-10x.png).
+
+The diagnostic points toward the Milky Way and omits celestial bodies to make
+sky quality visible; it is not the normal screensaver camera. Population spectra,
+bar luminosity and distant dust are model approximations. Fine stellar
+associations and the Magellanic Clouds from the former raster are not reconstructed
+in this version. See [design and limits](GALAXY.md).
+
+## Historical photographic sky refinement
+
+The subsequent grain refinement widens only the diffuse map's sampling
+footprint by 1.52x (+0.6 mip bias), using the existing linear-light mipmaps and
+the same single lookup. In an isolated 1080p Galactic-center view, normalized
+pixel-scale variation drops **55.5%**, while the mean absolute difference of
+32-pixel cell averages is **0.133%** of the original total radiance. Tests also
+require retained fine structure and mean brightness within 1%. In the actual
+eclipse-sky review patch, pixel-scale variation drops **40.2%**. Turning off
+display dithering alone reduced it only 3.2%; dithering remains to prevent
+color banding. Catalog point profiles and GPU memory are unchanged. The updated
+eclipse regression detects **359 visible catalog stars**, peak 188/255.
+See the [before/after crop](images/galaxy-detail-before-after.png).
+
+Three alternating 180-frame timing runs per variant measured combined sky
+medians of **0.850 ms before / 0.843 ms after** at 1080p, and **3.535 / 3.544 ms**
+at 4K: changes of -0.82% and +0.25%, respectively. This refinement adds no
+measurable rendering burden in these shared-desktop samples. Raw repetitions
+are in [galaxy-grain-benchmark.json](galaxy-grain-benchmark.json).
+
+### Preceding high-resolution revision
+
+The quality revision replaces the softened 4k/1024-face map with the 16k NASA
+source and 4096-pixel faces, removes Gaussian preblur, restores the 16-fold
+source texel-area brightness scaling, and increases catalog point exposure 10x.
+That revision's eclipse regression measured **358 distinct catalog stars** above
+12/255 contrast in the visible upper sky, with a peak difference of 187/255.
+It tests the actual atmosphere, diffuse galaxy, occlusion and final tone mapping.
+An isolated 1080p diffuse-sky check requires retained fine structure rather than
+accepting a bright but blurred band. Colors, magnitudes and subpixel flux
+stability remain independently tested.
+
+BC7 sRGB compression retains the 4096-pixel resolution and full linear-light
+mip chain while reducing static sky GPU storage from **512 MiB to 128 MiB**.
+The actual AMD GPU supports the format. No codec runs during animation; the
+hardware samples the compressed texture directly. The portable decoder path
+produces **zero final-display difference** in the tested eclipse scene. GPU and
+decoded uploads are compared explicitly, and the binary loader rejects incorrect
+dimensions, mip sizes, truncation and trailing data.
+
+Compared with the uncompressed source capture, the final 1080p eclipse changes
+by **0.044/255 on average**, **1/255 at the 99.9th percentile**, and **3/255 at
+the worst channel**. Base-level source-face comparison measures 47.48 dB PSNR
+and 0.72/255 mean absolute error. These are image-fidelity checks, not an assertion
+of calibrated human-eye brightness. The offline conversion and encoding tools
+are not runtime dependencies. The 21 CPU/CLI checks and all seven GPU suites
+pass locally. The initial timing data below belongs to the preceding softer
+beta; broader tuning follows appearance review.
+
+A 180-frame check of this quality revision measured a **0.905 ms sky median**
+at 1080p eclipse, versus the initial baseline's **0.793 ms** (+14.0%). Full-scene
+GPU median was **4.50 ms**; the earlier baseline sample was **4.53 ms**. This is
+a spot check on a shared desktop, not the previous three-run performance gate
+or a guarantee across resolutions and drivers.
+
+## Earth sky beta
+
+The galaxy beta has 20 CPU/CLI tests and seven GPU behavior suites, including
+new catalog and sky tests. The new checks verify named J2000 star positions
+(Sirius, Rigel, Betelgeuse), V-magnitude flux ratios, B-V color differences,
+malformed catalog rejection, stable integrated star flux across fractional pixel
+movement and 4x linear resolution, continuous cube edges, galaxy/pole contrast,
+daylight washout and mountain occlusion. A solar regression compares the optimized
+cosine-bound disk against the original ungated angular calculation. Both sky
+layers can be disabled independently for review.
+
+The offline bake was repeated from the pinned source checksums. All catalog
+bytes and all six cubemap pixel arrays reproduced exactly. NASA's celestial
+orientation and the requested PyVista reference faces were inspected; the
+reference's different JPEG exposure is not used as a naked-eye brightness scale.
+Actual 1920x1080 eclipse and planetlit-night captures were reviewed.
+
+On AMD Radeon integrated graphics (radeonsi/renoir/ACO, kernel 6.18.6), each
+measurement below is the median of three 180-frame runs after 40 warmup frames.
+Baseline and beta were alternated on the same desktop. Baseline is `8d50bba`
+with timer instrumentation only. Production builds do not include those calls.
+
+| Scene | Baseline sky median / p95 | Beta sky median / p95 | Median change |
+|---|---:|---:|---:|
+| Day, time 0, 1080p | 0.760 / 0.803 ms | 0.688 / 0.717 ms | -9.5% |
+| Planetlit night, time 900, 1080p | 0.761 / 0.795 ms | 0.833 / 0.877 ms | +9.5% |
+| Eclipse, time 437625, 1080p | 0.793 / 0.833 ms | 0.881 / 0.906 ms | +11.1% |
+| Eclipse, time 437625, 4K | 3.329 / 3.441 ms | 3.622 / 3.774 ms | +8.8% |
+
+**Sky means background plus point stars**, where the diffuse galaxy is added.
+Both median and p95 stay below +20% in these samples. Separately, the eclipse
+point-star pass grows from 0.021 to 0.031 ms at 1080p and from 0.021 to 0.070 ms
+at 4K: more catalog points and integrated filtering are not free. The 20% result
+is for the complete sky, not that small point-star pass alone. The conservative
+solar bound offsets part of the cube-sampling cost, particularly in daylight.
+These are shared-desktop GPU timings, not power-consumption measurements or a
+guarantee for all graphics drivers. Raw repeated measurements are recorded in
+[galaxy-benchmark.json](galaxy-benchmark.json).
+
+A separate 180-frame full-scene 1080p eclipse comparison measured GPU medians
+of **4.529 ms baseline / 4.630 ms beta** (+2.2%), with GPU p95 **5.340 / 5.175 ms**.
+Synchronized CPU+GPU medians were **5.849 / 6.040 ms**. Both Nix packages built,
+all four flake checks passed, and the packaged Hyprlock renderer was exercised
+in an isolated headless Hyprland session: native capture, cyan password input
+and unlock transition passed. The real desktop was not locked or reconfigured.
+
+```sh
+nix develop --command cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+nix develop --command cmake --build build --parallel 3
+ctest --test-dir build --output-on-failure
+./build/render-tests
+./build/ring-render-tests
+./build/edge-render-tests
+./build/atmosphere-render-tests
+./build/scattering-edge-tests
+./build/emission-render-tests
+./build/sky-render-tests
+```
+
+CI runs the same CPU and seven GPU suites using Mesa llvmpipe/Xvfb, builds the
+Nix packages and validates the native lock configuration. The feature remains
+unmerged for operator review.
+
 ## Automated checks
 
 The local CMake/CTest gate covers the 1.25 apocenter/pericenter ratio, closed

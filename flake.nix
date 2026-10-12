@@ -9,12 +9,12 @@
       version = "0.1.0";
       src = pkgs.lib.fileset.toSource {
         root = ./.;
-        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/mountains.png ];
+        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/mountains.png ./assets/sky ];
       };
       nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
       buildInputs = [ pkgs.glfw pkgs.libGL pkgs.libpng ];
       cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
-      meta.license = pkgs.lib.licenses.mit;
+      meta.license = with pkgs.lib.licenses; [ mit cc-by-sa-40 cc-by-40 ];
       doCheck = true;
       checkPhase = "ctest --output-on-failure";
     };
@@ -33,7 +33,9 @@
       ];
       postPatch = (old.postPatch or "") + ''
         mkdir -p src/observatory
-        cp ${./src}/{renderer,system,emissions}.{cpp,hpp} src/observatory/
+        cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture}.{cpp,hpp} src/observatory/
+        mkdir -p src/observatory/third_party
+        cp ${./src}/third_party/bcdec.h src/observatory/third_party/
         cp ${./hyprlock}/Observatory.{cpp,hpp} src/renderer/widgets/
         cat >> CMakeLists.txt <<'CMAKE'
         find_package(PNG REQUIRED)

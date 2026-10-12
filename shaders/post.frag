@@ -6,8 +6,9 @@ in vec2 uv;out vec4 color;
 uniform highp sampler2D uScene;
 uniform sampler2D uMountains,uNoise;
 uniform float uOpacity;
+uniform float uSceneScale;
 uniform vec2 uCloudOffset[5];
-vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/128.;}
+vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/uSceneScale;}
 float n2(vec2 p){return texture(uNoise,p/256.).r;}
 float clouds(vec2 p){return .55*n2(p+uCloudOffset[0])+.27*n2(p*2.01+uCloudOffset[1])+.12*n2(p*4.03+uCloudOffset[2])+.06*n2(p*8.07+uCloudOffset[3]);}
 vec3 tonemap(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}

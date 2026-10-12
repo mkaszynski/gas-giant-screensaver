@@ -1,0 +1,93 @@
+{
+  "comparison": "Previous photographic mip footprint versus +0.6 mip bias; both use the same 4096-pixel BC7 cube and catalog.",
+  "hardware": "AMD Radeon Graphics (radeonsi, renoir, ACO, DRM 3.64, kernel 6.18.6)",
+  "scene_time": 437625,
+  "frames_per_run": 180,
+  "warmup_frames": 40,
+  "repetitions": 3,
+  "method": "Alternate before/after on shared desktop; production build excludes timer instrumentation. GPU timings of background plus point-star passes.",
+  "results": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "before": {
+        "runs": [
+          {
+            "median_ms": 0.86236,
+            "p95_ms": 0.91992
+          },
+          {
+            "median_ms": 0.84892,
+            "p95_ms": 0.90272
+          },
+          {
+            "median_ms": 0.8502,
+            "p95_ms": 0.917
+          }
+        ],
+        "median_ms": 0.8502,
+        "p95_ms": 0.917
+      },
+      "after": {
+        "runs": [
+          {
+            "median_ms": 0.85296,
+            "p95_ms": 0.91632
+          },
+          {
+            "median_ms": 0.84324,
+            "p95_ms": 0.89572
+          },
+          {
+            "median_ms": 0.84236,
+            "p95_ms": 0.88036
+          }
+        ],
+        "median_ms": 0.84324,
+        "p95_ms": 0.89572
+      },
+      "median_change_percent": -0.8186309103740297
+    },
+    {
+      "width": 3840,
+      "height": 2160,
+      "before": {
+        "runs": [
+          {
+            "median_ms": 3.52332,
+            "p95_ms": 3.65932
+          },
+          {
+            "median_ms": 3.53528,
+            "p95_ms": 3.73876
+          },
+          {
+            "median_ms": 3.55164,
+            "p95_ms": 3.7564
+          }
+        ],
+        "median_ms": 3.53528,
+        "p95_ms": 3.73876
+      },
+      "after": {
+        "runs": [
+          {
+            "median_ms": 3.53564,
+            "p95_ms": 3.74224
+          },
+          {
+            "median_ms": 3.54416,
+            "p95_ms": 3.68824
+          },
+          {
+            "median_ms": 3.60948,
+            "p95_ms": 3.8366
+          }
+        ],
+        "median_ms": 3.54416,
+        "p95_ms": 3.74224
+      },
+      "median_change_percent": 0.2511823674503866
+    }
+  ]
+}

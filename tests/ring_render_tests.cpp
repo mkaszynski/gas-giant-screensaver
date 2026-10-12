@@ -122,12 +122,14 @@ int main() {
     require(window, "GLES context");
     glfwMakeContextCurrent(window);
     {
-      Renderer normal(Renderer::defaultDataDirectory());
+      // Isolate ring comparisons; the separate sky suite exercises the large
+      // photographic cube with actual foreground occlusion.
+      Renderer normal(Renderer::defaultDataDirectory(), {false, true});
       ShadowFixture noRings(false, true), noSpheres(true, false),
           noShadows(false, false);
-      Renderer ringShadowOff(noRings.path.string()),
-          sphereShadowOff(noSpheres.path.string()),
-          allShadowsOff(noShadows.path.string());
+      Renderer ringShadowOff(noRings.path.string(), {false, true}),
+          sphereShadowOff(noSpheres.path.string(), {false, true}),
+          allShadowsOff(noShadows.path.string(), {false, true});
       const Vec3 pole = giantPole(), x = normalized(cross(pole, {0, 0, 1}));
       const Vec3 ringPoint = x * 1.52;
       auto s = scene(-x + pole * .25);
@@ -197,7 +199,7 @@ int main() {
       // partially covered sphere pixels. The former depth-tested ring pass
       // rejected their entire pixel and exposed the dark sky under the edge.
       ShadowFixture flatFixture(false, false, true);
-      Renderer flat(flatFixture.path.string());
+      Renderer flat(flatFixture.path.string(), {false, true});
       s = scene({0, 0, 1});
       const Vec3 toward = normalized(s.observer - ringPoint);
       auto empty = render(flat, s);

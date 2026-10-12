@@ -1,0 +1,525 @@
+{
+  "baseline": "8d50bba (timer instrumentation only)",
+  "frames_per_run": 180,
+  "warmup_frames": 40,
+  "runs": 3,
+  "hardware": "AMD Radeon Graphics (radeonsi, renoir, ACO, DRM 3.64, kernel 6.18.6)",
+  "measurements": [
+    {
+      "scene": "day",
+      "time": 0,
+      "width": 1920,
+      "height": 1080,
+      "samples": [
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.75588,
+              "p95_ms": 0.882
+            },
+            "Catalog": {
+              "median_ms": 0.00248,
+              "p95_ms": 0.003
+            },
+            "Sky total": {
+              "median_ms": 0.75824,
+              "p95_ms": 0.8848
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.66612,
+              "p95_ms": 0.6892
+            },
+            "Catalog": {
+              "median_ms": 0.0204,
+              "p95_ms": 0.02452
+            },
+            "Sky total": {
+              "median_ms": 0.6878,
+              "p95_ms": 0.71328
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.77136,
+              "p95_ms": 0.79832
+            },
+            "Catalog": {
+              "median_ms": 0.00252,
+              "p95_ms": 0.0028
+            },
+            "Sky total": {
+              "median_ms": 0.77396,
+              "p95_ms": 0.80088
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.66672,
+              "p95_ms": 0.70332
+            },
+            "Catalog": {
+              "median_ms": 0.02056,
+              "p95_ms": 0.0254
+            },
+            "Sky total": {
+              "median_ms": 0.68952,
+              "p95_ms": 0.72692
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.75716,
+              "p95_ms": 0.80016
+            },
+            "Catalog": {
+              "median_ms": 0.00248,
+              "p95_ms": 0.00272
+            },
+            "Sky total": {
+              "median_ms": 0.75964,
+              "p95_ms": 0.8028
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.66132,
+              "p95_ms": 0.69544
+            },
+            "Catalog": {
+              "median_ms": 0.02072,
+              "p95_ms": 0.02488
+            },
+            "Sky total": {
+              "median_ms": 0.6832,
+              "p95_ms": 0.71724
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "baseline": {
+          "Background": {
+            "median_ms": 0.75716,
+            "p95_ms": 0.80016
+          },
+          "Catalog": {
+            "median_ms": 0.00248,
+            "p95_ms": 0.0028
+          },
+          "Sky total": {
+            "median_ms": 0.75964,
+            "p95_ms": 0.8028
+          }
+        },
+        "galaxy": {
+          "Background": {
+            "median_ms": 0.66612,
+            "p95_ms": 0.69544
+          },
+          "Catalog": {
+            "median_ms": 0.02056,
+            "p95_ms": 0.02488
+          },
+          "Sky total": {
+            "median_ms": 0.6878,
+            "p95_ms": 0.71724
+          }
+        }
+      },
+      "median_increase_percent": -9.457111263229956
+    },
+    {
+      "scene": "night",
+      "time": 900,
+      "width": 1920,
+      "height": 1080,
+      "samples": [
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.74384,
+              "p95_ms": 0.77952
+            },
+            "Catalog": {
+              "median_ms": 0.01624,
+              "p95_ms": 0.01812
+            },
+            "Sky total": {
+              "median_ms": 0.76016,
+              "p95_ms": 0.79544
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.80764,
+              "p95_ms": 0.8642
+            },
+            "Catalog": {
+              "median_ms": 0.02588,
+              "p95_ms": 0.02972
+            },
+            "Sky total": {
+              "median_ms": 0.83344,
+              "p95_ms": 0.89396
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.74424,
+              "p95_ms": 0.77972
+            },
+            "Catalog": {
+              "median_ms": 0.01636,
+              "p95_ms": 0.01776
+            },
+            "Sky total": {
+              "median_ms": 0.76088,
+              "p95_ms": 0.79672
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.80816,
+              "p95_ms": 0.85164
+            },
+            "Catalog": {
+              "median_ms": 0.02616,
+              "p95_ms": 0.02928
+            },
+            "Sky total": {
+              "median_ms": 0.83452,
+              "p95_ms": 0.87748
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.75052,
+              "p95_ms": 0.77968
+            },
+            "Catalog": {
+              "median_ms": 0.01624,
+              "p95_ms": 0.01792
+            },
+            "Sky total": {
+              "median_ms": 0.76684,
+              "p95_ms": 0.79528
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.79984,
+              "p95_ms": 0.8414
+            },
+            "Catalog": {
+              "median_ms": 0.026,
+              "p95_ms": 0.0286
+            },
+            "Sky total": {
+              "median_ms": 0.82584,
+              "p95_ms": 0.86736
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "baseline": {
+          "Background": {
+            "median_ms": 0.74424,
+            "p95_ms": 0.77968
+          },
+          "Catalog": {
+            "median_ms": 0.01624,
+            "p95_ms": 0.01792
+          },
+          "Sky total": {
+            "median_ms": 0.76088,
+            "p95_ms": 0.79544
+          }
+        },
+        "galaxy": {
+          "Background": {
+            "median_ms": 0.80764,
+            "p95_ms": 0.85164
+          },
+          "Catalog": {
+            "median_ms": 0.026,
+            "p95_ms": 0.02928
+          },
+          "Sky total": {
+            "median_ms": 0.83344,
+            "p95_ms": 0.87748
+          }
+        }
+      },
+      "median_increase_percent": 9.536326358952785
+    },
+    {
+      "scene": "eclipse",
+      "time": 437625,
+      "width": 1920,
+      "height": 1080,
+      "samples": [
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.77132,
+              "p95_ms": 0.81192
+            },
+            "Catalog": {
+              "median_ms": 0.02088,
+              "p95_ms": 0.02348
+            },
+            "Sky total": {
+              "median_ms": 0.79172,
+              "p95_ms": 0.8328
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.835,
+              "p95_ms": 0.87472
+            },
+            "Catalog": {
+              "median_ms": 0.0312,
+              "p95_ms": 0.03432
+            },
+            "Sky total": {
+              "median_ms": 0.86684,
+              "p95_ms": 0.90568
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.77232,
+              "p95_ms": 0.82284
+            },
+            "Catalog": {
+              "median_ms": 0.02092,
+              "p95_ms": 0.02376
+            },
+            "Sky total": {
+              "median_ms": 0.79336,
+              "p95_ms": 0.8436
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.84992,
+              "p95_ms": 0.87524
+            },
+            "Catalog": {
+              "median_ms": 0.03128,
+              "p95_ms": 0.03396
+            },
+            "Sky total": {
+              "median_ms": 0.8814,
+              "p95_ms": 0.90596
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 0.77348,
+              "p95_ms": 0.80016
+            },
+            "Catalog": {
+              "median_ms": 0.02072,
+              "p95_ms": 0.02424
+            },
+            "Sky total": {
+              "median_ms": 0.79564,
+              "p95_ms": 0.82196
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 0.89296,
+              "p95_ms": 1.11392
+            },
+            "Catalog": {
+              "median_ms": 0.03192,
+              "p95_ms": 0.03752
+            },
+            "Sky total": {
+              "median_ms": 0.92476,
+              "p95_ms": 1.14892
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "baseline": {
+          "Background": {
+            "median_ms": 0.77232,
+            "p95_ms": 0.81192
+          },
+          "Catalog": {
+            "median_ms": 0.02088,
+            "p95_ms": 0.02376
+          },
+          "Sky total": {
+            "median_ms": 0.79336,
+            "p95_ms": 0.8328
+          }
+        },
+        "galaxy": {
+          "Background": {
+            "median_ms": 0.84992,
+            "p95_ms": 0.87524
+          },
+          "Catalog": {
+            "median_ms": 0.03128,
+            "p95_ms": 0.03432
+          },
+          "Sky total": {
+            "median_ms": 0.8814,
+            "p95_ms": 0.90596
+          }
+        }
+      },
+      "median_increase_percent": 11.097105979630939
+    },
+    {
+      "scene": "eclipse-4k",
+      "time": 437625,
+      "width": 3840,
+      "height": 2160,
+      "samples": [
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 3.3888,
+              "p95_ms": 4.26056
+            },
+            "Catalog": {
+              "median_ms": 0.02112,
+              "p95_ms": 0.02548
+            },
+            "Sky total": {
+              "median_ms": 3.41104,
+              "p95_ms": 4.28236
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 3.54108,
+              "p95_ms": 3.70256
+            },
+            "Catalog": {
+              "median_ms": 0.06996,
+              "p95_ms": 0.07572
+            },
+            "Sky total": {
+              "median_ms": 3.61268,
+              "p95_ms": 3.77376
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 3.3086,
+              "p95_ms": 3.42016
+            },
+            "Catalog": {
+              "median_ms": 0.0206,
+              "p95_ms": 0.0234
+            },
+            "Sky total": {
+              "median_ms": 3.3288,
+              "p95_ms": 3.44096
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 3.57324,
+              "p95_ms": 3.66912
+            },
+            "Catalog": {
+              "median_ms": 0.0698,
+              "p95_ms": 0.07616
+            },
+            "Sky total": {
+              "median_ms": 3.6438,
+              "p95_ms": 3.73936
+            }
+          }
+        },
+        {
+          "baseline": {
+            "Background": {
+              "median_ms": 3.29288,
+              "p95_ms": 3.37084
+            },
+            "Catalog": {
+              "median_ms": 0.0206,
+              "p95_ms": 0.02396
+            },
+            "Sky total": {
+              "median_ms": 3.31408,
+              "p95_ms": 3.39136
+            }
+          },
+          "galaxy": {
+            "Background": {
+              "median_ms": 3.548,
+              "p95_ms": 3.73172
+            },
+            "Catalog": {
+              "median_ms": 0.0696,
+              "p95_ms": 0.0774
+            },
+            "Sky total": {
+              "median_ms": 3.62172,
+              "p95_ms": 3.80132
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "baseline": {
+          "Background": {
+            "median_ms": 3.3086,
+            "p95_ms": 3.42016
+          },
+          "Catalog": {
+            "median_ms": 0.0206,
+            "p95_ms": 0.02396
+          },
+          "Sky total": {
+            "median_ms": 3.3288,
+            "p95_ms": 3.44096
+          }
+        },
+        "galaxy": {
+          "Background": {
+            "median_ms": 3.548,
+            "p95_ms": 3.70256
+          },
+          "Catalog": {
+            "median_ms": 0.0698,
+            "p95_ms": 0.07616
+          },
+          "Sky total": {
+            "median_ms": 3.62172,
+            "p95_ms": 3.77376
+          }
+        }
+      },
+      "median_increase_percent": 8.799567411679865
+    }
+  ]
+}

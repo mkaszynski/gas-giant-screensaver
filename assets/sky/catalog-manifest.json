@@ -1,0 +1,8 @@
+{
+  "stars": 8920,
+  "missing_color_indices": 40,
+  "limiting_magnitude": 6.5,
+  "sources": {
+    "hyg_v41.csv": "d9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd"
+  }
+}

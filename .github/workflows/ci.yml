@@ -10,11 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install build and software-rendering dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libglfw3-dev libgles2-mesa-dev libpng-dev xvfb
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libglfw3-dev libgles2-mesa-dev libpng-dev xvfb python3-venv
       - name: Build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
       - name: Unit and CLI tests
         run: ctest --test-dir build --output-on-failure
+      - name: Offline galaxy model behavior
+        run: |
+          python3 -m venv /tmp/sky-model-tests
+          /tmp/sky-model-tests/bin/pip install -r scripts/sky-model-requirements.txt
+          /tmp/sky-model-tests/bin/python tests/test_galaxy_model.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
@@ -23,11 +28,13 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/atmosphere-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/scattering-edge-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/emission-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/sky-render-tests
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 0 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --time 437625 --width 1920 --height 1080
       - uses: actions/upload-artifact@v4
         with:
           name: software-rendered-captures
