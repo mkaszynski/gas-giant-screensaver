@@ -12,15 +12,19 @@ remain unchanged; viewing elevation decreases from 28 to 26 degrees.
 All 21 CPU/CLI checks, 11 galaxy model tests, eight terrain model tests and eight
 GPU suites pass locally. Dry opaque interiors are compared against extreme
 sky/glare and celestial toggles; lake reflection is intentionally tested
-separately. The new GPU suite verifies directional light response, actual
+separately. A software-renderer regression exposed a shoreline threshold that jumped by
+62 display codes at Unix-scale weather time. Coverage blending fixes it;
+strict continuity checks remain bounded to two codes on both AMD and llvmpipe,
+including the true plus/minus-pi phase wrap.
+The new GPU suite verifies directional light response, actual
 visible lake coverage, moving reflected images, phase continuity at wraps and
 Unix timestamps, and absence of the former cache-boundary arc. The galaxy
 regression still detects 401 visible eclipse stars (183/255 peak contrast).
 
 Three alternating 180-frame runs per variant at 1920x1080 measured total GPU
-medians of **5.174 / 5.836 ms** in daylight (+12.8%) and **4.875 / 5.464 ms**
-at night (+12.1%). The median of run p95 values is 5.747 / 6.376 ms in daylight
-and 5.499 / 5.998 ms at night. These include the camera adjustment and are
+medians of **5.235 / 5.833 ms** in daylight (+11.4%) and **4.885 / 5.472 ms**
+at night (+12.0%). The median of run p95 values is 7.811 / 6.474 ms in daylight
+and 5.559 / 6.049 ms at night. These include the camera adjustment and are
 shared-desktop measurements, not watt readings or universal driver guarantees.
 Raw repetitions are in [terrain-benchmark.json](terrain-benchmark.json).
 

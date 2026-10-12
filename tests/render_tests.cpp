@@ -61,7 +61,7 @@ struct ShaderFixture {
       auto shader = buffer.str();
       shader.insert(shader.rfind('}'),
                     "vec3 td=ray();vec4 tm=terrainSample(td);"
-                    "color=vec4(step(1.,tm.a),step(.001,texture("
+                    "color=vec4(step(1.,tm.a),step(1.e-20,texture("
                     "uTerrainGeometry,terrainUV(td)).b),0.,1.);\n");
       std::ofstream(target) << shader;
       return;

@@ -13,7 +13,7 @@ void require(bool ok, const char *s) {
 }
 struct Fixture {
   std::filesystem::path path;
-  Fixture() {
+  explicit Fixture(bool terrainMask = false) {
     char name[] = "/tmp/observatory-emissions-XXXXXX";
     path = mkdtemp(name);
     auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
@@ -29,6 +29,15 @@ struct Fixture {
       transform(s);
       std::ofstream(p) << s;
     };
+    if (terrainMask) {
+      edit("post.frag", [](auto &source) {
+        source.insert(source.rfind('}'),
+                      "vec3 td=ray();vec4 tm=terrainSample(td);"
+                      "color=vec4(step(1.,tm.a),step(1.e-20,texture("
+                      "uTerrainGeometry,terrainUV(td)).b),0.,1.);\n");
+      });
+      return;
+    }
     for (const char *file :
          {"background.frag", "stars.frag", "body.frag", "rings.frag"})
       edit(file,
@@ -315,12 +324,19 @@ int main() {
       s.sunLocal = {0, -1, 0};
       auto hidden = render(actual, s, {t, 1. / 30, true, false});
       auto background = render(actual, s, {-1});
-      for (int y = 0; y < 12; ++y)
-        for (int x = 0; x < 320; ++x)
+      Fixture terrainCoverage(true);
+      Renderer coverage(terrainCoverage.path.string());
+      const auto mask = render(coverage, s, {-1});
+      int dryPixels = 0;
+      for (int i = 0; i < 320 * 180; ++i)
+        if (mask[i * 4] == 1.f && mask[i * 4 + 1] == 0.f) {
+          ++dryPixels;
           for (int c = 0; c < 3; ++c)
-            require(hidden[(y * 320 + x) * 4 + c] ==
-                        background[(y * 320 + x) * 4 + c],
-                    "opaque mountains block emission in the actual compositor");
+            require(hidden[i * 4 + c] == background[i * 4 + c],
+                    "opaque dry terrain blocks emissions in the compositor");
+        }
+      require(dryPixels > 200,
+              "emission occlusion must cover dry terrain interiors");
       const int flashDisplay = displayDifference(
           actual, 430350, {430354.833333333, 1. / 30, true, false});
       const int auroraDisplay =

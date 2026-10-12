@@ -42,8 +42,8 @@ vec3 terrainDiffuse(vec3 d,vec4 material){
  vec3 diffuseSky=sky(vec3(0,1,0))*.35+
                  sky(normalize(worldNormal+vec3(0,.35,0)))*.65;
  vec3 ambient=diffuseSky*2.2*packedNormal.a;
- // The giant is another directional light. Its diffuse irradiance uses the
- // existing phase/distance estimate, keeping terrain dark during its eclipse.
+ // The giant supplies ambient fill using the existing phase/distance
+ // estimate, keeping terrain dark during its eclipse.
  vec3 planet=vec3(.10,.16,.24)*uPlanetLight*.10*max(.2,N.y);
  vec3 light=direct+ambient+planet+vec3(.000040)/uDarkGain;
  vec3 rgb=material.rgb/max(material.a,1.e-5)*.72*light;
@@ -66,7 +66,9 @@ vec3 reflectedScene(vec3 d){
  // Reflect dry terrain once. No recursion or second scene render.
  if(mountain.a>0.){
   float water=texture(uTerrainGeometry,terrainUV(d)).b;
-  if(water<.5)L=mix(L,terrainDiffuse(d,mountain),mountain.a);
+  // Water/land mips encode area coverage. Thresholding it makes a moving
+  // reflection jump between sky and rock as it crosses shoreline texels.
+  L=mix(L,terrainDiffuse(d,mountain),mountain.a*(1.-water));
  }
  return L;
 }
@@ -75,7 +77,7 @@ vec3 terrainSurface(vec3 d,vec4 mountain){
  vec4 geometry=texture(uTerrainGeometry,p);
  float water=geometry.b;
  vec3 land=terrainDiffuse(d,mountain);
- if(water<.001)return land;
+ if(water<=0.)return land;
  float distance=dot(geometry.rg,vec2(65280.,255.));
  vec3 local=terrainFrame(d);
  vec2 world=local.xz*distance/max(length(local.xz),.001);

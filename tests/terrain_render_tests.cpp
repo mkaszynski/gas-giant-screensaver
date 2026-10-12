@@ -90,7 +90,8 @@ int main() {
       require(waveDelta > lake, "wind waves move their reflected image");
       for (double frequency : {.496, .157})
         for (double t :
-             {2 * pi / frequency, 10000 * 2 * pi / frequency, 1790900000.}) {
+             {pi / frequency, 2 * pi / frequency, 10001 * pi / frequency,
+              10000 * 2 * pi / frequency, 1790900000.}) {
           r.renderScene(w, h, fixed, t - .0001);
           auto a = pixels(w, h);
           r.renderScene(w, h, fixed, t + .0001);
@@ -98,6 +99,8 @@ int main() {
           int maximum = 0;
           for (size_t i = 0; i < a.size(); ++i)
             maximum = std::max(maximum, std::abs(int(a[i]) - int(b[i])));
+          std::cout << "Continuity frequency " << frequency << " time " << t
+                    << " max channel delta " << maximum << std::endl;
           require(maximum <= 2,
                   "wave/cloud clocks remain continuous at epoch and wraps");
         }
