@@ -12,11 +12,11 @@ void main(){
  float night=1.-smoothstep(.00002,.003,dot(L,vec3(.2126,.7152,.0722)));
  if(uGalaxyEnabled && night>0.){
    vec3 world=transpose(uStarFrame)*d;
-   // Integrate the diffuse star clouds over a slightly wider pixel footprint
-   // (2^.6 = 1.52x). This suppresses near-pixel Gaia-map grain without a fixed
-   // angular blur; detail scales with output resolution and catalog points
-   // retain their independent optical profile. Still one cube lookup.
-   L+=texture(uGalaxy,world,.6).rgb*.009*night*uCelestialGain/uDarkGain*T;
+   // Cached deterministic stellar-population/dust integration, in linear HDR.
+   // Resolved catalog stars have a separate flux budget and optical profile.
+   // Same magnitude zero point as the catalog. .8 is the reference point-star
+   // flux scale and 4*tan(29deg)^2/1080^2 is its reference pixel solid angle.
+   L+=texture(uGalaxy,world).rgb*8.429589150e-07*night*uCelestialGain/uDarkGain*T;
  }
  // Most pixels cannot intersect the solar disk. Keep the original angular
  // antialiasing/limb model inside a cheap conservative cosine bound.

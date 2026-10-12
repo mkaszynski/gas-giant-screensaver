@@ -1,176 +1,151 @@
-# Photographic Earth sky beta
+# Rendered Earth night sky
 
-The `feat/galaxy` beta replaces uniformly random stars with an Earth sky catalog
-and adds the Milky Way. It does not change orbital simulation, the camera,
-clouds, mountains, ring geometry or the operator's configured emission gains.
-The feature is available for review without replacing the installed lock screen.
-The current operator instruction prioritizes photorealism over the initial 20%
-performance target. The initial performance beta remains documented separately;
-its timings do not establish a budget result for the current quality revision.
+The `feat/galaxy` branch replaces the old uniform starfield with measured Earth
+stars and a deterministic model of integrated Milky Way light. It remains
+unmerged for operator review. Orbital simulation, celestial geometry, clouds,
+mountains and configured giant emission gains retain their existing behavior.
 
-## Astronomical content
+## Stars and diffuse light
 
-- **8,920 stars**, apparent V magnitude <= 6.5, from
-  [HYG v4.1](https://github.com/astronexus/HYG-Database). The Sun is excluded.
-  J2000 right ascension and declination are converted offline into the same
-  ecliptic world frame as the orbit simulation, using 23.4392911-degree obliquity.
-  The moon's changing local frame rotates both stars and galaxy together.
-- Relative visual flux follows `10^(-0.4 * magnitude)`. B-V photometry produces
-  a Ballesteros effective temperature and a blackbody spectrum, integrated
-  against [Wyman, Sloan and Shirley's CIE 1931 approximation](https://jcgt.org/published/0002/02/01/).
-  Linear RGB is normalized to unit visual luminance; colors cannot accidentally
-  alter catalog V brightness. Forty missing color indices use neutral white.
-- Diffuse light is derived from the **Milky Way-only** layer of
-  [NASA Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851/), which omits the
-  bright Hipparcos/Tycho layer. Bright catalog stars are consequently not drawn
-  twice. Dust lanes, star clouds, background clusters and the Magellanic Clouds
-  follow the map; this is not a painted procedural stripe.
+The renderer draws **8,920 HYG v4.1 stars**, V magnitude <= 6.5, using measured
+J2000 directions, relative flux `10^(-0.4 V)` and B-V-derived spectral colors.
+The Sun is excluded. All coordinates/colors are cached in a static VBO.
+The pixel-integrated point profile preserves brightness during subpixel motion.
+[HYG source](https://github.com/astronexus/HYG-Database).
 
-Positions and magnitudes are a static historical catalog. Proper motion,
-precession, variable stars and current transient phenomena are not simulated.
-Close binary components can overlap naturally at this field of view. The gap
-between the naked-eye catalog limit and the map's omitted Hipparcos/Tycho stars
-is not represented as individually resolved points. No deep-sky nebula imagery
-or telescope-only detail is added.
+The unresolved background is generated from an emissivity model, rather than
+sampling a flattened star-map image. `scripts/galaxy_model.py` integrates two
+luminosity-weighted population templates through smooth thin/thick disks and a
+triaxial stellar bar. The Sun is at radius 8.2 kpc and height 20 pc. Old/young
+spectra are 4500 K and 8500 K blackbodies, integrated through the same analytic
+CIE approximation used for catalog colors. A CCM89 R_V=3.1 extinction curve is
+applied spectrally, before conversion to linear RGB.
 
-## Dark-sky appearance
+A mixture of normal luminosity-weighted absolute-magnitude distributions models
+giant/dwarf light. Its unresolved fraction depends on distance and extinction;
+light brighter than the catalog's magnitude limit is excluded from the smooth
+model. This is a population approximation, not an exact Gaia population-synthesis
+fit. It avoids adding a second contribution for the bright-star population.
+Observed HYG magnitudes already include interstellar extinction and therefore
+receive only the observer atmosphere's attenuation at runtime.
 
-Stars are compact points with a pixel-integrated Gaussian profile, rather than
-uniformly sized disks. The integral preserves flux while stars move through
-fractional pixel positions; resolution scaling preserves apparent brightness.
-Bright stars show restrained warm or blue color; the diffuse galaxy retains
-60% of the source's chroma for the requested photographic appearance.
+For each direction, deterministic distance quadrature computes:
 
-The existing Earthlike atmospheric transmittance attenuates both layers,
-particularly near the horizon. Atmospheric sky brightness washes them out in
-daylight and twilight. Existing clouds, solid bodies, ring transmission and the
-opaque foreground ridge compose in front of the sky. The sky itself does not
-cast shadows on mountains or change the simulation.
-
-The Milky Way is displayed as a detailed photographic sky rather than a blurred
-low-resolution background. Its fine star-cloud and dust structure comes from
-the 16k source, with no Gaussian preblur. Catalog point exposure is ten times
-the first beta's value, preserving relative magnitudes while allowing faint
-stars to stand out against that background on an ordinary monitor.
-The diffuse lookup uses a +0.6 mip bias: a 1.52x wider pixel sampling footprint
-reduces grain from unresolved Gaia stars while preserving the dust lanes.
-This is resolution-dependent filtering, rather than a fixed angular blur of
-the source. The 4096-pixel faces and their mipmaps remain unchanged, as do the
-independently rendered catalog stars. The lookup still costs one texture sample.
-The enormous sunlit giant supplies much more planetshine than Earth's Moon.
-A bounded phase/solid-angle contrast factor suppresses the celestial background
-beside it. This is **display calibration**, not absolute retinal photometry:
-catalog brightness ratios, orientations and extinction have physical meaning,
-but monitor brightness, observer dark adaptation and glare are not calibrated
-to a particular eye or display. Instantaneous adaptation and the existing
-approximate airglow remain limitations. Eclipse time `437625` is useful for
-review because the giant is then a dark silhouette.
-
-## Reference comparison
-
-The requested [PyVista 16k space cube](https://docs.pyvista.org/api/examples/_autosummary/pyvista.examples.downloads.download_cubemap_space_16k.html)
-was downloaded and its six faces inspected. Its
-[provenance](https://github.com/pyvista/data/blob/master/Data/cubemap_space/README.md)
-identifies the same NASA map family: the full 16k galactic-coordinate star map.
-Its EXR-to-JPEG conversion scales/clips values and uses JPEG quality 50, so it
-provides a **morphology reference**, not an absolute naked-eye brightness target.
-The beta retains the broad Sagittarius star clouds and branching dark lanes,
-without borrowing that reference's exposure or drawing its bright stars twice.
-The beta now uses the 16k diffuse map and a 4096-pixel cube to retain fine
-structure at 1080p and 4K. The source stores flux per texel: its mean green
-channel is 0.001644, versus 0.026304 for the 4k source. Multiplying by the
-16-fold texel-area ratio restores the same surface brightness before PNG
-encoding and filtering. This avoids accidentally dimming the galaxy when its
-source resolution increases. The rare brightest diffuse samples clip at the
-PNG's white level; this is a photographic visualization, not an absolute HDR
-photometry instrument. Catalog stars retain independent sharp positions.
-
-## Runtime and performance
-
-The runtime reads one 279 KiB binary catalog and six BC7 faces once, then uploads
-one static star VBO and one mipmapped sRGB cubemap. It generates neither positions
-nor colors each frame. The additional diffuse sky costs one cube lookup in the
-existing background pass; there is no extra fullscreen pass, render target,
-blur pyramid or procedural galaxy generation. Total extra static GPU storage
-is approximately **128 MiB** for the compressed cube/mips plus the catalog VBO.
-This computer supports BC7 in hardware; blocks remain compressed in GPU memory
-and decoding occurs during sampling. The full cube retains a single-sample
-shader without page-table lookups or streaming uploads during animation.
-Visible-tile streaming remains possible if a smaller memory ceiling is needed.
-A renderer
-with its galaxy disabled does not load or allocate that cube. Offline conversion
-streams EXR half-float planes and rows through memory maps, avoiding full-size
-float32 RGB copies on the development computer. Compression happens offline
-using ISPC's slow BC7 profile after linear-light mip filtering. Intermediate PNGs
-are not included in the installed package. On GPUs without BC7, the same blocks
-are decoded once by the included MIT-licensed `bcdec` fallback and uploaded as
-sRGB RGBA; that compatibility path uses approximately **512 MiB**. Use
-`--uncompressed-galaxy` to exercise the fallback explicitly.
-
-To accommodate that lookup, the background shader rejects pixels outside the
-solar disk with a conservative cosine bound before evaluating `acos`. A GPU
-regression compares it against the original ungated disk and limb-darkening
-calculation. The existing solar appearance and edge filtering are preserved.
-
-The optional benchmark records background and point-star passes separately,
-plus their sum. The **initial** 20% budget was evaluated on combined sky rendering
-because the added galaxy is rendered in the background pass, not the point-star
-pass. Quality is now the first acceptance criterion; optimization follows visual
-review. Historical timings refer to the first beta's smaller, smoothed cube.
-Measurements use the actual AMD integrated GPU on a shared desktop, not an
-exclusive GPU laboratory. Timing instrumentation is excluded from production.
-
-For timings and checks, see [validation](VALIDATION.md#earth-sky-beta).
-
-The [native-resolution grain comparison](images/galaxy-detail-before-after.png)
-shows the same 360x580-pixel eclipse-sky patch: previous sampling on the left,
-updated pixel footprint on the right. These are actual framebuffer crops.
-
-```sh
-nix develop --command cmake -S . -B build -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release -DOBSERVATORY_BUILD_SKY_BENCHMARK=ON
-nix develop --command cmake --build build --parallel 3
-./build/sky-benchmark 437625 1920 1080 180
+```
+L(direction) = integral(emissivity * unresolved_fraction * dust_transmission ds)
 ```
 
-## Reproduce the assets
+The units are V-zero-point-relative flux per steradian. The inverse-square
+stellar-flux factor cancels the distance-square volume factor. No random rays,
+particle sampling, dithering or hash noise generates the model light.
+The diffuse and point layers share a magnitude-zero-point scale at the 1080p
+reference projection. Display exposure follows the existing screensaver.
+This is not an absolute calibration of a particular eye or monitor.
 
-Use Python with `numpy`, `pillow`, `OpenEXR`, and `ispc_texcomp==1.0.1`. These are offline build
-tools; the installed screensaver does not depend on Python or those libraries.
-Download the following inputs and verify SHA-256:
+## Measured dust
 
-| Source | SHA-256 |
-|---|---|
-| [HYG v4.1 CSV](https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv) | `d9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd` |
-| [NASA celestial Milky Way 16k EXR](https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004851/milkyway_2020_16k.exr) | `9d60e58075bcbce9cd03f8115e5635533a0a910007348a485755630a3927b97a` |
+The detailed angular dust column comes from
+[Chiang's CSFD map](https://doi.org/10.5281/zenodo.8207175), HEALPix nside 2048.
+This is numerical extinction data with reconstructed extragalactic contamination
+removed; no photographic RGB is used. The local distance distribution comes
+from the mean of [Edenhofer et al.'s 3D reconstruction](https://doi.org/10.5281/zenodo.8187943),
+HEALPix nside 256, extending from the inner 68.6 pc to 1.248 kpc. All measured
+radial density shells are integrated, then 49 cumulative knots are retained.
+The 496 exact-zero CSFD conversion-seam pixels near the Galactic plane are
+filled from valid neighboring columns; they are missing entries rather than
+transparent windows into the central bar. Measured nonzero pixels are retained.
+The mean is used rather than random posterior samples.
+
+CSFD columns use approximate A_V = 2.742 E(B-V); the local reconstruction uses
+approximate A_V = 2.8 E_ZGR. Local columns are bounded by the measured all-sky
+column. Beyond the measured volume, the remaining column is distributed through
+an exponential gas disk, with 3.2 kpc radial and 120 pc vertical scales. Thus
+nearby light can appear in front of a lane while distant light is reddened and
+absorbed. The distant distribution and mismatches between surveys are modeled
+approximations, not measured 3D detail across the entire Galaxy. CSFD's Galactic
+plane calibration and finite angular resolution also limit accuracy.
+
+## HDR cache and runtime
+
+The offline renderer computes the complete sky in bounded ray batches, with
+96 logarithmic distance samples from 1 pc to 30 kpc. It stores six 2048-pixel
+cube faces in **linear HDR**, builds mipmaps by averaging radiance, and encodes
+BC6H with ISPC's slow profile. No intermediate 8-bit image, baked display
+exposure, clamped photographic highlights or Gaussian source blur is involved.
+The scene stores radiance with a reversible 4096x scale before its RGBA16F
+framebuffer, preserving faint values above the coarse subnormal range. The
+post pass reverses that scale before exposure. Sky/transmittance sampling
+uses explicit high precision; low-precision sampling created visible bands
+in elevated-exposure diagnostics. Neither change adds a framebuffer or pass.
+
+Star positions and background structures rotate together in the existing local
+frame. The sky retains atmospheric extinction, daylight washout, planetshine
+contrast adaptation, foreground occlusion and ring transmission.
+
+The complete compressed cache/mips use approximately **32 MiB**. Runtime uploads
+it once and performs **one cube lookup** in the existing background pass.
+No galaxy integration, catalog generation, codec or texture streaming runs
+during animation. On GPUs lacking BPTC, the included `bcdec` fallback expands
+the same HDR values once to RGB16F. Logical storage is 192 MiB; drivers may pad
+RGB to RGBA, making it 256 MiB. `--uncompressed-galaxy` tests that fallback.
+
+For visual validation the offline renderer can also output uncompressed RGB16F
+reference faces, using the same binary container. These are not shipped. A
+separate data directory allows direct raw-reference versus compressed rendering
+through the actual GLES pipeline, including at elevated exposure.
+
+The eight-byte magic is `GGSHDR01` (BC6H) or `GGSRAW01` (RGB16F reference), followed
+by little-endian uint32 face dimension and mip count. Each mip has a uint32
+byte count and payload. The loader validates dimensions, complete mips, lengths,
+trailing data, and finite/nonnegative raw radiance. Cube faces must have matching
+sizes and encodings. Raw half floats are little-endian; packaged builds target
+x86_64 Linux.
+
+## Reproduction and checks
+
+Install the pinned offline dependencies in `scripts/sky-model-requirements.txt`.
+These packages are not runtime dependencies or part of the Nix screensaver.
 
 ```sh
-python scripts/bake_sky.py --catalog hygdata_v41.csv \
-  --milky-way milkyway_2020_16k.exr --output sky-intermediate
-python scripts/compress_sky.py --input sky-intermediate --output assets/sky
+python scripts/fetch_galaxy_data.py --output sky-inputs
+python scripts/bake_stars.py --catalog hygdata_v41.csv --output assets/sky
+python scripts/render_galaxy.py --dust sky-inputs/csfd_ebv.fits \
+  --profiles sky-inputs/dust-profiles.npz --output assets/sky \
+  --reference sky-reference --face-size 2048
+python tests/test_galaxy_model.py
 ```
 
-The bake refuses input whose checksum differs. RA zero is at the NASA panorama's
-center; RA increases to the left. Standard OpenGL cube-face directions are
-transformed back to equatorial coordinates before sampling that panorama.
-Polar rows clamp and longitude wraps. Flux normalization and bilinear reprojection occur
-in linear light. Intermediate PNGs encode sRGB. Mips are built in linear light
-and compressed offline to BC7 sRGB, which the GPU decodes before lighting and
-filtering. Runtime cube dimensions, mip sizes, file lengths and catalog values
-are validated.
+The downloader validates the pinned SHA-256 of CSFD and the original Edenhofer
+primary/MEAN and metadata subsets. HTTP ranges omit the unused 1.6 GB uncertainty
+HDU; the retained bytes are original data, not a substituted or fabricated FITS
+file. Every requested range must have the exact expected Content-Range/length.
+The full-catalog HYG checksum is also pinned. Inputs are immutable versions.
+No build or runtime downloads these source catalogs; the generated cache ships.
 
-The binary layout is `GGSSTAR1`, a little-endian uint32 count, then eight
-little-endian floats per star: unit xyz direction, magnitude-zero-relative flux,
-unit-luminance linear RGB, V magnitude. `manifest.json` records the selection
-and source checksums. The cube is smoothly filtered across face boundaries.
-Each `GGSCUBE1` face file contains a little-endian dimension and mip count,
-followed by each mip's byte count and its 16-byte BC7 blocks. Reading faces
-sequentially bounds startup RAM. The BC7
-[format](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_texture_compression_bptc.txt)
-and [encoder](https://github.com/K0lb3/ispc_texcomp_py) are documented publicly.
+Model tests cover orientation, magnitude selection, deterministic output,
+quadrature convergence, continuous emissivity, absorption/reddening, cumulative
+dust-column conservation, spectral color and HDR mip/reference serialization.
+GPU tests check the continuous diffuse field, band/pole contrast, catalog flux,
+visible points, cube edges, daylight, mountain coverage and portable HDR decoding.
+Measurements and framebuffer captures are in [validation](VALIDATION.md).
 
-HYG data and `stars.bin` remain **CC BY-SA 4.0**. NASA map attribution, the full
-catalog license and the transformations are included with the installed assets
-in [assets/sky/ATTRIBUTION.md](../assets/sky/ATTRIBUTION.md). Original code remains
-MIT. Credits: David Nash / Astronexus; NASA/Goddard Space Flight Center Scientific
-Visualization Studio, Ernie Wright; Gaia DR2: ESA/Gaia/DPAC.
+## Remaining limits
+
+The intrinsic population and bar models are approximations. Fine structure is
+constrained by measured dust, with no invented fractal detail. The model does
+not reconstruct every observed stellar association, globular cluster or the
+Magellanic Clouds; their former raster contributions are removed. Proper motion,
+precession and variable stars are not simulated. Atmosphere, airglow and immediate
+contrast adaptation retain the existing approximations. The existing sky floor
+is not a complete GAMBONS implementation. Its
+[scientific model](https://arxiv.org/abs/2408.17371) is a reference for the components
+and brightness comparisons, not code incorporated into this implementation.
+
+The goal is a clean, detailed rendering with physically organized light and
+extinction, not a claim that modeled unseen structure is more accurate than
+measurements. The source NASA/PyVista map remains a historical morphology
+reference and is no longer a runtime asset or model input.
+
+Both dust datasets and the rendered derivative cube are CC BY 4.0. The HYG
+catalog derivative is CC BY-SA 4.0. Original code remains MIT. See
+[sky attribution](../assets/sky/ATTRIBUTION.md) for credits and full licenses.

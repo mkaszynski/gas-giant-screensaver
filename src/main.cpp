@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
                "  --no-galaxy            Disable diffuse Milky Way for "
                "comparison\n"
                "  --no-stars             Disable catalog stars for comparison\n"
-               "  --uncompressed-galaxy  Expand sky texture on GPU for format "
+               "  --uncompressed-galaxy  Expand HDR sky on GPU for format "
                "comparison\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"

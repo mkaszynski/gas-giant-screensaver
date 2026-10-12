@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 using namespace observatory;
@@ -44,7 +45,7 @@ struct Fixture {
     });
     edit("atmosphere.glsl", [](auto &s) {
       const std::string fn =
-          "vec3 transmission(sampler2D lut,float h,float mu){";
+          "vec3 transmission(highp sampler2D lut,float h,float mu){";
       auto at = s.find(fn);
       require(at != std::string::npos, "transmission fixture stage");
       s.insert(at + fn.size(), "return vec3(1.);");
@@ -133,25 +134,6 @@ double fineVariation(const std::vector<float> &pixels, int width, int height) {
     }
   return variation / total;
 }
-double broadDifference(const std::vector<float> &a,
-                       const std::vector<float> &b, int width, int height) {
-  double error = 0, total = 0;
-  // Average over 32-pixel cells so this checks the retained clouds and dust
-  // lanes rather than demanding the same individual unresolved star texels.
-  for (int y = 0; y < height; y += 32)
-    for (int x = 0; x < width; x += 32) {
-      double cellA = 0, cellB = 0;
-      for (int yy = y; yy < std::min(y + 32, height); ++yy)
-        for (int xx = x; xx < std::min(x + 32, width); ++xx) {
-          const auto at = (yy * width + xx) * 4;
-          cellA += a[at];
-          cellB += b[at];
-        }
-      error += std::abs(cellA - cellB);
-      total += cellB;
-    }
-  return error / total;
-}
 int main() {
   try {
     require(glfwInit(), "GLFW");
@@ -200,6 +182,56 @@ int main() {
       require(flux(render(none, s)) == 0,
               "disabling both sky layers leaves no celestial signal");
       {
+        Fixture gradient;
+        gradient.star(direction);
+        gradient.edit("background.frag", [](auto &source) {
+          const std::string output = "color=vec4(L,1);";
+          const auto at = source.find(output);
+          require(at != std::string::npos, "dim gradient fixture");
+          source.insert(at, "L=vec3(3.e-8+uv.x*3.e-8);\n");
+        });
+        Renderer faint(gradient.path.string(), {false, false});
+        const auto pixels = render(faint, s, 2048, 16);
+        std::set<float> levels;
+        double error = 0;
+        for (int x = 0; x < 2048; ++x) {
+          const double expected = 3.e-8 * (1 + (x + .5) / 2048);
+          levels.insert(pixels[x * 4]);
+          error = std::max(error, std::abs(pixels[x * 4] / expected - 1));
+        }
+        std::cout << "Dim gradient levels " << levels.size()
+                  << " worst relative error " << error << '\n';
+        require(
+            levels.size() > 900 && error < .001,
+            "scene storage preserves dim continuous radiance before exposure");
+      }
+      {
+        Fixture atmosphere;
+        atmosphere.star(direction);
+        atmosphere.edit("atmosphere.glsl", [](auto &source) {
+          const std::string bypass = "return vec3(1.);";
+          const auto at = source.find(bypass);
+          require(at != std::string::npos, "real transmission fixture");
+          source.erase(at, bypass.size());
+        });
+        atmosphere.edit("background.frag", [](auto &source) {
+          const auto at = source.find("color=vec4(L,1);");
+          require(at != std::string::npos, "transmission gradient fixture");
+          source.insert(at, "L=transmission(uTrans,.2,.15+uv.x*.03)-"
+                            "transmission(uTrans,.2,.15);\n");
+        });
+        Renderer transmission(atmosphere.path.string(), {false, false});
+        const auto pixels = render(transmission, s, 2048, 16);
+        std::set<float> levels;
+        for (int x = 0; x < 2048; ++x)
+          levels.insert(pixels[x * 4]);
+        std::cout << "Atmospheric transmission gradient levels "
+                  << levels.size() << '\n';
+        require(
+            levels.size() > 900,
+            "high precision atmospheric sampling avoids horizontal sky bands");
+      }
+      {
         Renderer galaxy(fixture.path.string(), {true, false});
         const auto galacticCenter =
             equatorialDirection(17.7603 * pi / 12, -28.9362 * pi / 180);
@@ -208,42 +240,20 @@ int main() {
         const double center = flux(render(galaxy, emptySky(galacticCenter))),
                      pole = flux(render(galaxy, emptySky(galacticPole)));
         std::cout << "Galaxy center/pole contrast " << center / pole << '\n';
-        require(center > pole * 2, "NASA Milky Way has the expected aligned "
-                                   "bright band and dark pole");
+        require(center > pole * 2,
+                "Rendered Milky Way has the expected aligned "
+                "bright band and dark pole");
         const auto detail =
             render(galaxy, emptySky(galacticCenter), 1920, 1080);
         const double variation = fineVariation(detail, 1920, 1080);
         std::cout << "1080p diffuse galaxy detail " << variation << '\n';
+        // Pixel-scale variation was 0.49 for the unfiltered Gaia raster and
+        // 0.22 after mip bias. The model must integrate unresolved light into
+        // a continuous field while retaining nonzero structure and band/pole
+        // contrast; high brightness alone cannot pass this check.
         require(
-            variation > .1,
-            "fine galaxy structure survives projection and filtering at 1080p");
-        {
-          // Compare against the old nominal pixel footprint in the same GPU
-          // scene. A broad blur would pass a grain check alone, so also require
-          // preserved cloud/dust structure, mean radiance and fine detail.
-          Fixture reference;
-          reference.star(direction);
-          reference.edit("background.frag", [](auto &source) {
-            const std::string sample = "texture(uGalaxy,world,.6)";
-            const auto at = source.find(sample);
-            require(at != std::string::npos, "galaxy footprint fixture");
-            source.replace(at, sample.size(), "texture(uGalaxy,world)");
-          });
-          Renderer unfiltered(reference.path.string(), {true, false});
-          const auto original =
-              render(unfiltered, emptySky(galacticCenter), 1920, 1080);
-          const double grainRatio =
-              variation / fineVariation(original, 1920, 1080);
-          const double broadError =
-              broadDifference(detail, original, 1920, 1080);
-          std::cout << "Diffuse grain ratio " << grainRatio
-                    << " broad structure error " << broadError << '\n';
-          require(grainRatio < .8,
-                  "pixel footprint filtering reduces diffuse-map grain");
-          require(broadError < .02 &&
-                      std::abs(flux(detail) / flux(original) - 1) < .01,
-                  "grain reduction preserves dust lanes and sky brightness");
-        }
+            variation > .0001 && variation < .06,
+            "continuous structured radiance without amplified star-map grain");
         // Cross every cube edge from either side; adjacent camera poses must
         // not introduce a face boundary or reset, including close to a cube
         // corner.
@@ -363,10 +373,11 @@ int main() {
         for (int c = 0; c < 3; ++c)
           formatError = std::max(formatError,
                                  std::abs(double(portable[i + c] - on[i + c])));
-      std::cout << "BC7 GPU/portable display difference " << formatError * 255
+      std::cout << "BC6H GPU/portable display difference " << formatError * 255
                 << "/255\n";
-      require(formatError < 2. / 255,
-              "hardware and portable BC7 decode preserve the same sky colors");
+      require(
+          formatError < 2. / 255,
+          "hardware and portable BC6H decode preserve the same HDR sky colors");
       require(glGetError() == GL_NO_ERROR, "sky GL errors");
     }
     glfwDestroyWindow(window);

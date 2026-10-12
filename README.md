@@ -10,20 +10,19 @@ clouds and stars emerging at dusk.
 ## Galaxy beta (`feat/galaxy`)
 
 The review branch adds Earth's J2000 sky: 8,920 catalog stars with measured
-magnitudes and color indices, plus NASA's Milky Way star clouds and dust lanes.
+magnitudes and color indices, plus modeled Milky Way light and measured dust lanes.
 Coordinates and colors are baked once; one cached cubemap sample in the existing
 sky pass supplies the diffuse galaxy. Local atmosphere, clouds, mountains and
 celestial bodies determine visibility. A brightly illuminated giant suppresses
 the faint sky; total eclipse is a useful review instant.
 
-The current revision prioritizes photographic detail: the 16k NASA source feeds
-a 4096-pixel cube without preblur, and a revised star exposure makes hundreds of
-catalog stars clearly visible during eclipse. Offline BC7 compression keeps
-the full cube at about 128 MiB on supporting GPUs, with no runtime encoder or
-tile-streaming work. A slightly wider pixel sampling footprint suppresses
-diffuse-map grain while retaining dust-lane detail and sharp catalog points.
-Broader performance tuning follows appearance review. The earlier timing results
-describe the initial, softer 1024-pixel beta rather than this quality revision.
+The current revision generates the Milky Way from stellar-emissivity integration
+and measured all-sky/local 3D dust extinction. Individual catalog stars remain
+sharp; unresolved starlight is a continuous field. No RGB sky photo, NASA raster
+or 8-bit intermediate supplies the model. The cached 2048-pixel HDR cube uses
+about 32 MiB with hardware BC6H compression and one lookup per sky pixel.
+Expensive integration runs offline, never during animation. The model's stellar
+populations and distant dust are approximations, described in the design notes.
 
 Preview the beta without changing the installed screensaver:
 
@@ -245,8 +244,8 @@ integration; overlapping penumbras use an approximation. See
 The original renderer is released under the standard [MIT License](LICENSE). Hyprlock integration incorporates BSD-3-Clause upstream
 code and attributed UX patches. Generated assets: CC0-1.0 to the extent rights
 exist. See [LICENSE](LICENSE) and [attribution](docs/ASSETS.md).
-The HYG-derived star catalog has a separate CC BY-SA 4.0 data license; the NASA
-Milky Way visualization is credited separately. See
+The HYG-derived star catalog has a separate CC BY-SA 4.0 data license; the modeled
+Milky Way model cache uses CC BY 4.0 for its measured dust inputs. See
 [sky attribution and included data license](assets/sky/ATTRIBUTION.md).
-The optional portable BC7 decoder retains its upstream
+The optional portable BC6H decoder retains its upstream
 [MIT notice](assets/sky/LICENSE-BCDEC-MIT.txt).

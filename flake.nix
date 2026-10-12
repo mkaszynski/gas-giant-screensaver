@@ -14,7 +14,7 @@
       nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
       buildInputs = [ pkgs.glfw pkgs.libGL pkgs.libpng ];
       cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
-      meta.license = with pkgs.lib.licenses; [ mit cc-by-sa-40 ];
+      meta.license = with pkgs.lib.licenses; [ mit cc-by-sa-40 cc-by-40 ];
       doCheck = true;
       checkPhase = "ctest --output-on-failure";
     };

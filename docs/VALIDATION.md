@@ -1,6 +1,75 @@
 # Validation
 
-## Photographic sky refinement
+## Rendered HDR galaxy
+
+The current beta replaces the flattened star map with deterministic stellar-
+emissivity integration through measured CSFD and local Edenhofer 3D extinction.
+It retains the same 8,920 cached HYG stars, but treats unresolved light as a
+continuous radiance field. Six 2048-pixel BC6H faces and complete HDR mipmaps
+use **32 MiB**, versus 128 MiB for the preceding photographic cube. Original
+8-bit/BC7 assets and their image-conversion pipeline are removed.
+
+All **21 CPU/CLI checks, 11 offline model tests and seven GPU suites** pass on
+the local AMD GPU. The diffuse 1080p Galactic-center variation proxy is
+**0.01959**, versus 0.49425 for the unfiltered raster and 0.22015 after its mip
+bias: approximately **96% / 91% lower**, respectively. This is a normalized
+pixel-scale variation measure, not a claim of exactly reproducing every measured
+stellar association. Band/pole contrast remains **8.25x**. The eclipse regression
+detects **400 visible catalog stars**, with 195/255 peak contrast.
+
+The data check found 496 exact-zero conversion-seam dust entries. Treating them
+as transparent produced false bright patches; deterministic neighboring-column
+reconstruction removes them. A regression preserves measured nonzero values and
+rejects holes with no valid neighbors. The model tests also check coordinate
+alignment, distance/magnitude selection, deterministic output, quadrature
+convergence, spectral reddening, cumulative dust budgets and HDR mip averages.
+
+The existing RGBA16F scene now uses a reversible 4096x storage scale, without a
+new target or pass. A dim 2048-pixel test gradient retains **1024 distinct levels**
+with **0.091%** worst relative error. Explicit high-precision atmospheric sampling
+avoids horizontal bands exposed by the new continuous sky; its test gradient
+retains **984 levels**. Solar clipping remains far above display white, and all
+solar, body, ring, atmosphere, emission and foreground regressions pass.
+
+Uncompressed RGB16F model references were rendered through the same GLES path.
+Compared with BC6H, normal-exposure output differs by **0.0035/255 on average**,
+with **1/255 maximum**. At 10x and 100x exposure, mean error is **0.0178/255** and
+**0.0314/255**, respectively; their 99.9th-percentile error is 1/255 and maxima
+4/255 and 3/255. These elevated exposures are stress tests, not the normal preset.
+Portable and GPU BC6H decoding produce zero display difference in the tested
+eclipse. Raw comparisons are in
+[galaxy-model-image-quality.json](galaxy-model-image-quality.json).
+
+Each performance value below is the median of three alternating 180-frame runs,
+after 40 warmup frames. Baseline is the original starfield at `8d50bba` with
+profiling only. Both median and p95 stay within the +20% combined-sky budget.
+The instrumented benchmark is separate from production. These are measurements
+on a shared desktop, not watt readings or guarantees for every graphics driver.
+
+| Scene | Baseline sky median | Model sky median | Change |
+|---|---:|---:|---:|
+| Day, 1080p | 0.791 ms | 0.695 ms | -12.1% |
+| Planetlit night, 1080p | 0.795 ms | 0.832 ms | +4.6% |
+| Eclipse, 1080p | 0.817 ms | 0.866 ms | +6.0% |
+| Eclipse, 4K | 3.365 ms | 3.583 ms | +6.5% |
+
+Raw medians, p95 values and individual runs are in
+[galaxy-model-benchmark.json](galaxy-model-benchmark.json).
+
+Review images are actual framebuffer captures:
+
+- [Normal fixed-camera eclipse](images/galaxy-eclipse.png).
+- [Planetlit night](images/galaxy-night.png).
+- [Galactic-center diagnostic camera](images/galaxy-model-reference.png).
+- [The same diagnostic camera at 10x exposure](images/galaxy-model-exposure-10x.png).
+
+The diagnostic points toward the Milky Way and omits celestial bodies to make
+sky quality visible; it is not the normal screensaver camera. Population spectra,
+bar luminosity and distant dust are model approximations. Fine stellar
+associations and the Magellanic Clouds from the former raster are not reconstructed
+in this version. See [design and limits](GALAXY.md).
+
+## Historical photographic sky refinement
 
 The subsequent grain refinement widens only the diffuse map's sampling
 footprint by 1.52x (+0.6 mip bias), using the existing linear-light mipmaps and

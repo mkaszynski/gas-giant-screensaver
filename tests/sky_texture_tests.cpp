@@ -11,27 +11,28 @@ void require(bool ok, const char *message) {
 }
 int main() {
   try {
-    const auto path = std::filesystem::path(SKY_ASSET_DIR) / "galaxy-px.bc7";
+    const auto path = std::filesystem::path(SKY_ASSET_DIR) / "galaxy-px.ggsky";
     const auto mips = loadSkyTexture(path.string());
-    require(mips.size() == 13 && mips.front().size == 4096 &&
+    require(mips.size() == 12 && mips.front().size == 2048 &&
                 mips.back().size == 1,
-            "full-resolution BC7 sky with complete linear-light mip chain");
+            "HDR model sky with complete linear-radiance mip chain");
     size_t bytes = 0;
     for (const auto &mip : mips)
       bytes += mip.blocks.size();
-    require(bytes == 22369648,
-            "bounded 128 MiB total sky storage including all mipmaps");
+    require(bytes == 5592432,
+            "bounded 32 MiB total sky storage including all mipmaps");
     const auto smallest = decodeSkyMip(mips.back());
-    require(smallest.size() == 4 && smallest[3] == 255,
-            "portable fallback handles a partial BC7 block");
+    require(smallest.size() == 3 && smallest[0] > 0 && smallest[0] < 0x7c00,
+            "portable HDR fallback handles a partial BC6H block");
     const SkyMip constant{4,
-                          {0x08, 0x40, 0x20, 0x10, 0x08, 0x08, 0x04, 0x02, 0x01,
-                           0x81, 0x40, 0x20, 0xac, 0xaa, 0xaa, 0xaa}};
+                          {0x0f, 0xb1, 0x94, 0x64, 0x04, 0x18, 0x4a, 0x18, 0x13,
+                           0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11}};
     const auto color = decodeSkyMip(constant);
-    for (size_t i = 0; i < color.size(); i += 4)
-      require(color[i] == 32 && color[i + 1] == 64 && color[i + 2] == 128 &&
-                  color[i + 3] == 255,
-              "portable BC7 decode preserves channels and opaque alpha");
+    for (size_t i = 0; i < color.size(); i += 3)
+      require(color[i] > 0 && color[i] < 0x1000 && color[i + 1] >= 0x4ff0 &&
+                  color[i + 1] <= 0x5010 && color[i + 2] >= 0x5ff0 &&
+                  color[i + 2] <= 0x6010,
+              "BC6H preserves dim radiance and values far above display white");
     char name[] = "/tmp/observatory-sky-texture-XXXXXX";
     const std::filesystem::path temporary = mkdtemp(name);
     struct Cleanup {
@@ -41,7 +42,7 @@ int main() {
     std::ifstream input(path, std::ios::binary);
     const std::string original((std::istreambuf_iterator<char>(input)), {});
     auto reject = [&](const std::string &data) {
-      const auto invalid = temporary / "invalid.bc7";
+      const auto invalid = temporary / "invalid.ggsky";
       std::ofstream(invalid, std::ios::binary).write(data.data(), data.size());
       bool rejected = false;
       try {
@@ -66,6 +67,33 @@ int main() {
     changed = original;
     changed[16] = char(255);
     reject(changed);
+    // The uncompressed reference retains the same mip chain in RGB16F, and
+    // refuses NaNs, infinities and negative radiance before GPU upload.
+    std::string raw = "GGSRAW01";
+    auto word = [&](unsigned value) {
+      for (int i = 0; i < 4; ++i)
+        raw += char(value >> (8 * i));
+    };
+    word(256);
+    word(9);
+    for (unsigned n = 256; n; n /= 2) {
+      word(n * n * 6);
+      for (unsigned i = 0; i < n * n; ++i)
+        for (unsigned half : {0x3c00, 0x5000, 0x6000}) {
+          raw += char(half);
+          raw += char(half >> 8);
+        }
+    }
+    const auto reference = temporary / "reference.ggsky";
+    std::ofstream(reference, std::ios::binary).write(raw.data(), raw.size());
+    const auto uncompressed = loadSkyTexture(reference.string());
+    require(!uncompressed.front().compressed &&
+                uncompressed.front().blocks.size() == 256 * 256 * 6,
+            "raw HDR reference keeps floating-point radiance");
+    raw[21] = char(0x7c);
+    reject(raw);
+    raw[21] = char(0xbc);
+    reject(raw);
     std::cout << "Sky texture behavior passed\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

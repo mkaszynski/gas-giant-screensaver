@@ -4,7 +4,7 @@ flat in float flux;
 flat in vec3 starColor,direction;
 flat in vec2 center;
 out vec4 color;
-uniform sampler2D uSky,uTrans;
+uniform highp sampler2D uSky,uTrans;
 uniform float uDarkGain,uCelestialGain,uStarSigma,uStarFluxScale;
 #include "atmosphere.glsl"
 float erfApprox(float x){float s=sign(x);x=abs(x);float t=1./(1.+.3275911*x);return s*(1.-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*exp(-x*x));}

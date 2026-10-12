@@ -15,6 +15,9 @@ namespace observatory {
 extern GLuint skyProfileQueries[2];
 #endif
 namespace {
+// Keep faint sky/emission radiance out of half-float's coarse subnormal range.
+// The post pass reverses this scale before physical display exposure.
+constexpr float sceneStorageScale = 4096;
 // Restore the host lock renderer's state, including on shader/asset exceptions.
 struct GLState {
   GLint framebuffer = 0, viewport[4]{}, vao = 0, program = 0, buffer = 0,
@@ -132,13 +135,15 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
   if (fragment == "background.frag" || fragment == "body.frag" ||
       fragment == "stars.frag" || fragment == "rings.frag" ||
       fragment == "emission.frag") {
+    fragmentSource.insert(fragmentSource.find('\n') + 1,
+                          "uniform highp float uSceneScale;\n");
     const auto main = fragmentSource.find("void main()");
     if (main == std::string::npos)
       throw std::runtime_error("Missing scene shader entry point");
     fragmentSource.replace(main, 11, "void scenePixel()");
-    fragmentSource +=
-        "\nvoid "
-        "main(){scenePixel();color.rgb=min(color.rgb*128.,vec3(60000.));}\n";
+    fragmentSource += "\nvoid "
+                      "main(){scenePixel();color.rgb=min(color.rgb*uSceneScale,"
+                      "vec3(60000.));}\n";
   }
   GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)),
          fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
@@ -255,6 +260,9 @@ GLuint Renderer::galaxyTexture() {
   glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
   const char *faces[] = {"px", "nx", "py", "ny", "pz", "nz"};
   unsigned size = 0;
+  bool cubeCompressed = false;
+  GLint unpackAlignment = 0;
+  glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
   GLint extensions = 0;
   glGetIntegerv(GL_NUM_EXTENSIONS, &extensions);
   bool compressed = false;
@@ -263,28 +271,36 @@ GLuint Renderer::galaxyTexture() {
             GL_EXTENSIONS, i))) == "GL_EXT_texture_compression_bptc")
       compressed = starfield.compressed;
   for (int face = 0; face < 6; ++face) {
-    const auto file = root + "/assets/sky/galaxy-" + faces[face] + ".bc7";
+    const auto file = root + "/assets/sky/galaxy-" + faces[face] + ".ggsky";
     const auto mips = loadSkyTexture(file);
-    if (size && size != mips.front().size)
-      throw std::runtime_error("Invalid galaxy cube dimensions: " + file);
+    if (size && (size != mips.front().size ||
+                 cubeCompressed != mips.front().compressed))
+      throw std::runtime_error("Inconsistent galaxy cube format: " + file);
     size = mips.front().size;
+    cubeCompressed = mips.front().compressed;
     for (unsigned level = 0; level < mips.size(); ++level) {
       const auto &mip = mips[level];
-      if (compressed) {
+      if (compressed && mip.compressed) {
         glCompressedTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level,
-                               GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT,
+                               GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT,
                                mip.size, mip.size, 0, mip.blocks.size(),
                                mip.blocks.data());
       } else {
-        const auto pixels = decodeSkyMip(mip);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level,
-                     GL_SRGB8_ALPHA8, mip.size, mip.size, 0, GL_RGBA,
-                     GL_UNSIGNED_BYTE, pixels.data());
+        const auto pixels =
+            mip.compressed ? decodeSkyMip(mip) : std::vector<std::uint16_t>{};
+        // RGB half-float rows at the 1x1 mip contain six bytes.
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, GL_RGB16F,
+                     mip.size, mip.size, 0, GL_RGB, GL_HALF_FLOAT,
+                     mip.compressed
+                         ? static_cast<const void *>(pixels.data())
+                         : static_cast<const void *>(mip.blocks.data()));
+        glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
       }
     }
   }
-  // Mipmaps were filtered in linear light before offline BC7 encoding. Hardware
-  // decodes only sampled blocks; the entire image is never expanded in RAM.
+  // Model radiance and all mipmaps remain HDR and linear, including the
+  // portable decoder path. No display exposure or 8-bit quantization is baked.
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -476,6 +492,7 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   const double gain = 1 + 255 * std::pow(dark, 4) * dimPlanet * dimPlanet /
                               (1 + planet * 50000);
   scalar(p, "uDarkGain", gain);
+  scalar(p, "uSceneScale", sceneStorageScale);
   // The enormous nearby giant lights the observer far more than Earth's Moon.
   // Its phase controls contrast adaptation: the galaxy emerges when it is dim.
   // This is a bounded display adaptation model, not absolute eye photometry.

@@ -1,0 +1,17 @@
+{
+  "1": {
+    "mean_error_codes": 0.00348608699845679,
+    "p999_error_codes": 1.0,
+    "max_error_codes": 1
+  },
+  "10": {
+    "mean_error_codes": 0.017832634066358023,
+    "p999_error_codes": 1.0,
+    "max_error_codes": 4
+  },
+  "100": {
+    "mean_error_codes": 0.031399498456790124,
+    "p999_error_codes": 1.0,
+    "max_error_codes": 3
+  }
+}
