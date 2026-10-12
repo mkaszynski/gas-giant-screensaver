@@ -19,7 +19,13 @@ std::vector<unsigned char> pixels(int w, int h) {
   glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
   return p;
 }
-enum class FixtureMode { BrightSky, LongitudeChart, SlabReference };
+enum class FixtureMode {
+  FrozenWater,
+  TerrainCoverage,
+  BrightSky,
+  LongitudeChart,
+  SlabReference
+};
 struct ShaderFixture {
   std::filesystem::path path;
   ShaderFixture(FixtureMode mode = FixtureMode::BrightSky) {
@@ -33,6 +39,33 @@ struct ShaderFixture {
                           std::filesystem::copy_options::recursive);
     std::filesystem::create_directory_symlink(source / "assets",
                                               path / "assets");
+    if (mode == FixtureMode::FrozenWater) {
+      const auto target = path / "shaders/terrain.glsl";
+      std::ifstream input(target);
+      std::ostringstream buffer;
+      buffer << input.rdbuf();
+      auto shader = buffer.str();
+      for (const std::string needle : {"+uWaterOffset.x", "+uWaterOffset.y"}) {
+        const auto at = shader.find(needle);
+        require(at != std::string::npos, "water phase expression exists");
+        shader.replace(at, needle.size(), "+0.");
+      }
+      std::ofstream(target) << shader;
+      return;
+    }
+    if (mode == FixtureMode::TerrainCoverage) {
+      const auto target = path / "shaders/post.frag";
+      std::ifstream input(target);
+      std::ostringstream buffer;
+      buffer << input.rdbuf();
+      auto shader = buffer.str();
+      shader.insert(shader.rfind('}'),
+                    "vec3 td=ray();vec4 tm=terrainSample(td);"
+                    "color=vec4(step(1.,tm.a),step(.001,texture("
+                    "uTerrainGeometry,terrainUV(td)).b),0.,1.);\n");
+      std::ofstream(target) << shader;
+      return;
+    }
     if (mode == FixtureMode::SlabReference) {
       const auto target = path / "shaders/body.frag";
       std::ifstream input(target);
@@ -119,19 +152,27 @@ int main() {
       r.render(640, 360, 900, 1800, 1, false);
       auto without = pixels(640, 360);
       long visibleDifference = 0;
-      int bottomDifference = 0;
+      ShaderFixture coverageFixture(FixtureMode::TerrainCoverage);
+      Renderer coverageRenderer(coverageFixture.path.string());
+      coverageRenderer.render(640, 360, 900);
+      const auto mask = pixels(640, 360);
+      int bottomDifference = 0, dryPixels = 0;
       for (int y = 0; y < 360; ++y)
         for (int x = 0; x < 640; ++x)
           for (int c = 0; c < 3; ++c) {
             int delta = std::abs(int(with[(y * 640 + x) * 4 + c]) -
                                  int(without[(y * 640 + x) * 4 + c]));
             visibleDifference += delta;
-            if (y < 20)
+            if (mask[(y * 640 + x) * 4] == 255 &&
+                mask[(y * 640 + x) * 4 + 1] == 0) {
+              ++dryPixels;
               bottomDifference = std::max(bottomDifference, delta);
+            }
           }
       require(visibleDifference > 100000, "giant must be visibly rendered");
       std::cout << "Mountain interior max channel delta: " << bottomDifference
                 << "\n";
+      require(dryPixels > 1000, "terrain mask must contain dry interiors");
       require(bottomDifference == 0, "mountain interior must completely "
                                      "occlude the giant (alpha regression)");
       r.render(640, 360, 0);
@@ -174,12 +215,14 @@ int main() {
       for (size_t i = 0; i < cloudsBefore.size(); ++i)
         cloudMotion += std::abs(int(cloudsBefore[i]) - int(cloudsAfter[i]));
       require(cloudMotion > 10000, "clouds keep moving at Unix-scale time");
+      ShaderFixture frozenWaterFixture(FixtureMode::FrozenWater);
+      Renderer cloudOnly(frozenWaterFixture.path.string());
       for (double boundary : boundaries) {
         // Freeze geometry to isolate cloud continuity from moving shadows.
         const auto fixed = sceneAt(550.);
-        r.renderScene(640, 360, fixed, boundary - .001);
+        cloudOnly.renderScene(640, 360, fixed, boundary - .001);
         auto a = pixels(640, 360);
-        r.renderScene(640, 360, fixed, boundary + .001);
+        cloudOnly.renderScene(640, 360, fixed, boundary + .001);
         auto b = pixels(640, 360);
         int maximum = 0;
         for (size_t i = 0; i < a.size(); ++i)
@@ -196,10 +239,11 @@ int main() {
           auto normal = pixels(640, 360);
           brightSky.render(640, 360, time);
           auto bright = pixels(640, 360);
-          for (int i = 0; i < 640 * 20 * 4; ++i)
-            require(
-                normal[i] == bright[i],
-                "mountains must occlude all sky and solar glare at every time");
+          for (int i = 0; i < 640 * 360; ++i)
+            if (mask[i * 4] == 255 && mask[i * 4 + 1] == 0)
+              for (int c = 0; c < 3; ++c)
+                require(normal[i * 4 + c] == bright[i * 4 + c],
+                        "dry terrain must occlude all sky and solar glare");
           require(normal != bright,
                   "bright sky fixture must change visible sky");
         }

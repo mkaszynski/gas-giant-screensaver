@@ -213,23 +213,13 @@ GLuint Renderer::imageTexture(const std::string &file) {
     png_image_free(&img);
     throw std::runtime_error(msg);
   }
-  if (file == "mountains.png") {
-    // Make the ridge opaque BEFORE minification. Thresholding a filtered
-    // alpha value in the shader destroys its subpixel coverage. Premultiply
-    // color as well so transparent asset pixels cannot darken the silhouette.
-    for (size_t i = 0; i < pixels.size(); i += 4) {
-      double coverage = std::clamp((pixels[i + 3] / 255. - .01) / .11, 0., 1.);
-      coverage = coverage * coverage * (3 - 2 * coverage);
-      for (int channel = 0; channel < 3; ++channel)
-        pixels[i + channel] = std::lround(pixels[i + channel] * coverage);
-      pixels[i + 3] = std::lround(255 * coverage);
-    }
-  }
   GLuint t;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, img.width, img.height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, pixels.data());
+  glTexImage2D(GL_TEXTURE_2D, 0,
+               (file == "terrain/albedo.png" ? GL_SRGB8_ALPHA8 : GL_RGBA8),
+               img.width, img.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               pixels.data());
   glGenerateMipmap(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
@@ -237,7 +227,7 @@ GLuint Renderer::imageTexture(const std::string &file) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                   file == "giant.png" ? GL_REPEAT : GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  if (file == "mountains.png") {
+  if (file.starts_with("terrain/")) {
     const auto *extensions =
         reinterpret_cast<const char *>(glGetString(GL_EXTENSIONS));
     if (extensions &&
@@ -345,7 +335,11 @@ Renderer::Renderer(std::string dir, StarfieldOptions options)
     offset += size;
   }
   giant = imageTexture("giant.png");
-  mountains = imageTexture("mountains.png");
+  mountains = imageTexture("terrain/albedo.png");
+  terrainNormal = imageTexture("terrain/normal.png");
+  terrainGeometry = imageTexture("terrain/geometry.png");
+  horizonA = imageTexture("terrain/horizon-a.png");
+  horizonB = imageTexture("terrain/horizon-b.png");
   constexpr int profileWidth = 4096;
   std::vector<float> profile(profileWidth * 2);
   for (int i = 0; i < profileWidth; ++i) {
@@ -707,6 +701,13 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   bind(postProgram, 2, "uScene", scene.texture);
   bind(postProgram, 3, "uMountains", mountains);
   bind(postProgram, 4, "uNoise", noise);
+  bind(postProgram, 5, "uTerrainNormal", terrainNormal);
+  bind(postProgram, 6, "uTerrainGeometry", terrainGeometry);
+  bind(postProgram, 7, "uHorizonA", horizonA);
+  bind(postProgram, 8, "uHorizonB", horizonB);
+  glUniform2f(glGetUniformLocation(postProgram, "uWaterOffset"),
+              std::remainder(seconds * .496, 2 * pi),
+              std::remainder(seconds * .157, 2 * pi));
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
 }

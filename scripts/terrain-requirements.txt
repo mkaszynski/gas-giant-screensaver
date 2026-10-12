@@ -1,0 +1,6 @@
+# Offline baking and geometry tests only; none are runtime dependencies.
+numpy==2.5.4
+scipy==1.18.1
+Pillow==12.3.0
+rasterio==1.5.2
+pyproj==3.8.0

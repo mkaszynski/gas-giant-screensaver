@@ -1,5 +1,34 @@
 # Validation
 
+## Relightable terrain
+
+The foreground now uses measured 2m Swiss relief with modeled rock, vegetation,
+conifer crowns and an alpine lake, rather than the old flat mountain panorama.
+The fixed-view cache supports directional relighting, eight-angle horizon
+shadows, changing aerial perspective, moving wind waves and reflections of
+terrain, clouds and visible HDR scene radiance. Native sky and body simulation
+remain unchanged; viewing elevation decreases from 28 to 26 degrees.
+
+All 21 CPU/CLI checks, 11 galaxy model tests, eight terrain model tests and eight
+GPU suites pass locally. Dry opaque interiors are compared against extreme
+sky/glare and celestial toggles; lake reflection is intentionally tested
+separately. The new GPU suite verifies directional light response, actual
+visible lake coverage, moving reflected images, phase continuity at wraps and
+Unix timestamps, and absence of the former cache-boundary arc. The galaxy
+regression still detects 401 visible eclipse stars (183/255 peak contrast).
+
+Three alternating 180-frame runs per variant at 1920x1080 measured total GPU
+medians of **5.174 / 5.836 ms** in daylight (+12.8%) and **4.875 / 5.464 ms**
+at night (+12.1%). The median of run p95 values is 5.747 / 6.376 ms in daylight
+and 5.499 / 5.998 ms at night. These include the camera adjustment and are
+shared-desktop measurements, not watt readings or universal driver guarantees.
+Raw repetitions are in [terrain-benchmark.json](terrain-benchmark.json).
+
+The Nix-packaged 1080p daytime capture is pixel-identical to the source capture.
+Actual captures and source/renderer limits are documented in
+[the terrain design](TERRAIN.md).
+
+
 ## Rendered HDR galaxy
 
 The current beta replaces the flattened star map with deterministic stellar-

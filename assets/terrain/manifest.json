@@ -1,0 +1,38 @@
+{
+  "size": [
+    4096,
+    1024
+  ],
+  "horizon_size": [
+    1024,
+    256
+  ],
+  "eye_elevation_m": 1584.3678897655009,
+  "heading_deg": 95.0,
+  "azimuth_bounds_deg": [
+    -65,
+    65
+  ],
+  "elevation_bounds_deg": [
+    -12,
+    35
+  ],
+  "lake_elevation_m": 1579.0,
+  "relief_scale": 0.5,
+  "source": "https://elevation-tiles-prod.s3.amazonaws.com/skadi/N46/N46E007.hgt.gz",
+  "source_sha256": "cf790a87057dfdf126f9b314d9ec71d407afdedbe71c79e2b14c903d024ce0b9",
+  "model": "Measured bare-earth relief; modeled materials, lake mask and microrelief; eight azimuth horizons",
+  "near_relief": "swissALTI3D 2m",
+  "cache_sha256": {
+    "albedo.png": "b41c73d43939a897d8224f08f781dccafa5465a3a29b9052e5f5c5107da3d57a",
+    "geometry.png": "69642e120d46f100dbd683ec0fdf1cd942a8fcf485f7f9ad935bb1869010753a",
+    "horizon-a.png": "9d5a7a5fc195e8ac2c8a9ef34ba2209cb59084fd13d05664e9dccc1b68db01d6",
+    "horizon-b.png": "78731d6961d0f54dea9b1ecf38dfe0b54dfd581a76c52b0d1489ee58a1cf519f",
+    "normal.png": "048cc2098cb272cd57424ed96c736dac12463987a9613f15167c514888c33b53"
+  },
+  "observer_coordinates": [
+    46.4967,
+    7.7164
+  ],
+  "canopy_model": "deterministic lobed conifer crowns, 5.5m cells, 6-12m heights; forest begins at 750-1050m range"
+}

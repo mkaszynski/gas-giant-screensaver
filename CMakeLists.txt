@@ -78,3 +78,6 @@ if(OBSERVATORY_BUILD_SKY_BENCHMARK)
   target_link_libraries(sky-benchmark PRIVATE PkgConfig::GLFW PkgConfig::GLES PNG::PNG)
   target_compile_definitions(sky-benchmark PRIVATE OBSERVATORY_SKY_PROFILE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
 endif()
+
+add_executable(terrain-render-tests tests/terrain_render_tests.cpp)
+target_link_libraries(terrain-render-tests PRIVATE observatory PkgConfig::GLFW)

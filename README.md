@@ -1,6 +1,6 @@
 # Gas Giant Observatory
 
-A fixed view from a green mountain ridge on a synchronously rotating moon.
+A fixed view across an alpine lake and green mountains on a synchronously rotating moon.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
@@ -112,7 +112,9 @@ Installing the preview does not change any host configuration or idle timeout.
 - Faint nighttime airglow and ambient mountain light preserve subtle detail.
 - Finite solar disk (about 0.53° across), atmospheric aureole, soft optical glare,
   mutual eclipses, and planetshine approximation.
-- Photographic-style generated mountain albedo and giant band textures; runtime
+- Relightable measured mountain geometry, modeled conifer canopy, terrain shadows
+  and a Fresnel-reflecting alpine lake; see [terrain design](docs/TERRAIN.md).
+- Generated gas giant band texture; runtime
   lighting supplies their changing appearance. Mountain interiors fully occlude
   the sky, with antialiasing restricted to the silhouette.
 
@@ -170,6 +172,8 @@ ctest --test-dir build --output-on-failure
 ./build/atmosphere-render-tests
 ./build/scattering-edge-tests
 ./build/emission-render-tests
+./build/sky-render-tests
+./build/terrain-render-tests
 nix flake check
 ```
 

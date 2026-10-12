@@ -1,13 +1,15 @@
 # Assets and provenance
 
-`assets/giant.png` and `assets/mountains.png` were created for this project using
+`assets/giant.png` and the former mountain panorama were created for this project using
 OpenAI's built-in image generation tool. They are generated imagery, not NASA
 observations or photographs of an identified mountain range. The project offers
 these original generated assets under CC0-1.0 to the extent rights exist.
 
 The renderer supplies all directional light, astronomical phases and eclipses.
-The mountain photograph-style layer is a fixed-view approximation; its internal
-surface relief does not cast changing geometric shadows.
+The current foreground is baked from numerical elevation, with modeled materials
+and vegetation; its surfaces and horizon shadows respond to changing light.
+See [terrain design](TERRAIN.md) and [source attribution](../assets/terrain/ATTRIBUTION.md).
+The following mountain prompts document the replaced historical panorama.
 
 ## Mountain generation prompt
 

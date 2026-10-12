@@ -304,16 +304,31 @@ int main() {
       auto night = sceneAt(437625), day = sceneAt(0);
       const auto on = render(actual, night, 960, 540, true),
                  off = render(without, night, 960, 540, true);
+      Fixture terrainMask;
+      terrainMask.star({0, 0, 1});
+      terrainMask.edit("post.frag", [](auto &s) {
+        s.insert(s.rfind('}'), "vec3 td=ray();vec4 tm=terrainSample(td);"
+                               "color=vec4(step(1.,tm.a),step(.001,texture("
+                               "uTerrainGeometry,terrainUV(td)).b),0.,1.);\n");
+      });
+      Renderer maskRenderer(terrainMask.path.string(), {false, false});
+      const auto mask = render(maskRenderer, night, 960, 540);
+      int dryPixels = 0;
       double difference = 0;
       for (int y = 0; y < 540; ++y)
         for (int x = 0; x < 960; ++x)
           for (int c = 0; c < 3; ++c) {
             const auto i = (y * 960 + x) * 4 + c;
             difference += std::abs(on[i] - off[i]);
-            if (y < 30)
+            if (mask[(y * 960 + x) * 4] == 1.f &&
+                mask[(y * 960 + x) * 4 + 1] == 0.f) {
+              ++dryPixels;
               require(on[i] == off[i],
-                      "opaque mountain interiors occlude galaxy and catalog");
+                      "opaque dry terrain occludes galaxy and catalog");
+            }
           }
+      require(dryPixels > 1000,
+              "sky occlusion test covers dry mountain interiors");
       require(difference > 1, "galaxy survives final display in eclipse");
       const auto dayOn = render(actual, day, 480, 270, true),
                  dayOff = render(without, day, 480, 270, true);

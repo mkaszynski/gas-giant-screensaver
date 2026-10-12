@@ -9,7 +9,7 @@
       version = "0.1.0";
       src = pkgs.lib.fileset.toSource {
         root = ./.;
-        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/mountains.png ./assets/sky ];
+        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/terrain ./assets/sky ];
       };
       nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
       buildInputs = [ pkgs.glfw pkgs.libGL pkgs.libpng ];

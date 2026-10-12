@@ -37,6 +37,7 @@ private:
          postProgram = 0, ringProgram = 0, giantProgram = 0,
          giantLimbProgram = 0, emissionProgram = 0;
   GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
+         terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0;
   Target trans, multi, sky, scene;

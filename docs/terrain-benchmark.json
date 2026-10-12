@@ -1,0 +1,100 @@
+{
+  "hardware": "AMD Renoir radeonsi, shared desktop",
+  "frames_per_run": 180,
+  "runs_per_variant": 3,
+  "method": "Alternating packaged main 854deb7 baseline and terrain feature; total GPU timer and synchronized GPU+CPU frames, 1920x1080, including camera change",
+  "scenes": [
+    {
+      "baseline": {
+        "runs": [
+          {
+            "gpu_median_ms": 5.37173,
+            "gpu_p95_ms": 27.2102,
+            "synchronized_median_ms": 6.76767
+          },
+          {
+            "gpu_median_ms": 5.17377,
+            "gpu_p95_ms": 5.74717,
+            "synchronized_median_ms": 6.56978
+          },
+          {
+            "gpu_median_ms": 5.12052,
+            "gpu_p95_ms": 5.63362,
+            "synchronized_median_ms": 6.49086
+          }
+        ],
+        "gpu_median_ms": 5.17377,
+        "gpu_p95_ms": 5.74717
+      },
+      "terrain": {
+        "runs": [
+          {
+            "gpu_median_ms": 5.838,
+            "gpu_p95_ms": 6.4408,
+            "synchronized_median_ms": 7.31159
+          },
+          {
+            "gpu_median_ms": 5.83558,
+            "gpu_p95_ms": 6.37618,
+            "synchronized_median_ms": 7.14931
+          },
+          {
+            "gpu_median_ms": 5.77457,
+            "gpu_p95_ms": 6.28417,
+            "synchronized_median_ms": 7.14931
+          }
+        ],
+        "gpu_median_ms": 5.83558,
+        "gpu_p95_ms": 6.37618
+      },
+      "scene": "day",
+      "median_change_percent": 12.791639365491703
+    },
+    {
+      "baseline": {
+        "runs": [
+          {
+            "gpu_median_ms": 4.87482,
+            "gpu_p95_ms": 5.49908,
+            "synchronized_median_ms": 6.28154
+          },
+          {
+            "gpu_median_ms": 4.80732,
+            "gpu_p95_ms": 5.36056,
+            "synchronized_median_ms": 6.17855
+          },
+          {
+            "gpu_median_ms": 4.90876,
+            "gpu_p95_ms": 5.52786,
+            "synchronized_median_ms": 6.24276
+          }
+        ],
+        "gpu_median_ms": 4.87482,
+        "gpu_p95_ms": 5.49908
+      },
+      "terrain": {
+        "runs": [
+          {
+            "gpu_median_ms": 5.43298,
+            "gpu_p95_ms": 5.99808,
+            "synchronized_median_ms": 6.82987
+          },
+          {
+            "gpu_median_ms": 5.49304,
+            "gpu_p95_ms": 6.01469,
+            "synchronized_median_ms": 6.83943
+          },
+          {
+            "gpu_median_ms": 5.46378,
+            "gpu_p95_ms": 5.95642,
+            "synchronized_median_ms": 6.85954
+          }
+        ],
+        "gpu_median_ms": 5.46378,
+        "gpu_p95_ms": 5.99808
+      },
+      "scene": "night",
+      "median_change_percent": 12.081676861914904
+    }
+  ]
+}

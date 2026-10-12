@@ -188,11 +188,11 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
       {0.65, 0.08, 0.76},
       std::remainder(2 * pi * physicalSeconds / stellarYearSeconds, 2 * pi)));
   s.sunLocal = s.local(s.sun);
-  // Fixed azimuth points at the mean giant bearing. 28-degree elevation,
+  // Fixed azimuth points at the mean giant bearing. 26-degree elevation,
   // 58-degree vertical FOV.
   Vec3 meanGiant = normalized(s.local(toward));
   const double az = std::atan2(meanGiant.x, meanGiant.z) + 0.12;
-  const double elevation = 28 * pi / 180;
+  const double elevation = 26 * pi / 180;
   s.forward = {std::sin(az) * std::cos(elevation), std::sin(elevation),
                std::cos(az) * std::cos(elevation)};
   s.right = normalized(cross(Vec3{0, 1, 0}, s.forward));

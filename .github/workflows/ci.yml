@@ -19,7 +19,9 @@ jobs:
         run: |
           python3 -m venv /tmp/sky-model-tests
           /tmp/sky-model-tests/bin/pip install -r scripts/sky-model-requirements.txt
+          /tmp/sky-model-tests/bin/pip install -r scripts/terrain-requirements.txt
           /tmp/sky-model-tests/bin/python tests/test_galaxy_model.py
+          /tmp/sky-model-tests/bin/python tests/test_terrain_bake.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
@@ -29,6 +31,7 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/scattering-edge-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/emission-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/sky-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/terrain-render-tests
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
