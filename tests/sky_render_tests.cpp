@@ -168,35 +168,54 @@ int main() {
       Renderer none(fixture.path.string(), {false, false});
       require(flux(render(none, s)) == 0,
               "disabling both sky layers leaves no celestial signal");
-      Renderer galaxy(fixture.path.string(), {true, false});
-      const auto galacticCenter =
-          equatorialDirection(17.7603 * pi / 12, -28.9362 * pi / 180);
-      const auto galacticPole =
-          equatorialDirection(12.8573 * pi / 12, 27.1283 * pi / 180);
-      const double center = flux(render(galaxy, emptySky(galacticCenter))),
-                   pole = flux(render(galaxy, emptySky(galacticPole)));
-      std::cout << "Galaxy center/pole contrast " << center / pole << '\n';
-      require(
-          center > pole * 2,
-          "NASA Milky Way has the expected aligned bright band and dark pole");
-      // Cross every cube edge from either side; adjacent camera poses must not
-      // introduce a face boundary or reset, including close to a cube corner.
-      for (int axis = 0; axis < 3; ++axis)
-        for (int a : {-1, 1})
-          for (int b : {-1, 1}) {
-            Vec3 edge = axis == 0   ? Vec3{double(a), double(b), .2}
-                        : axis == 1 ? Vec3{.2, double(a), double(b)}
-                                    : Vec3{double(a), .2, double(b)};
-            const auto before =
-                render(galaxy, emptySky(edge - Vec3{.000001, 0, 0}));
-            const auto after =
-                render(galaxy, emptySky(edge + Vec3{.000001, 0, 0}));
-            double difference = 0;
-            for (size_t i = 0; i < before.size(); i += 4)
-              difference += std::abs(before[i] - after[i]);
-            require(difference / std::max(flux(before), 1.e-20) < .002,
-                    "continuous cubemap edge");
+      {
+        Renderer galaxy(fixture.path.string(), {true, false});
+        const auto galacticCenter =
+            equatorialDirection(17.7603 * pi / 12, -28.9362 * pi / 180);
+        const auto galacticPole =
+            equatorialDirection(12.8573 * pi / 12, 27.1283 * pi / 180);
+        const double center = flux(render(galaxy, emptySky(galacticCenter))),
+                     pole = flux(render(galaxy, emptySky(galacticPole)));
+        std::cout << "Galaxy center/pole contrast " << center / pole << '\n';
+        require(center > pole * 2, "NASA Milky Way has the expected aligned "
+                                   "bright band and dark pole");
+        const auto detail =
+            render(galaxy, emptySky(galacticCenter), 1920, 1080);
+        double variation = 0, total = 0;
+        for (int y = 1; y < 1079; ++y)
+          for (int x = 1; x < 1919; ++x) {
+            const int at = (y * 1920 + x) * 4;
+            const double here = detail[at];
+            variation +=
+                std::abs(4 * here - detail[at - 4] - detail[at + 4] -
+                         detail[at - 1920 * 4] - detail[at + 1920 * 4]);
+            total += here;
           }
+        std::cout << "1080p diffuse galaxy detail " << variation / total
+                  << '\n';
+        require(
+            variation / total > .1,
+            "fine galaxy structure survives projection and filtering at 1080p");
+        // Cross every cube edge from either side; adjacent camera poses must
+        // not introduce a face boundary or reset, including close to a cube
+        // corner.
+        for (int axis = 0; axis < 3; ++axis)
+          for (int a : {-1, 1})
+            for (int b : {-1, 1}) {
+              Vec3 edge = axis == 0   ? Vec3{double(a), double(b), .2}
+                          : axis == 1 ? Vec3{.2, double(a), double(b)}
+                                      : Vec3{double(a), .2, double(b)};
+              const auto before =
+                  render(galaxy, emptySky(edge - Vec3{.000001, 0, 0}));
+              const auto after =
+                  render(galaxy, emptySky(edge + Vec3{.000001, 0, 0}));
+              double difference = 0;
+              for (size_t i = 0; i < before.size(); i += 4)
+                difference += std::abs(before[i] - after[i]);
+              require(difference / std::max(flux(before), 1.e-20) < .002,
+                      "continuous cubemap edge");
+            }
+      }
       // The conservative cosine bound skips empty solar pixels without
       // changing the original limb darkening or angular antialiasing.
       fixture.edit("background.frag", [](auto &source) {
@@ -244,6 +263,62 @@ int main() {
       for (size_t i = 0; i < dayOn.size(); i += 4)
         dayDifference += std::abs(dayOn[i] - dayOff[i]);
       require(dayDifference < .01, "daylight washes out celestial background");
+      // A mathematically nonzero star is insufficient: require a populated
+      // starfield in the actual tone-mapped eclipse sky, over the Milky Way.
+      Renderer noStars(Renderer::defaultDataDirectory(), {true, false});
+      const auto starOn = render(actual, night, 1920, 1080, true),
+                 starOff = render(noStars, night, 1920, 1080, true);
+      std::vector<unsigned char> visible(1920 * 1080);
+      int peak = 0;
+      for (int y = 324; y < 1080; ++y)
+        for (int x = 0; x < 1920; ++x) {
+          double contrast = 0;
+          for (int c = 0; c < 3; ++c)
+            contrast =
+                std::max(contrast, double(starOn[(y * 1920 + x) * 4 + c] -
+                                          starOff[(y * 1920 + x) * 4 + c]));
+          visible[y * 1920 + x] = contrast >= 12. / 255;
+          peak = std::max(peak, int(contrast * 255));
+        }
+      int points = 0;
+      std::vector<int> pending;
+      for (int start = 0; start < 1920 * 1080; ++start)
+        if (visible[start]) {
+          ++points;
+          visible[start] = 0;
+          pending.push_back(start);
+          while (!pending.empty()) {
+            const int at = pending.back();
+            pending.pop_back();
+            for (int dy = -1; dy <= 1; ++dy)
+              for (int dx = -1; dx <= 1; ++dx) {
+                const int x = at % 1920 + dx, y = at / 1920 + dy;
+                if (x < 0 || x >= 1920 || y < 0 || y >= 1080)
+                  continue;
+                const int next = y * 1920 + x;
+                if (visible[next]) {
+                  visible[next] = 0;
+                  pending.push_back(next);
+                }
+              }
+          }
+        }
+      std::cout << "Visible eclipse catalog stars " << points
+                << " peak contrast " << peak << "/255\n";
+      require(points >= 80 && peak >= 100,
+              "populated visible stars survive diffuse galaxy and display "
+              "exposure");
+      Renderer decoded(Renderer::defaultDataDirectory(), {true, true, false});
+      const auto portable = render(decoded, night, 960, 540, true);
+      double formatError = 0;
+      for (size_t i = 0; i < portable.size(); i += 4)
+        for (int c = 0; c < 3; ++c)
+          formatError = std::max(formatError,
+                                 std::abs(double(portable[i + c] - on[i + c])));
+      std::cout << "BC7 GPU/portable display difference " << formatError * 255
+                << "/255\n";
+      require(formatError < 2. / 255,
+              "hardware and portable BC7 decode preserve the same sky colors");
       require(glGetError() == GL_NO_ERROR, "sky GL errors");
     }
     glfwDestroyWindow(window);

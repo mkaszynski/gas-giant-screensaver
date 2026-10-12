@@ -1,5 +1,40 @@
 # Validation
 
+## Photographic sky refinement
+
+The quality revision replaces the softened 4k/1024-face map with the 16k NASA
+source and 4096-pixel faces, removes Gaussian preblur, restores the 16-fold
+source texel-area brightness scaling, and increases catalog point exposure 10x.
+The latest eclipse regression measures **358 distinct catalog stars** above
+12/255 contrast in the visible upper sky, with a peak difference of 187/255.
+It tests the actual atmosphere, diffuse galaxy, occlusion and final tone mapping.
+An isolated 1080p diffuse-sky check requires retained fine structure rather than
+accepting a bright but blurred band. Colors, magnitudes and subpixel flux
+stability remain independently tested.
+
+BC7 sRGB compression retains the 4096-pixel resolution and full linear-light
+mip chain while reducing static sky GPU storage from **512 MiB to 128 MiB**.
+The actual AMD GPU supports the format. No codec runs during animation; the
+hardware samples the compressed texture directly. The portable decoder path
+produces **zero final-display difference** in the tested eclipse scene. GPU and
+decoded uploads are compared explicitly, and the binary loader rejects incorrect
+dimensions, mip sizes, truncation and trailing data.
+
+Compared with the uncompressed source capture, the final 1080p eclipse changes
+by **0.044/255 on average**, **1/255 at the 99.9th percentile**, and **3/255 at
+the worst channel**. Base-level source-face comparison measures 47.48 dB PSNR
+and 0.72/255 mean absolute error. These are image-fidelity checks, not an assertion
+of calibrated human-eye brightness. The offline conversion and encoding tools
+are not runtime dependencies. The 21 CPU/CLI checks and all seven GPU suites
+pass locally. The initial timing data below belongs to the preceding softer
+beta; broader tuning follows appearance review.
+
+A 180-frame check of this quality revision measured a **0.905 ms sky median**
+at 1080p eclipse, versus the initial baseline's **0.793 ms** (+14.0%). Full-scene
+GPU median was **4.50 ms**; the earlier baseline sample was **4.53 ms**. This is
+a spot check on a shared desktop, not the previous three-run performance gate
+or a guarantee across resolutions and drivers.
+
 ## Earth sky beta
 
 The galaxy beta has 20 CPU/CLI tests and seven GPU behavior suites, including

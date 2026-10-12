@@ -67,6 +67,8 @@ int main(int argc, char **argv) {
                "  --no-galaxy            Disable diffuse Milky Way for "
                "comparison\n"
                "  --no-stars             Disable catalog stars for comparison\n"
+               "  --uncompressed-galaxy  Expand sky texture on GPU for format "
+               "comparison\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"
                "Escape or Q closes the preview. This preview does "
@@ -83,6 +85,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-stars") {
         starfield.stars = false;
+        continue;
+      }
+      if (a == "--uncompressed-galaxy") {
+        starfield.compressed = false;
         continue;
       }
       if (a == "--no-emissions") {

@@ -7,6 +7,7 @@
 namespace observatory {
 struct StarfieldOptions {
   bool galaxy = true, stars = true;
+  bool compressed = true;
 };
 class Renderer {
 public:

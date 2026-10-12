@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline-only bake: NASA linear EXR + HYG 4.1 -> cached GPU sky assets.
-Requires numpy, scipy, pillow, OpenEXR. No downloads or generation at runtime.
+Requires numpy, pillow, OpenEXR. No downloads or generation at runtime.
 See docs/GALAXY.md for inputs, checksums, coordinates, and attribution.
 """
 import argparse
@@ -8,18 +8,20 @@ import csv
 import hashlib
 import json
 import math
+import mmap
 import struct
+import tempfile
 from pathlib import Path
 
 import numpy as np
 import OpenEXR
+import Imath
 from PIL import Image
-from scipy.ndimage import gaussian_filter, map_coordinates
 
 OBLIQUITY = math.radians(23.4392911)
 SOURCE_HASHES = {
     'catalog': 'd9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd',
-    'milky_way': '2eb802d6e68d170b410f766c7fec07f7518619f6b6708fdc81e9302d93e74fdb',
+    'milky_way': '9d60e58075bcbce9cd03f8115e5635533a0a910007348a485755630a3927b97a',
 }
 
 
@@ -73,32 +75,55 @@ def bake_catalog(path, out):
 
 
 def bake_galaxy(path, out, size):
-    image = OpenEXR.File(str(path)).channels()['RGB'].pixels.astype(np.float32)
-    # Average unresolved faint-star speckle at ~0.1 degrees; preserve measured
-    # structure and flux in linear light, including dust lanes and star clouds.
-    image = gaussian_filter(image, sigma=(1.1,1.1,0), mode=('nearest','wrap','nearest'))
-    # Low-light appearance is mostly neutral; preserve gentle real warm/cool hues.
-    luminance = image @ np.array([.2126,.7152,.0722],np.float32)
-    image = .25*image+.75*luminance[...,None]
-    height,width,_ = image.shape
-    s,t = np.meshgrid((np.arange(size)+.5)*2/size-1,(np.arange(size)+.5)*2/size-1)
-    one = np.ones_like(s)
-    faces = [(one,-t,-s),(-one,-t,s),(s,one,t),(s,-one,-t),(s,-t,one),(-s,-t,-one)]
-    for name,face in zip(('px','nx','py','ny','pz','nz'),faces):
-        v = np.stack(face,axis=-1);v /= np.linalg.norm(v,axis=-1)[...,None]
-        # World is ecliptic; inverse obliquity returns J2000 equatorial directions.
-        x=v[...,0];y=v[...,1]*math.cos(OBLIQUITY)+v[...,2]*math.sin(OBLIQUITY)
-        z=-v[...,1]*math.sin(OBLIQUITY)+v[...,2]*math.cos(OBLIQUITY)
-        u=(.5-np.arctan2(z,x)/(2*math.pi))%1
-        vv=.5-np.arcsin(np.clip(y,-1,1))/math.pi
-        coords=[np.clip(vv*height-.5,0,height-1),u*width-.5]
-        # Wrap longitude explicitly; do not wrap the celestial poles.
-        padded=np.concatenate((image[:,-1:],image,image[:,:1]),axis=1)
-        coords[1]+=1
-        linear=np.stack([map_coordinates(padded[...,c],coords,order=1,mode='nearest')
-                         for c in range(3)],axis=-1)
-        srgb=np.where(linear<=.0031308,12.92*linear,1.055*np.maximum(linear,0)**(1/2.4)-.055)
-        Image.fromarray(np.uint8(np.clip(srgb,0,1)*255+.5)).save(out/f'galaxy-{name}.png')
+    # Stream half-float planes through temporary memory maps. The 16k input
+    # must not require several full float32 RGB copies on the user's computer.
+    with tempfile.TemporaryDirectory(prefix='observatory-sky-') as directory:
+        exr = OpenEXR.InputFile(str(path))
+        window = exr.header()['dataWindow']
+        width = window.max.x-window.min.x+1
+        height = window.max.y-window.min.y+1
+        planes = []
+        for channel in 'RGB':
+            target = Path(directory)/channel
+            target.write_bytes(exr.channel(channel,Imath.PixelType(Imath.PixelType.HALF)))
+            planes.append(np.memmap(target,dtype=np.float16,mode='r',shape=(height,width)))
+        exr.close()
+        for face,name in enumerate(('px','nx','py','ny','pz','nz')):
+            pixels = np.memmap(Path(directory)/'face',dtype=np.uint8,mode='w+',shape=(size,size,3))
+            for row in range(0,size,64):
+                s,t = np.meshgrid((np.arange(size,dtype=np.float32)+.5)*2/size-1,
+                                 (np.arange(row,min(row+64,size),dtype=np.float32)+.5)*2/size-1)
+                one = np.ones_like(s)
+                directions = ((one,-t,-s),(-one,-t,s),(s,one,t),(s,-one,-t),(s,-t,one),(-s,-t,-one))
+                v = np.stack(directions[face],axis=-1)
+                v /= np.linalg.norm(v,axis=-1)[...,None]
+                x = v[...,0]
+                y = v[...,1]*math.cos(OBLIQUITY)+v[...,2]*math.sin(OBLIQUITY)
+                z = -v[...,1]*math.sin(OBLIQUITY)+v[...,2]*math.cos(OBLIQUITY)
+                u = ((.5-np.arctan2(z,x)/(2*math.pi))%1)*width-.5
+                vv = np.clip((.5-np.arcsin(np.clip(y,-1,1))/math.pi)*height-.5,0,height-1)
+                xi = np.floor(u).astype(np.int32);yi = np.floor(vv).astype(np.int32)
+                fx = u-xi;fy = vv-yi
+                linear = np.stack([
+                    ((1-fy)*((1-fx)*p[yi,xi%width].astype(np.float32)+fx*p[yi,(xi+1)%width].astype(np.float32))
+                     +fy*((1-fx)*p[np.minimum(yi+1,height-1),xi%width].astype(np.float32)
+                          +fx*p[np.minimum(yi+1,height-1),(xi+1)%width].astype(np.float32)))
+                    for p in planes],axis=-1)
+                # NASA stores integrated stellar flux per source texel. A
+                # 16k map has sixteen times as many texels as the 4k reference;
+                # restore surface brightness before encoding/filtering.
+                linear *= (width/4096)**2
+                # Retain the source's fine structure; no Gaussian preblur.
+                luminance = linear @ np.array([.2126,.7152,.0722])
+                linear = .6*linear+.4*luminance[...,None]
+                srgb = np.where(linear<=.0031308,12.92*linear,1.055*np.maximum(linear,0)**(1/2.4)-.055)
+                pixels[row:row+s.shape[0]] = np.uint8(np.clip(srgb,0,1)*255+.5)
+                for p in planes:
+                    if hasattr(p._mmap,'madvise'):
+                        p._mmap.madvise(mmap.MADV_DONTNEED)
+            Image.fromarray(pixels).save(out/f'galaxy-{name}.png')
+            del pixels
+            print(f'Baked {name}',flush=True)
 
 
 def main():
@@ -106,7 +131,7 @@ def main():
     p.add_argument('--catalog',type=Path,required=True)
     p.add_argument('--milky-way',type=Path,required=True)
     p.add_argument('--output',type=Path,default=Path('assets/sky'))
-    p.add_argument('--face-size',type=int,choices=(256,512,1024,2048),default=1024)
+    p.add_argument('--face-size',type=int,choices=(256,512,1024,2048,4096),default=4096)
     a=p.parse_args()
     for role in SOURCE_HASHES:
         actual=hashlib.sha256(getattr(a,role).read_bytes()).hexdigest()
@@ -116,6 +141,7 @@ def main():
     metadata=bake_catalog(a.catalog,a.output)
     bake_galaxy(a.milky_way,a.output,a.face_size)
     metadata.update(face_size=a.face_size,obliquity_degrees=23.4392911,
+                    preblur_sigma=0,retained_chroma=.6,source_flux_scale=16,
                     sources={p.name:hashlib.sha256(p.read_bytes()).hexdigest()
                              for p in (a.catalog,a.milky_way)})
     (a.output/'manifest.json').write_text(json.dumps(metadata,indent=2)+'\n')

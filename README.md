@@ -16,6 +16,13 @@ sky pass supplies the diffuse galaxy. Local atmosphere, clouds, mountains and
 celestial bodies determine visibility. A brightly illuminated giant suppresses
 the faint sky; total eclipse is a useful review instant.
 
+The current revision prioritizes photographic detail: the 16k NASA source feeds
+a 4096-pixel cube without preblur, and a revised star exposure makes hundreds of
+catalog stars clearly visible during eclipse. Offline BC7 compression keeps
+the full cube at about 128 MiB on supporting GPUs, with no runtime encoder or
+tile-streaming work. Broader performance tuning follows appearance review. The earlier timing results
+describe the initial, softer 1024-pixel beta rather than this quality revision.
+
 Preview the beta without changing the installed screensaver:
 
 ```sh
@@ -239,3 +246,5 @@ exist. See [LICENSE](LICENSE) and [attribution](docs/ASSETS.md).
 The HYG-derived star catalog has a separate CC BY-SA 4.0 data license; the NASA
 Milky Way visualization is credited separately. See
 [sky attribution and included data license](assets/sky/ATTRIBUTION.md).
+The optional portable BC7 decoder retains its upstream
+[MIT notice](assets/sky/LICENSE-BCDEC-MIT.txt).

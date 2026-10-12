@@ -1,9 +1,12 @@
-# Earth sky beta
+# Photographic Earth sky beta
 
 The `feat/galaxy` beta replaces uniformly random stars with an Earth sky catalog
 and adds the Milky Way. It does not change orbital simulation, the camera,
 clouds, mountains, ring geometry or the operator's configured emission gains.
 The feature is available for review without replacing the installed lock screen.
+The current operator instruction prioritizes photorealism over the initial 20%
+performance target. The initial performance beta remains documented separately;
+its timings do not establish a budget result for the current quality revision.
 
 ## Astronomical content
 
@@ -46,8 +49,11 @@ daylight and twilight. Existing clouds, solid bodies, ring transmission and the
 opaque foreground ridge compose in front of the sky. The sky itself does not
 cast shadows on mountains or change the simulation.
 
-The Milky Way is deliberately subdued relative to a long-exposure astrophotograph.
-Its largest features emerge in a dark sky; it is not a saturated colored cloud.
+The Milky Way is displayed as a detailed photographic sky rather than a blurred
+low-resolution background. Its fine star-cloud and dust structure comes from
+the 16k source, with no Gaussian preblur. Catalog point exposure is ten times
+the first beta's value, preserving relative magnitudes while allowing faint
+stars to stand out against that background on an ordinary monitor.
 The enormous sunlit giant supplies much more planetshine than Earth's Moon.
 A bounded phase/solid-angle contrast factor suppresses the celestial background
 beside it. This is **display calibration**, not absolute retinal photometry:
@@ -67,18 +73,36 @@ Its EXR-to-JPEG conversion scales/clips values and uses JPEG quality 50, so it
 provides a **morphology reference**, not an absolute naked-eye brightness target.
 The beta retains the broad Sagittarius star clouds and branching dark lanes,
 without borrowing that reference's exposure or drawing its bright stars twice.
-The beta uses the 4k diffuse map and a 1024-pixel cube to keep memory and bandwidth
-small. Fine telescope-scale structure is intentionally below the display's
-angular resolution; catalog stars retain independent, sharp positions.
+The beta now uses the 16k diffuse map and a 4096-pixel cube to retain fine
+structure at 1080p and 4K. The source stores flux per texel: its mean green
+channel is 0.001644, versus 0.026304 for the 4k source. Multiplying by the
+16-fold texel-area ratio restores the same surface brightness before PNG
+encoding and filtering. This avoids accidentally dimming the galaxy when its
+source resolution increases. The rare brightest diffuse samples clip at the
+PNG's white level; this is a photographic visualization, not an absolute HDR
+photometry instrument. Catalog stars retain independent sharp positions.
 
 ## Runtime and performance
 
-The runtime reads one 279 KiB binary catalog and six PNG faces once, then uploads
+The runtime reads one 279 KiB binary catalog and six BC7 faces once, then uploads
 one static star VBO and one mipmapped sRGB cubemap. It generates neither positions
 nor colors each frame. The additional diffuse sky costs one cube lookup in the
 existing background pass; there is no extra fullscreen pass, render target,
 blur pyramid or procedural galaxy generation. Total extra static GPU storage
-is approximately **32 MiB** for the cube/mips plus the catalog VBO.
+is approximately **128 MiB** for the compressed cube/mips plus the catalog VBO.
+This computer supports BC7 in hardware; blocks remain compressed in GPU memory
+and decoding occurs during sampling. The full cube retains a single-sample
+shader without page-table lookups or streaming uploads during animation.
+Visible-tile streaming remains possible if a smaller memory ceiling is needed.
+A renderer
+with its galaxy disabled does not load or allocate that cube. Offline conversion
+streams EXR half-float planes and rows through memory maps, avoiding full-size
+float32 RGB copies on the development computer. Compression happens offline
+using ISPC's slow BC7 profile after linear-light mip filtering. Intermediate PNGs
+are not included in the installed package. On GPUs without BC7, the same blocks
+are decoded once by the included MIT-licensed `bcdec` fallback and uploaded as
+sRGB RGBA; that compatibility path uses approximately **512 MiB**. Use
+`--uncompressed-galaxy` to exercise the fallback explicitly.
 
 To accommodate that lookup, the background shader rejects pixels outside the
 solar disk with a conservative cosine bound before evaluating `acos`. A GPU
@@ -86,10 +110,10 @@ regression compares it against the original ungated disk and limb-darkening
 calculation. The existing solar appearance and edge filtering are preserved.
 
 The optional benchmark records background and point-star passes separately,
-plus their sum. **The 20% budget is evaluated on combined sky rendering** because
-the added galaxy is rendered in the background pass, not the point-star pass.
-This scope is explicit: the point-star pass alone does grow with the larger
-catalog and integrated filtering. Full-scene rendering is measured separately.
+plus their sum. The **initial** 20% budget was evaluated on combined sky rendering
+because the added galaxy is rendered in the background pass, not the point-star
+pass. Quality is now the first acceptance criterion; optimization follows visual
+review. Historical timings refer to the first beta's smaller, smoothed cube.
 Measurements use the actual AMD integrated GPU on a shared desktop, not an
 exclusive GPU laboratory. Timing instrumentation is excluded from production.
 
@@ -104,31 +128,39 @@ nix develop --command cmake --build build --parallel 3
 
 ## Reproduce the assets
 
-Use Python with `numpy`, `scipy`, `pillow`, and `OpenEXR`. These are offline build
+Use Python with `numpy`, `pillow`, `OpenEXR`, and `ispc_texcomp==1.0.1`. These are offline build
 tools; the installed screensaver does not depend on Python or those libraries.
 Download the following inputs and verify SHA-256:
 
 | Source | SHA-256 |
 |---|---|
 | [HYG v4.1 CSV](https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv) | `d9f69fd86bbf90a4e4d52b4c5c53eacfa6dfc0bfdef85bfd94f095e0bebe4ebd` |
-| [NASA celestial Milky Way 4k EXR](https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004851/milkyway_2020_4k.exr) | `2eb802d6e68d170b410f766c7fec07f7518619f6b6708fdc81e9302d93e74fdb` |
+| [NASA celestial Milky Way 16k EXR](https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004851/milkyway_2020_16k.exr) | `9d60e58075bcbce9cd03f8115e5635533a0a910007348a485755630a3927b97a` |
 
 ```sh
 python scripts/bake_sky.py --catalog hygdata_v41.csv \
-  --milky-way milkyway_2020_4k.exr --output assets/sky
+  --milky-way milkyway_2020_16k.exr --output sky-intermediate
+python scripts/compress_sky.py --input sky-intermediate --output assets/sky
 ```
 
 The bake refuses input whose checksum differs. RA zero is at the NASA panorama's
 center; RA increases to the left. Standard OpenGL cube-face directions are
 transformed back to equatorial coordinates before sampling that panorama.
-Polar rows clamp and longitude wraps. Smoothing and bilinear reprojection occur
-in linear light; PNGs encode sRGB, which the GPU decodes before lighting and
-filtering. Runtime cube dimensions and catalog values are validated.
+Polar rows clamp and longitude wraps. Flux normalization and bilinear reprojection occur
+in linear light. Intermediate PNGs encode sRGB. Mips are built in linear light
+and compressed offline to BC7 sRGB, which the GPU decodes before lighting and
+filtering. Runtime cube dimensions, mip sizes, file lengths and catalog values
+are validated.
 
 The binary layout is `GGSSTAR1`, a little-endian uint32 count, then eight
 little-endian floats per star: unit xyz direction, magnitude-zero-relative flux,
 unit-luminance linear RGB, V magnitude. `manifest.json` records the selection
 and source checksums. The cube is smoothly filtered across face boundaries.
+Each `GGSCUBE1` face file contains a little-endian dimension and mip count,
+followed by each mip's byte count and its 16-byte BC7 blocks. Reading faces
+sequentially bounds startup RAM. The BC7
+[format](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_texture_compression_bptc.txt)
+and [encoder](https://github.com/K0lb3/ispc_texcomp_py) are documented publicly.
 
 HYG data and `stars.bin` remain **CC BY-SA 4.0**. NASA map attribution, the full
 catalog license and the transformations are included with the installed assets

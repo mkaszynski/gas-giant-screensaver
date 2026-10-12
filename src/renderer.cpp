@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 #include "sky_catalog.hpp"
+#include "sky_texture.hpp"
 #include <GLES2/gl2ext.h>
 #include <algorithm>
 #include <cstdlib>
@@ -254,34 +255,36 @@ GLuint Renderer::galaxyTexture() {
   glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
   const char *faces[] = {"px", "nx", "py", "ny", "pz", "nz"};
   unsigned size = 0;
+  GLint extensions = 0;
+  glGetIntegerv(GL_NUM_EXTENSIONS, &extensions);
+  bool compressed = false;
+  for (GLint i = 0; i < extensions; ++i)
+    if (std::string(reinterpret_cast<const char *>(glGetStringi(
+            GL_EXTENSIONS, i))) == "GL_EXT_texture_compression_bptc")
+      compressed = starfield.compressed;
   for (int face = 0; face < 6; ++face) {
-    const auto file = root + "/assets/sky/galaxy-" + faces[face] + ".png";
-    png_image img{};
-    img.version = PNG_IMAGE_VERSION;
-    if (!png_image_begin_read_from_file(&img, file.c_str()))
-      throw std::runtime_error("Cannot load galaxy face: " + file);
-    img.format = PNG_FORMAT_RGBA;
-    const bool valid = img.width == img.height && img.width >= 256 &&
-                       img.width <= 2048 && !(img.width & (img.width - 1)) &&
-                       (!size || size == img.width);
-    if (!valid) {
-      png_image_free(&img);
+    const auto file = root + "/assets/sky/galaxy-" + faces[face] + ".bc7";
+    const auto mips = loadSkyTexture(file);
+    if (size && size != mips.front().size)
       throw std::runtime_error("Invalid galaxy cube dimensions: " + file);
+    size = mips.front().size;
+    for (unsigned level = 0; level < mips.size(); ++level) {
+      const auto &mip = mips[level];
+      if (compressed) {
+        glCompressedTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level,
+                               GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT,
+                               mip.size, mip.size, 0, mip.blocks.size(),
+                               mip.blocks.data());
+      } else {
+        const auto pixels = decodeSkyMip(mip);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level,
+                     GL_SRGB8_ALPHA8, mip.size, mip.size, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, pixels.data());
+      }
     }
-    size = img.width;
-    std::vector<unsigned char> pixels(PNG_IMAGE_SIZE(img));
-    if (!png_image_finish_read(&img, nullptr, pixels.data(), 0, nullptr)) {
-      auto message = std::string(img.message);
-      png_image_free(&img);
-      throw std::runtime_error(message);
-    }
-    // Hardware sRGB decode reconstructs linear diffuse radiance before
-    // seamless cube filtering; bright catalog stars are a separate layer.
-    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_SRGB8_ALPHA8,
-                 size, size, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    png_image_free(&img);
   }
-  glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+  // Mipmaps were filtered in linear light before offline BC7 encoding. Hardware
+  // decodes only sampled blocks; the entire image is never expanded in RAM.
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -400,7 +403,8 @@ Renderer::Renderer(std::string dir, StarfieldOptions options)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   const auto catalog = loadStarCatalog(root + "/assets/sky/stars.bin");
   stars = static_cast<int>(catalog.size());
-  galaxy = galaxyTexture();
+  if (starfield.galaxy)
+    galaxy = galaxyTexture();
   glGenVertexArrays(1, &starVao);
   glBindVertexArray(starVao);
   glGenBuffers(1, &starBuffer);
@@ -550,7 +554,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                        GL_FALSE, matrix);
     const double sigma = std::max(.4, .55 * h / 1080.);
     scalar(starProgram, "uStarSigma", sigma);
-    scalar(starProgram, "uStarFluxScale", .08 * std::pow(h / 1080., 2));
+    scalar(starProgram, "uStarFluxScale", .8 * std::pow(h / 1080., 2));
     scalar(starProgram, "uStarSize", 2 * std::ceil(4 * sigma));
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
