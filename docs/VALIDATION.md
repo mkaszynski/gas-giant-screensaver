@@ -2,10 +2,30 @@
 
 ## Photographic sky refinement
 
+The subsequent grain refinement widens only the diffuse map's sampling
+footprint by 1.52x (+0.6 mip bias), using the existing linear-light mipmaps and
+the same single lookup. In an isolated 1080p Galactic-center view, normalized
+pixel-scale variation drops **55.5%**, while the mean absolute difference of
+32-pixel cell averages is **0.133%** of the original total radiance. Tests also
+require retained fine structure and mean brightness within 1%. In the actual
+eclipse-sky review patch, pixel-scale variation drops **40.2%**. Turning off
+display dithering alone reduced it only 3.2%; dithering remains to prevent
+color banding. Catalog point profiles and GPU memory are unchanged. The updated
+eclipse regression detects **359 visible catalog stars**, peak 188/255.
+See the [before/after crop](images/galaxy-detail-before-after.png).
+
+Three alternating 180-frame timing runs per variant measured combined sky
+medians of **0.850 ms before / 0.843 ms after** at 1080p, and **3.535 / 3.544 ms**
+at 4K: changes of -0.82% and +0.25%, respectively. This refinement adds no
+measurable rendering burden in these shared-desktop samples. Raw repetitions
+are in [galaxy-grain-benchmark.json](galaxy-grain-benchmark.json).
+
+### Preceding high-resolution revision
+
 The quality revision replaces the softened 4k/1024-face map with the 16k NASA
 source and 4096-pixel faces, removes Gaussian preblur, restores the 16-fold
 source texel-area brightness scaling, and increases catalog point exposure 10x.
-The latest eclipse regression measures **358 distinct catalog stars** above
+That revision's eclipse regression measured **358 distinct catalog stars** above
 12/255 contrast in the visible upper sky, with a peak difference of 187/255.
 It tests the actual atmosphere, diffuse galaxy, occlusion and final tone mapping.
 An isolated 1080p diffuse-sky check requires retained fine structure rather than

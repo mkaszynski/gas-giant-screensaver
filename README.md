@@ -20,7 +20,9 @@ The current revision prioritizes photographic detail: the 16k NASA source feeds
 a 4096-pixel cube without preblur, and a revised star exposure makes hundreds of
 catalog stars clearly visible during eclipse. Offline BC7 compression keeps
 the full cube at about 128 MiB on supporting GPUs, with no runtime encoder or
-tile-streaming work. Broader performance tuning follows appearance review. The earlier timing results
+tile-streaming work. A slightly wider pixel sampling footprint suppresses
+diffuse-map grain while retaining dust-lane detail and sharp catalog points.
+Broader performance tuning follows appearance review. The earlier timing results
 describe the initial, softer 1024-pixel beta rather than this quality revision.
 
 Preview the beta without changing the installed screensaver:

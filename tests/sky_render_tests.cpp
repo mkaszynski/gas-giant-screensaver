@@ -121,6 +121,37 @@ double flux(const std::vector<float> &p, int channel = 0) {
     sum += p[i];
   return sum;
 }
+double fineVariation(const std::vector<float> &pixels, int width, int height) {
+  double variation = 0, total = 0;
+  for (int y = 1; y < height - 1; ++y)
+    for (int x = 1; x < width - 1; ++x) {
+      const int at = (y * width + x) * 4;
+      const double here = pixels[at];
+      variation += std::abs(4 * here - pixels[at - 4] - pixels[at + 4] -
+                            pixels[at - width * 4] - pixels[at + width * 4]);
+      total += here;
+    }
+  return variation / total;
+}
+double broadDifference(const std::vector<float> &a,
+                       const std::vector<float> &b, int width, int height) {
+  double error = 0, total = 0;
+  // Average over 32-pixel cells so this checks the retained clouds and dust
+  // lanes rather than demanding the same individual unresolved star texels.
+  for (int y = 0; y < height; y += 32)
+    for (int x = 0; x < width; x += 32) {
+      double cellA = 0, cellB = 0;
+      for (int yy = y; yy < std::min(y + 32, height); ++yy)
+        for (int xx = x; xx < std::min(x + 32, width); ++xx) {
+          const auto at = (yy * width + xx) * 4;
+          cellA += a[at];
+          cellB += b[at];
+        }
+      error += std::abs(cellA - cellB);
+      total += cellB;
+    }
+  return error / total;
+}
 int main() {
   try {
     require(glfwInit(), "GLFW");
@@ -181,21 +212,38 @@ int main() {
                                    "bright band and dark pole");
         const auto detail =
             render(galaxy, emptySky(galacticCenter), 1920, 1080);
-        double variation = 0, total = 0;
-        for (int y = 1; y < 1079; ++y)
-          for (int x = 1; x < 1919; ++x) {
-            const int at = (y * 1920 + x) * 4;
-            const double here = detail[at];
-            variation +=
-                std::abs(4 * here - detail[at - 4] - detail[at + 4] -
-                         detail[at - 1920 * 4] - detail[at + 1920 * 4]);
-            total += here;
-          }
-        std::cout << "1080p diffuse galaxy detail " << variation / total
-                  << '\n';
+        const double variation = fineVariation(detail, 1920, 1080);
+        std::cout << "1080p diffuse galaxy detail " << variation << '\n';
         require(
-            variation / total > .1,
+            variation > .1,
             "fine galaxy structure survives projection and filtering at 1080p");
+        {
+          // Compare against the old nominal pixel footprint in the same GPU
+          // scene. A broad blur would pass a grain check alone, so also require
+          // preserved cloud/dust structure, mean radiance and fine detail.
+          Fixture reference;
+          reference.star(direction);
+          reference.edit("background.frag", [](auto &source) {
+            const std::string sample = "texture(uGalaxy,world,.6)";
+            const auto at = source.find(sample);
+            require(at != std::string::npos, "galaxy footprint fixture");
+            source.replace(at, sample.size(), "texture(uGalaxy,world)");
+          });
+          Renderer unfiltered(reference.path.string(), {true, false});
+          const auto original =
+              render(unfiltered, emptySky(galacticCenter), 1920, 1080);
+          const double grainRatio =
+              variation / fineVariation(original, 1920, 1080);
+          const double broadError =
+              broadDifference(detail, original, 1920, 1080);
+          std::cout << "Diffuse grain ratio " << grainRatio
+                    << " broad structure error " << broadError << '\n';
+          require(grainRatio < .8,
+                  "pixel footprint filtering reduces diffuse-map grain");
+          require(broadError < .02 &&
+                      std::abs(flux(detail) / flux(original) - 1) < .01,
+                  "grain reduction preserves dust lanes and sky brightness");
+        }
         // Cross every cube edge from either side; adjacent camera poses must
         // not introduce a face boundary or reset, including close to a cube
         // corner.

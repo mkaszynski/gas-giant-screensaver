@@ -39,9 +39,7 @@ Stars are compact points with a pixel-integrated Gaussian profile, rather than
 uniformly sized disks. The integral preserves flux while stars move through
 fractional pixel positions; resolution scaling preserves apparent brightness.
 Bright stars show restrained warm or blue color; the diffuse galaxy retains
-25% of the source's chroma to approximate its mostly neutral low-light appearance.
-The map is averaged in linear light over roughly 0.1 degree to avoid turning
-unresolved Gaia stars into noisy bright texels.
+60% of the source's chroma for the requested photographic appearance.
 
 The existing Earthlike atmospheric transmittance attenuates both layers,
 particularly near the horizon. Atmospheric sky brightness washes them out in
@@ -54,6 +52,11 @@ low-resolution background. Its fine star-cloud and dust structure comes from
 the 16k source, with no Gaussian preblur. Catalog point exposure is ten times
 the first beta's value, preserving relative magnitudes while allowing faint
 stars to stand out against that background on an ordinary monitor.
+The diffuse lookup uses a +0.6 mip bias: a 1.52x wider pixel sampling footprint
+reduces grain from unresolved Gaia stars while preserving the dust lanes.
+This is resolution-dependent filtering, rather than a fixed angular blur of
+the source. The 4096-pixel faces and their mipmaps remain unchanged, as do the
+independently rendered catalog stars. The lookup still costs one texture sample.
 The enormous sunlit giant supplies much more planetshine than Earth's Moon.
 A bounded phase/solid-angle contrast factor suppresses the celestial background
 beside it. This is **display calibration**, not absolute retinal photometry:
@@ -118,6 +121,10 @@ Measurements use the actual AMD integrated GPU on a shared desktop, not an
 exclusive GPU laboratory. Timing instrumentation is excluded from production.
 
 For timings and checks, see [validation](VALIDATION.md#earth-sky-beta).
+
+The [native-resolution grain comparison](images/galaxy-detail-before-after.png)
+shows the same 360x580-pixel eclipse-sky patch: previous sampling on the left,
+updated pixel footprint on the right. These are actual framebuffer crops.
 
 ```sh
 nix develop --command cmake -S . -B build -G Ninja \

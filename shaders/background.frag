@@ -12,7 +12,11 @@ void main(){
  float night=1.-smoothstep(.00002,.003,dot(L,vec3(.2126,.7152,.0722)));
  if(uGalaxyEnabled && night>0.){
    vec3 world=transpose(uStarFrame)*d;
-   L+=texture(uGalaxy,world).rgb*.009*night*uCelestialGain/uDarkGain*T;
+   // Integrate the diffuse star clouds over a slightly wider pixel footprint
+   // (2^.6 = 1.52x). This suppresses near-pixel Gaia-map grain without a fixed
+   // angular blur; detail scales with output resolution and catalog points
+   // retain their independent optical profile. Still one cube lookup.
+   L+=texture(uGalaxy,world,.6).rgb*.009*night*uCelestialGain/uDarkGain*T;
  }
  // Most pixels cannot intersect the solar disk. Keep the original angular
  // antialiasing/limb model inside a cheap conservative cosine bound.
