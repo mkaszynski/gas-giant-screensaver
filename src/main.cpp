@@ -37,7 +37,8 @@ int main(int argc, char **argv) {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
     double day = 1800, time = -1, weatherTime = -1, timeout = 0,
            timeStep = 1.0 / 30, lightningBrightness = 5,
-           auroraBrightness = 1000;
+           auroraBrightness = 1000, travelTime = -1, travelSpeed = 1;
+    SurfaceOptions surface{true};
     bool fullscreen = false, drawRings = true, drawEmissions = true;
     StarfieldOptions starfield;
     std::string capture, record, data = Renderer::defaultDataDirectory();
@@ -71,9 +72,18 @@ int main(int argc, char **argv) {
                "comparison\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"
+               "  --travel-time SECONDS   Start at this point of the 72-hour "
+               "route\n"
+               "  --travel-speed N        Preview travel rate (default 1)\n"
+               "  --fixed-view            Previous stationary landscape "
+               "comparison\n"
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
+      }
+      if (a == "--fixed-view") {
+        surface.enabled = false;
+        continue;
       }
       if (a == "--fullscreen") {
         fullscreen = true;
@@ -106,6 +116,10 @@ int main(int argc, char **argv) {
         timeout = number(v, 0, 86400);
       else if (a == "--time")
         time = number(v, 0, 1e10);
+      else if (a == "--travel-time")
+        travelTime = number(v, 0, 1e10);
+      else if (a == "--travel-speed")
+        travelSpeed = number(v, 0, 10000);
       else if (a == "--weather-time")
         weatherTime = number(v, 0, 1e10);
       else if (a == "--lightning-brightness")
@@ -166,7 +180,12 @@ int main(int argc, char **argv) {
     glfwSwapInterval(0);
     std::cerr << "Renderer: " << glGetString(GL_RENDERER) << "\n";
     {
-      Renderer renderer(data, starfield);
+      if (time < 0)
+        time = sceneClockNow();
+      surface.speed = travelSpeed;
+      surface.offset =
+          (travelTime < 0 ? time : travelTime) - time * travelSpeed;
+      Renderer renderer(data, starfield, surface);
       using Clock = std::chrono::steady_clock;
       auto start = Clock::now();
       std::vector<double> durations, gpuDurations;

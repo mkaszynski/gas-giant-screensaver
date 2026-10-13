@@ -1,7 +1,9 @@
 #pragma once
 #include "emissions.hpp"
+#include "surface_renderer.hpp"
 #include "system.hpp"
 #include <GLES3/gl3.h>
+#include <memory>
 #include <string>
 #include <vector>
 namespace observatory {
@@ -11,7 +13,8 @@ struct StarfieldOptions {
 };
 class Renderer {
 public:
-  explicit Renderer(std::string dataDirectory, StarfieldOptions = {});
+  explicit Renderer(std::string dataDirectory, StarfieldOptions = {},
+                    SurfaceOptions = {});
   ~Renderer();
   Renderer(const Renderer &) = delete;
   Renderer &operator=(const Renderer &) = delete;
@@ -31,6 +34,10 @@ private:
   };
   std::string root;
   StarfieldOptions starfield;
+  SurfaceOptions surfaceOptions;
+  std::unique_ptr<SurfaceRenderer> surface;
+  TravelLocation surfaceLocation{};
+  double lastAltitude = -1e30;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,

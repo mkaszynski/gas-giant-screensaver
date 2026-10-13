@@ -1,4 +1,7 @@
-# Relightable terrain and lake
+# Fixed-view relightable terrain and lake
+
+This landscape is now the `--fixed-view` comparison mode. The default moving
+world is documented in [the three-day surface circuit](SURFACE.md).
 
 The former generated mountain panorama was a single color/alpha layer. Its
 internal shadows could not move with the sun. The replacement is a fixed-view
@@ -22,7 +25,11 @@ envelope, interpolating the actual first intersected segment, including Earth
 curvature. It stores angular albedo/coverage, normals/ambient occlusion,
 16-bit horizontal distance and water coverage in three 4096x1024 RGBA maps.
 Eight directional horizon angles are stored in two 1024x256 RGBA maps.
-Full mip chains occupy about **66.7 MiB**. They upload once. There is no runtime
+Distance bytes are decoded once to floating-point kilometres before filtering
+and mip generation. Interpolating packed high/low bytes caused visible depth
+and reflection jumps at byte boundaries. Geometry uploads as RGBA16F; the
+complete cache now occupies about **88 MiB** with mipmaps (the initial terrain
+revision used 66.7 MiB). The assets upload once. There is no runtime
 height-field ray march, terrain generation, geometry stream, shadow map or
 second scene render.
 
@@ -38,6 +45,8 @@ scale and wrap boundaries. Derivative-based attenuation suppresses distant
 wave aliasing. Fresnel reflection shows dry terrain, clouds and visible scene
 radiance from the existing HDR buffer, with a solar highlight and absorbing
 water color. There is no recursive reflection or full reflection framebuffer.
+Explicit texture gradients are calculated before water/coverage branches, and
+large spatial wave phases wrap before the small animated phase is added.
 
 ## Reproduce
 

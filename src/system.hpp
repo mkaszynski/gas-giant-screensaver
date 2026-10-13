@@ -28,7 +28,13 @@ struct Body {
   double spin;
   Vec3 pole{0, 1, 0};
 };
+struct ObserverLocation {
+  double latitude = 38 * pi / 180, longitude = 50 * pi / 180;
+  double altitudeMeters = 200;
+};
 struct Scene {
+  double altitudeMeters = 200;
+  double latitude = 38 * pi / 180, longitude = 50 * pi / 180;
   std::array<Body, 21> bodies;
   Vec3 observer, east, up, north, sun, sunLocal;
   Vec3 right, cameraUp, forward;
@@ -54,7 +60,7 @@ double ringSunVisibility(Vec3 point, Vec3 toSun);
 Vec3 orbitPosition(const Orbit &, double periods);
 std::array<Orbit, 20> makeOrbits();
 Scene sceneAt(double displayedSeconds, double daySeconds = 1800,
-              bool ringsEnabled = true);
+              bool ringsEnabled = true, ObserverLocation observer = {});
 double diskVisibility(double separation, double sourceRadius,
                       double occluderRadius);
 double visibility(Vec3 point, Vec3 toSun, const std::array<Body, 21> &,

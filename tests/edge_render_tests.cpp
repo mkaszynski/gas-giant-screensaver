@@ -43,7 +43,7 @@ struct Fixture {
                           "\n#else\ndiscard;\n#endif\n");
       append("post.frag", "color=vec4(sceneColor(uv),1.);\n");
     } else if (mountains) {
-      append("post.frag", "color=vec4(vec3(mountain.a),1.);\n");
+      append("post.frag", "color=vec4(vec3(terrainSample(ray()).a),1.);\n");
     } else {
       append("background.frag", "color=vec4(0.);\n");
       append("stars.frag", "color=vec4(0.);\n");

@@ -1,0 +1,27 @@
+{
+  "format": "GGWORLD1",
+  "radius_m": 6371000,
+  "route_period_real_seconds": 259200,
+  "seed": 734,
+  "geometry": "Seamless spherical continental elevation and climate; stable meter-scale runtime detail",
+  "photographic_input": false,
+  "elevation_sha256": "2c0a1e7d710e7d2caa57048fbe0260c4076e0b3c7132b965756bb476fb0aa394",
+  "measured_relief": {
+    "source": "Federal Office of Topography swisstopo / Mapzen Skadi",
+    "spacing_m": 8,
+    "file_sha256": "8331cb8a2939bdd85d6fa9df34a95c0ed62964a9f9ed0d1a8e4c12dbcfd7b2f4",
+    "source_manifest": "../terrain/sources.json"
+  },
+  "circuit": {
+    "format": "GGROUTE1",
+    "points": 552960,
+    "file_sha256": "2e80e71a9f6d30802781ad08e7bf9d0fac0a2cd46c77177d4a28e5b64c88490e",
+    "world_sha256": "2c0a1e7d710e7d2caa57048fbe0260c4076e0b3c7132b965756bb476fb0aa394",
+    "relief_sha256": "8331cb8a2939bdd85d6fa9df34a95c0ed62964a9f9ed0d1a8e4c12dbcfd7b2f4",
+    "nominal_subplanet_angle_degrees": 59.5,
+    "maximum_detour_m": 4992,
+    "horizon_limit_degrees": 28,
+    "validation_samples": 1105920,
+    "horizon_bearing": "mean subplanet direction"
+  }
+}

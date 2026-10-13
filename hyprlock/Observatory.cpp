@@ -31,7 +31,7 @@ bool CObservatory::draw(const SRenderData &data) {
     try {
       if (!renderer)
         renderer = std::make_unique<observatory::Renderer>(
-            observatory::Renderer::defaultDataDirectory());
+            observatory::Renderer::defaultDataDirectory(), observatory::StarfieldOptions{}, observatory::SurfaceOptions{true});
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
       last = now;

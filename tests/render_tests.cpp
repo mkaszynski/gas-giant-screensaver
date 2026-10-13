@@ -105,7 +105,7 @@ struct ShaderFixture {
     // below.
     for (const std::string needle :
          {"vec3 L=sceneColor(uv);",
-          "L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;"}) {
+          "L+=transmission(uTrans,uObserverHeight,uSun.y)*halo*solarVisibility;"}) {
       auto at = shader.find(needle);
       require(at != std::string::npos, "sky/glare injection stage");
       shader.insert(at + needle.size(), "L+=vec3(1000.);");

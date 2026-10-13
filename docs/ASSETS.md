@@ -8,7 +8,7 @@ these original generated assets under CC0-1.0 to the extent rights exist.
 The renderer supplies all directional light, astronomical phases and eclipses.
 The current foreground is baked from numerical elevation, with modeled materials
 and vegetation; its surfaces and horizon shadows respond to changing light.
-See [terrain design](TERRAIN.md) and [source attribution](../assets/terrain/ATTRIBUTION.md).
+See [moving surface design](SURFACE.md), [fixed terrain design](TERRAIN.md) and [source attribution](../assets/terrain/ATTRIBUTION.md).
 The following mountain prompts document the replaced historical panorama.
 
 ## Mountain generation prompt

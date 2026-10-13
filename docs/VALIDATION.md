@@ -1,5 +1,39 @@
 # Validation
 
+## Three-day moving surface
+
+The default scene is the closed 72-hour surface circuit documented in
+[SURFACE.md](SURFACE.md). Historical static captures/benchmarks below use
+`--fixed-view`; moving latitude/longitude can change visible eclipse contact
+times and sky orientation.
+
+Local validation includes 29 CPU/CLI checks, 11 galaxy model tests, eight fixed
+terrain model tests, seven world/foliage model tests and nine GPU suites. The
+route sweep covers 8,192 positions at both small and Unix-scale sky times. It
+checks exact 72-hour closure, six biome categories, north/south latitude range,
+50 m camera clearance, shared celestial altitude and Jupiter above the horizon.
+The minimum sampled giant center elevation is 16.09 degrees. An independent
+128-position / 128-phase libration sweep keeps the upper limb above 35.63
+degrees on the preserved mean bearing. The offline planner checked 1,105,920
+interpolated positions with zero failed samples; the maximum tested ridge was
+27.98 degrees against its 28-degree limit. A 552,960-point cubic route cache
+adds only 2.1 MiB and no runtime search. Asset hashes bind it to both terrain
+elevation sources.
+
+The moving GPU suite checks actual opaque ground coverage, fractional silhouette
+and foliage coverage, no upper-sky crop rectangle, celestial occlusion by land,
+identical-phase three-day image periodicity, motion, streamed/fresh mesh agreement and host GL
+state restoration. The original static-landscape tests remain intact.
+
+An initial benchmark exposed shadow/target update spikes. Cached cascade updates,
+moon-fixed shadow transforms and persistent cropped multisample capacity reduce
+them. A 180-frame 1920x1080 forest run on AMD Renoir measured **7.53 ms median /
+12.74 ms p95 GPU**, and **10.21 / 15.31 ms** synchronized CPU+GPU time. This
+is a shared-desktop timing sample, not a watt reading or a guarantee for every
+biome/driver. Final repeated packaged measurements are recorded separately.
+
+
+
 ## Relightable terrain
 
 The foreground now uses measured 2m Swiss relief with modeled rock, vegetation,

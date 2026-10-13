@@ -22,6 +22,7 @@ jobs:
           /tmp/sky-model-tests/bin/pip install -r scripts/terrain-requirements.txt
           /tmp/sky-model-tests/bin/python tests/test_galaxy_model.py
           /tmp/sky-model-tests/bin/python tests/test_terrain_bake.py
+          /tmp/sky-model-tests/bin/python tests/test_world_bake.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
@@ -32,12 +33,13 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/emission-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/sky-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/terrain-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-render-tests
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 0 --width 960 --height 540
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --width 960 --height 540
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --time 437625 --width 1920 --height 1080
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 1710 --travel-time 162000 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1050 --travel-time 0 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --fixed-view --time 437625 --width 1920 --height 1080
       - uses: actions/upload-artifact@v4
         with:
           name: software-rendered-captures

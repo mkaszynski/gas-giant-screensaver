@@ -9,7 +9,7 @@
       version = "0.1.0";
       src = pkgs.lib.fileset.toSource {
         root = ./.;
-        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/terrain ./assets/sky ];
+        fileset = pkgs.lib.fileset.unions [ ./CMakeLists.txt ./LICENSE ./src ./shaders ./tests ./assets/giant.png ./assets/terrain ./assets/sky ./assets/world ];
       };
       nativeBuildInputs = [ pkgs.cmake pkgs.ninja pkgs.pkg-config ];
       buildInputs = [ pkgs.glfw pkgs.libGL pkgs.libpng ];
@@ -33,7 +33,7 @@
       ];
       postPatch = (old.postPatch or "") + ''
         mkdir -p src/observatory
-        cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture}.{cpp,hpp} src/observatory/
+        cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture,surface,surface_renderer}.{cpp,hpp} src/observatory/
         mkdir -p src/observatory/third_party
         cp ${./src}/third_party/bcdec.h src/observatory/third_party/
         cp ${./hyprlock}/Observatory.{cpp,hpp} src/renderer/widgets/

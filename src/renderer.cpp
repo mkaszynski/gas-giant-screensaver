@@ -23,11 +23,14 @@ struct GLState {
   GLint framebuffer = 0, viewport[4]{}, vao = 0, program = 0, buffer = 0,
         active = 0, renderbuffer = 0, depthFunction = 0;
   GLboolean depthWrite = GL_TRUE;
-  GLfloat clearDepth = 1;
+  GLfloat clearDepth = 1, clearColor[4]{};
+  GLint readFramebuffer = 0;
   GLint srcRGB = 0, dstRGB = 0, srcAlpha = 0, dstAlpha = 0, scissorBox[4]{};
   bool blend = false, depth = false, scissor = false;
   GLState() {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer);
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
     glGetIntegerv(GL_VIEWPORT, viewport);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
     glGetIntegerv(GL_CURRENT_PROGRAM, &program);
@@ -47,7 +50,9 @@ struct GLState {
     scissor = glIsEnabled(GL_SCISSOR_TEST);
   }
   ~GLState() {
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
+    glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -216,10 +221,22 @@ GLuint Renderer::imageTexture(const std::string &file) {
   GLuint t;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
-  glTexImage2D(GL_TEXTURE_2D, 0,
-               (file == "terrain/albedo.png" ? GL_SRGB8_ALPHA8 : GL_RGBA8),
-               img.width, img.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-               pixels.data());
+  if (file == "terrain/geometry.png") {
+    std::vector<float> geometry(pixels.size());
+    for (size_t i = 0; i < pixels.size(); i += 4) {
+      geometry[i] = (pixels[i] * 256. + pixels[i + 1]) / 1000.;
+      geometry[i + 1] = 0.;
+      geometry[i + 2] = pixels[i + 2] / 255.f;
+      geometry[i + 3] = pixels[i + 3] / 255.f;
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, img.width, img.height, 0,
+                 GL_RGBA, GL_FLOAT, geometry.data());
+  } else {
+    glTexImage2D(GL_TEXTURE_2D, 0,
+                 (file == "terrain/albedo.png" ? GL_SRGB8_ALPHA8 : GL_RGBA8),
+                 img.width, img.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 pixels.data());
+  }
   glGenerateMipmap(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
@@ -308,8 +325,9 @@ void Renderer::quad(GLuint p) {
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 }
-Renderer::Renderer(std::string dir, StarfieldOptions options)
-    : root(std::move(dir)), starfield(options) {
+Renderer::Renderer(std::string dir, StarfieldOptions options,
+                   SurfaceOptions travel)
+    : root(std::move(dir)), starfield(options), surfaceOptions(travel) {
   const GLState state;
   glGenVertexArrays(1, &vao);
   transProgram = program("transmittance.frag");
@@ -335,11 +353,24 @@ Renderer::Renderer(std::string dir, StarfieldOptions options)
     offset += size;
   }
   giant = imageTexture("giant.png");
-  mountains = imageTexture("terrain/albedo.png");
-  terrainNormal = imageTexture("terrain/normal.png");
-  terrainGeometry = imageTexture("terrain/geometry.png");
-  horizonA = imageTexture("terrain/horizon-a.png");
-  horizonB = imageTexture("terrain/horizon-b.png");
+  if (surfaceOptions.enabled) {
+    surface = std::make_unique<SurfaceRenderer>(root);
+    unsigned char empty[4]{};
+    glGenTextures(1, &mountains);
+    textures.push_back(mountains);
+    glBindTexture(GL_TEXTURE_2D, mountains);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 empty);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    terrainNormal = terrainGeometry = horizonA = horizonB = mountains;
+  } else {
+    mountains = imageTexture("terrain/albedo.png");
+    terrainNormal = imageTexture("terrain/normal.png");
+    terrainGeometry = imageTexture("terrain/geometry.png");
+    horizonA = imageTexture("terrain/horizon-a.png");
+    horizonB = imageTexture("terrain/horizon-b.png");
+  }
   constexpr int profileWidth = 4096;
   std::vector<float> profile(profileWidth * 2);
   for (int i = 0; i < profileWidth; ++i) {
@@ -405,8 +436,12 @@ Renderer::Renderer(std::string dir, StarfieldOptions options)
   glGenTextures(1, &noise);
   textures.push_back(noise);
   glBindTexture(GL_TEXTURE_2D, noise);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 256, 256, 0, GL_RED, GL_UNSIGNED_BYTE,
-               data.data());
+  // Float filtering retains subframe cloud interpolation at grazing angles.
+  std::vector<float> cloudNoise(data.size());
+  for (size_t i = 0; i < data.size(); ++i)
+    cloudNoise[i] = data[i] / 255.f;
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, 256, 256, 0, GL_RED, GL_FLOAT,
+               cloudNoise.data());
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -463,6 +498,7 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   vector(p, "uUp", s.cameraUp);
   vector(p, "uSun", s.sunLocal);
   scalar(p, "uTanFov", std::tan(29 * pi / 180));
+  scalar(p, "uObserverHeight", s.altitudeMeters / 1000.);
   scalar(p, "uPlanetLight", s.giantLight);
   scalar(p, "uEclipse", s.sunVisibility);
   // Stable exposure driven by daylight, not by passing bright bodies (no
@@ -506,21 +542,32 @@ void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
 }
 void Renderer::render(int w, int h, double seconds, double day, float opacity,
                       bool drawBodies, bool drawRings, EmissionFrame emission) {
-  renderScene(w, h, sceneAt(seconds, day, drawRings), seconds, day, opacity,
-              drawBodies, drawRings, emission);
+  if (surface) {
+    auto s = travelScene(surface->world(), seconds,
+                         seconds * surfaceOptions.speed + surfaceOptions.offset,
+                         day, drawRings);
+    renderScene(w, h, s, seconds, day, opacity, drawBodies, drawRings,
+                emission);
+  } else {
+    renderScene(w, h, sceneAt(seconds, day, drawRings), seconds, day, opacity,
+                drawBodies, drawRings, emission);
+  }
 }
 void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                            double day, float opacity, bool drawBodies,
                            bool drawRings, EmissionFrame emission) {
   if (w <= 0 || h <= 0)
     return;
+  if (surface)
+    surfaceLocation = {s.latitude, s.longitude};
   const GLState state;
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_SCISSOR_TEST);
   if (std::abs(seconds - lastSky) >= day / 7200. || day != lastDay ||
       std::abs(s.sunVisibility - lastVisibility) > .01 ||
-      length(s.sunLocal - lastSun) > .01 || drawRings != lastRings) {
+      length(s.sunLocal - lastSun) > .01 || drawRings != lastRings ||
+      std::abs(s.altitudeMeters - lastAltitude) > 2.) {
     glBindFramebuffer(GL_FRAMEBUFFER, sky.framebuffer);
     glViewport(0, 0, sky.width, sky.height);
     glUseProgram(skyProgram);
@@ -528,6 +575,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     bind(skyProgram, 1, "uMultiple", multi.texture);
     vector(skyProgram, "uSun", s.sunLocal);
     scalar(skyProgram, "uEclipse", s.sunVisibility);
+    scalar(skyProgram, "uObserverHeight", s.altitudeMeters / 1000.);
+    lastAltitude = s.altitudeMeters;
     quad(skyProgram);
     lastSky = seconds;
     lastDay = day;
@@ -683,18 +732,35 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDisable(GL_DEPTH_TEST);
   if (drawBodies && emission.seconds >= 0)
     emissions(s, w, h, emission, drawRings, day);
+  GLuint surfaceTexture = 0;
+  if (surface)
+    surfaceTexture =
+        surface->render(s, surfaceLocation, w, h, seconds, scene.texture,
+                        [&](GLuint p) { common(p, s, w, h); });
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);
+  integer(postProgram, "uMovingSurface", bool(surface));
+  scalar(postProgram, "uSurfaceFraction",
+         surface ? surface->coverageFraction() : 1.);
+  bind(postProgram, 9, "uSurface", surfaceTexture ? surfaceTexture : mountains);
   // Reduce each octave separately at the repeating noise texture's period.
   // A single wrapped clock cannot preserve noninteger octave frequencies.
   // Upload small offsets so Unix-scale time never loses subframe precision
   // in a float shader. Same five texture samples and no new render pass.
   const double frequencies[] = {1., 2.01, 4.03, 8.07, .045};
   float offsets[10];
+  double cloudEast =
+      surface ? surfaceRadius * surfaceLocation.longitude / 1000. * .85 : 0.;
+  double cloudNorth =
+      surface ? surfaceRadius * surfaceLocation.latitude / 1000. * 1.9 : 0.;
+  scalar(postProgram, "uCloudLongitudeScale",
+         surface ? 1. / std::cos(surfaceLocation.latitude) : 1.);
   for (int i = 0; i < 5; ++i) {
-    offsets[2 * i] = std::remainder(seconds * .007 * frequencies[i], 256.);
-    offsets[2 * i + 1] = std::remainder(seconds * .003 * frequencies[i], 256.);
+    offsets[2 * i] =
+        std::remainder((seconds * .007 + cloudEast) * frequencies[i], 256.);
+    offsets[2 * i + 1] =
+        std::remainder((seconds * .003 + cloudNorth) * frequencies[i], 256.);
   }
   glUniform2fv(glGetUniformLocation(postProgram, "uCloudOffset[0]"), 5,
                offsets);
