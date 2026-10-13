@@ -6,7 +6,7 @@ The default scene is the 72-hour flight documented in [SURFACE.md](SURFACE.md).
 Historical static captures below use `--fixed-view`. Moving latitude/longitude
 changes sky orientation and local eclipse times.
 
-The CPU/CLI gate contains 29 checks. An 8,192-position route sweep at both small
+The CPU/CLI gate contains 34 checks. An 8,192-position route sweep at both small
 and Unix-scale sky times checks closure, six climate categories, north/south
 latitude range, shared terrain/celestial altitude, ground clearance and bounded
 vertical speed. The route has no terrain-dependent lateral offset. Camera
@@ -17,7 +17,7 @@ limb above 35.66 degrees on the mean subplanet bearing.
 
 The offline flight builder checked 2,097,152 positions. Minimum ground clearance
 was **620 m**, maximum climb/descent **3.32672 m/s**, and maximum sampled ridge
-on the preserved bearing **0.01295 degrees** (below its 28-degree safety limit).
+on the preserved bearing **0.38599 degrees** (below its 28-degree safety limit).
 A 128 KiB periodic B-spline cache replaces the old 2.1 MiB lateral-detour cache.
 Runtime performs no route planning or horizon scanning.
 
@@ -25,11 +25,13 @@ The moving GPU suite checks opaque terrain coverage, fractional silhouettes,
 no upper-sky crop rectangle, celestial occlusion, identical-phase loop images,
 actual flight motion, mesh replacement/fresh geometry agreement, ground shadows
 from the visible cloud field and host GL state restoration. The source hardware
-check measured **0 codes** maximum at identical loop phases and **0.009 codes**
-mean difference between streamed and fresh geometry. It checks parallax over
+check measured **0 codes** maximum at identical loop phases and **0.00462 codes**
+mean difference between streamed and fresh geometry. It also verifies clouds
+actually appear in ocean reflections. It checks parallax over
 ten seconds at airplane height rather than the old one-second close-ground view.
 
-Offline world tests include deterministic canopy fields, packed normal bounds,
+The 28 offline model checks include preserved broad landforms, relief normals
+and valley occlusion, deterministic canopy fields, packed normal bounds,
 dense overlapping crown coverage and source-bound cache hashes. Conservative crop bounds contain sampled geometry;
 a 1080p forest comparison before/after this CPU optimization was pixel-identical.
 The GPU gate also checks that planetshine visibly illuminates nighttime land. The original
@@ -40,12 +42,14 @@ measured the following medians of run summaries (milliseconds):
 
 | Biome | GPU median | GPU p95 | CPU+GPU median | CPU+GPU p95 |
 |---|---:|---:|---:|---:|
-| Ocean | 10.22 | 28.62 | 12.13 | 30.98 |
-| Forest | 8.50 | 20.11 | 10.42 | 23.49 |
-| Snow | 8.21 | 23.20 | 10.11 | 25.13 |
+| Ocean | 9.62 | 13.78 | 11.62 | 16.94 |
+| Forest | 8.87 | 12.92 | 10.93 | 15.89 |
+| Snow | 8.92 | 12.53 | 10.86 | 14.80 |
 
 Raw repetitions are in [surface-benchmark.json](surface-benchmark.json); every
-run, including high first-round forest/snow outliers, is retained. These are
+run is retained. The [preceding relief version](surface-pre-landform.json)
+measured GPU medians of 10.22 / 8.50 / 8.21 ms for ocean / forest / snow,
+including high first-round forest/snow outliers. These are
 shared-desktop timings, not watts or universal frame-time guarantees. The
 [earlier shadow/crop measurements](surface-shadow-before.json) recorded roughly
 14–19 ms synchronized medians. Cached block bounds eliminate most repeated CPU
@@ -58,6 +62,25 @@ checks. An isolated compositor run verified actual rendering, cyan input and
 unlock without locking the user's desktop. Review images in [SURFACE.md](SURFACE.md)
 come from this package. Biome art remains subject to operator visual review;
 water/hydrology and silhouette limits are documented there.
+
+The preview-only debug slider has a deterministic clock test covering pause,
+seek, range changes, endpoint clamping, deferred drag commits, Unix-scale time
+and coupled flight/weather offsets. A separate GPU suite checks actual slider
+coverage, unmodified upper-sky pixels, 2x display density and GL state
+restoration on hardware and software rendering. An isolated Xvfb run of the
+packaged interactive preview exercised short mouse clicks, pause/resume,
+day/year range switches, drag previews, actual sky/route seeks and reset.
+CLI checks reject combining
+the interactive overlay with hidden capture, recording or benchmark modes.
+
+A separate linear-visibility GPU fixture checks six predicted-shadow rollovers
+at grazing sunlight. The largest change across 0.2 ms around a rollover is
+**1/255** on both AMD and llvmpipe. Disabling temporal interpolation in a
+reference fixture jumps by **120/255 (AMD) / 119/255 (software)**, proving the
+test detects discrete cache updates. Shadows still move substantially over two
+seconds. Tests verify four initial depth draws, zero draws during interpolation,
+one hidden-map draw at each staggered rollover, and identical reconstruction
+after rewinding. The normal direct-light shader is not advanced ahead of time.
 
 ## Relightable terrain
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "system.hpp"
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -16,6 +17,7 @@ struct TravelLocation {
 TravelLocation travelLocation(double realSeconds, double radialMetres = 0.);
 struct SurfaceSample {
   double ground, water, moisture, uplift, temperature;
+  std::array<double, 2> relief;
 };
 class SurfaceWorld {
 public:
@@ -28,6 +30,10 @@ public:
                  int samples = 80) const;
   SurfaceSample sample(double latitude, double longitude) const;
   double elevation(double latitude, double longitude) const;
+  std::array<double, 2> reliefCoordinates(double latitude,
+                                          double longitude) const;
+  double reliefSpan() const { return reliefWidth * reliefSpacing; }
+  double reliefTexelMeters() const { return reliefSpacing; }
 
 private:
   int width = 0, height = 0;
@@ -36,6 +42,8 @@ private:
   int reliefWidth = 0;
   double reliefSpacing = 8;
   double localRelief(double x, double z) const;
+  double elevationAt(double latitude, double longitude,
+                     std::array<double, 2> coordinates) const;
   std::vector<uint8_t> moisture, uplift;
   double field(const std::vector<uint8_t> &, double, double) const;
   double coarse(double, double) const;
@@ -48,13 +56,14 @@ Scene travelScene(const SurfaceWorld &, double sceneSeconds,
                   bool rings = true);
 struct SurfaceVertex {
   float x, y, z, nx, ny, nz, ground, moisture, temperature, materialX,
-      materialZ;
+      materialZ, reliefX, reliefZ, uplift;
 };
 struct SurfaceMesh {
   struct Bounds {
     Vec3 minimum, maximum;
   };
   TravelLocation center{};
+  bool hasLand = false;
   std::vector<SurfaceVertex> vertices;
   std::vector<uint32_t> indices;
   std::vector<Bounds> bounds;

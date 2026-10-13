@@ -753,7 +753,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     emissions(s, w, h, emission, drawRings, day);
   GLuint surfaceTexture = 0;
   if (surface)
-    surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds,
+    surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds, day,
                                      scene.texture, [&](GLuint p) {
                                        common(p, s, w, h);
                                        cloudUniforms(p, s, seconds);

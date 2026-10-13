@@ -246,6 +246,8 @@ int main() {
       require(v.ny > 0, "terrain normals follow upward triangle winding");
     }
     auto ocean = buildSurfaceMesh(w, w.location(0));
+    require(!ocean.hasLand,
+            "open ocean skips unneeded terrain-shadow rendering");
     int curvedWaterNormals = 0;
     for (auto v : ocean.vertices) {
       double radius = std::hypot(v.x, v.z);

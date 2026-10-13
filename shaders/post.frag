@@ -13,16 +13,6 @@ vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/uSceneScale;}
 // Wrap stationary spatial coordinates before adding small wind offsets.
 // Adding wind to a large grazing ray coordinate discards subframe precision.
 vec3 tonemap(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
-vec3 cloudScene(vec3 d,vec3 L){
- // Thin curved cloud sheet, with apparent wind motion and sun-dependent silver edges.
- vec2 roots=sphere(vec3(0,Rg+uObserverHeight,0),d,Rg+8.);float dist=roots.y;vec3 q=d*dist;
- vec2 p=q.xz*vec2(.85*uCloudLongitudeScale,1.9);
- float density=smoothstep(.55,.79,clouds(p));density*=smoothstep(.02,.15,d.y)*.26;
- density*=smoothstep(.33,.66,n2(p*.045+vec2(87.,31.),uCloudOffset[4]));
- float sunlit=smoothstep(-.12,.06,uSun.y)*uEclipse;
- vec3 cloudL=sky(d)*1.4+transmission(uTrans,8.,uSun.y)*sunlit*.095+vec3(.00002)*uPlanetLight;
- return mix(L,cloudL,density);
-}
 #include "terrain.glsl"
 void main(){vec3 d=ray();vec3 L=sceneColor(uv);
  L=cloudScene(d,L);

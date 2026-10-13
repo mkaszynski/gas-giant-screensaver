@@ -1,5 +1,5 @@
 {
-  "feature": "airborne-biomes",
+  "feature": "coherent-landforms-and-predicted-shadows",
   "resolution": [
     1920,
     1080
@@ -8,98 +8,100 @@
   "fps_cap": 30,
   "renderer": "AMD Radeon Graphics (radeonsi, renoir)",
   "environment": "shared desktop; timing only, not watts",
-  "binary_sha256": "f6a2dd5729fa923f918b081551fd59d6166e4ddea1ae42d186801f909788ae3a",
-  "flight_sha256": "d29c230de3ea06ab54d5624b5c2cfc3bf128a513045c99e3055aecd0a1661f19",
+  "binary_sha256": "bb09278de2a42d7862afd42816a0ff34d614509364502566b6d173abe2cac315",
+  "flight_sha256": "fa829d6d37235b3d3b63f5cd8464ff95413cf53998bebd9bd9d3a00e59e69b93",
+  "relief_sha256": "5e9d52b21a50b6316dbdc55e9468e13936a1b0924f8612a6c9f848580a140008",
+  "relief_material_sha256": "ff7226b4b0e44c6f6948e565072899224cea397bfecc0362ff79d5fb6de9d0f9",
   "runs": [
     {
       "biome": "ocean",
       "repeat": 1,
       "sky_time": 1740,
       "route_time": 0,
-      "cpu_gpu_median_ms": 12.1332,
-      "cpu_gpu_p95_ms": 30.9821,
-      "gpu_median_ms": 10.2188,
-      "gpu_p95_ms": 28.62
+      "cpu_gpu_median_ms": 11.6055,
+      "cpu_gpu_p95_ms": 16.1424,
+      "gpu_median_ms": 9.4888,
+      "gpu_p95_ms": 12.0831
     },
     {
       "biome": "forest",
       "repeat": 1,
       "sky_time": 510,
       "route_time": 162000,
-      "cpu_gpu_median_ms": 22.2367,
-      "cpu_gpu_p95_ms": 38.9479,
-      "gpu_median_ms": 20.0021,
-      "gpu_p95_ms": 35.5979
+      "cpu_gpu_median_ms": 11.0263,
+      "cpu_gpu_p95_ms": 15.8928,
+      "gpu_median_ms": 8.86268,
+      "gpu_p95_ms": 13.4212
     },
     {
       "biome": "snow",
       "repeat": 1,
       "sky_time": 360,
       "route_time": 210600,
-      "cpu_gpu_median_ms": 28.3676,
-      "cpu_gpu_p95_ms": 46.4158,
-      "gpu_median_ms": 24.2406,
-      "gpu_p95_ms": 44.3008
+      "cpu_gpu_median_ms": 10.9567,
+      "cpu_gpu_p95_ms": 15.3417,
+      "gpu_median_ms": 8.91792,
+      "gpu_p95_ms": 12.911
     },
     {
       "biome": "ocean",
       "repeat": 2,
       "sky_time": 1740,
       "route_time": 0,
-      "cpu_gpu_median_ms": 12.7077,
-      "cpu_gpu_p95_ms": 33.142,
-      "gpu_median_ms": 10.5397,
-      "gpu_p95_ms": 31.3439
+      "cpu_gpu_median_ms": 11.6195,
+      "cpu_gpu_p95_ms": 16.9444,
+      "gpu_median_ms": 9.62092,
+      "gpu_p95_ms": 13.7842
     },
     {
       "biome": "forest",
       "repeat": 2,
       "sky_time": 510,
       "route_time": 162000,
-      "cpu_gpu_median_ms": 10.3551,
-      "cpu_gpu_p95_ms": 23.4925,
-      "gpu_median_ms": 8.49932,
-      "gpu_p95_ms": 20.1106
+      "cpu_gpu_median_ms": 10.9344,
+      "cpu_gpu_p95_ms": 14.993,
+      "gpu_median_ms": 8.8671,
+      "gpu_p95_ms": 12.9185
     },
     {
       "biome": "snow",
       "repeat": 2,
       "sky_time": 360,
       "route_time": 210600,
-      "cpu_gpu_median_ms": 10.1105,
-      "cpu_gpu_p95_ms": 25.1315,
-      "gpu_median_ms": 8.20933,
-      "gpu_p95_ms": 23.2018
+      "cpu_gpu_median_ms": 10.83,
+      "cpu_gpu_p95_ms": 13.9108,
+      "gpu_median_ms": 8.92232,
+      "gpu_p95_ms": 11.3385
     },
     {
       "biome": "ocean",
       "repeat": 3,
       "sky_time": 1740,
       "route_time": 0,
-      "cpu_gpu_median_ms": 12.0903,
-      "cpu_gpu_p95_ms": 27.8466,
-      "gpu_median_ms": 10.0982,
-      "gpu_p95_ms": 25.1226
+      "cpu_gpu_median_ms": 11.6993,
+      "cpu_gpu_p95_ms": 18.3968,
+      "gpu_median_ms": 9.63573,
+      "gpu_p95_ms": 14.2091
     },
     {
       "biome": "forest",
       "repeat": 3,
       "sky_time": 510,
       "route_time": 162000,
-      "cpu_gpu_median_ms": 10.4235,
-      "cpu_gpu_p95_ms": 23.3195,
-      "gpu_median_ms": 8.4957,
-      "gpu_p95_ms": 19.8379
+      "cpu_gpu_median_ms": 10.8983,
+      "cpu_gpu_p95_ms": 16.1613,
+      "gpu_median_ms": 8.90416,
+      "gpu_p95_ms": 12.5308
     },
     {
       "biome": "snow",
       "repeat": 3,
       "sky_time": 360,
       "route_time": 210600,
-      "cpu_gpu_median_ms": 10.0143,
-      "cpu_gpu_p95_ms": 23.7684,
-      "gpu_median_ms": 8.0639,
-      "gpu_p95_ms": 18.8395
+      "cpu_gpu_median_ms": 10.8602,
+      "cpu_gpu_p95_ms": 14.8029,
+      "gpu_median_ms": 8.83229,
+      "gpu_p95_ms": 12.5312
     }
   ]
 }

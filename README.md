@@ -1,6 +1,10 @@
 # Gas Giant Observatory
 
 A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
+
+For interactive review, add `--debug` to the preview command. A time slider
+offers day, three-day flight and year ranges; drag and release to fast-forward
+the whole scene. Space pauses/resumes. The native lock screen has no debug UI.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
@@ -115,7 +119,8 @@ Installing the preview does not change any host configuration or idle timeout.
 - Finite solar disk (about 0.53° across), atmospheric aureole, soft optical glare,
   mutual eclipses, and planetshine approximation.
 - Moving spherical terrain with ocean, sea ice, snowy uplands, drylands, grassland
-  and forests; cached measured relief, continuous overlapping forest canopies, cloud/terrain shadows and
+  and forests; connected measured ridges and valleys with cached surface normals and skylight occlusion,
+  continuous overlapping forest canopies, cloud/terrain shadows and
   multisample silhouettes. See [surface circuit](docs/SURFACE.md). The previous
   fixed alpine landscape remains available with `--fixed-view`.
 - Generated gas giant band texture; runtime

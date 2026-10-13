@@ -90,6 +90,12 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glEnableVertexAttribArray(3);
   glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
                         reinterpret_cast<void *>(9 * sizeof(float)));
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(11 * sizeof(float)));
+  glEnableVertexAttribArray(5);
+  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(13 * sizeof(float)));
   png_image img{};
   img.version = PNG_IMAGE_VERSION;
   if (!png_image_begin_read_from_file(
@@ -130,6 +136,28 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  png_image reliefImage{};
+  reliefImage.version = PNG_IMAGE_VERSION;
+  if (!png_image_begin_read_from_file(
+          &reliefImage, (root + "/assets/world/relief-material.png").c_str()))
+    throw std::runtime_error("Missing relief material");
+  reliefImage.format = PNG_FORMAT_RGBA;
+  std::vector<unsigned char> reliefPixels(PNG_IMAGE_SIZE(reliefImage));
+  if (!png_image_finish_read(&reliefImage, nullptr, reliefPixels.data(), 0,
+                             nullptr))
+    throw std::runtime_error(reliefImage.message);
+  glGenTextures(1, &reliefMaterial);
+  glBindTexture(GL_TEXTURE_2D, reliefMaterial);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, reliefImage.width,
+               reliefImage.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               reliefPixels.data());
+  png_image_free(&reliefImage);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   GLint counts = 0;
   glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_NUM_SAMPLE_COUNTS, 1,
                         &counts);
@@ -140,9 +168,9 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   for (auto v : available)
     if (v <= 4)
       samples = std::max(samples, int(v));
-  glGenFramebuffers(2, shadowFbo);
-  glGenTextures(2, shadowTex);
-  for (int i = 0; i < 2; ++i) {
+  glGenFramebuffers(4, shadowFbo);
+  glGenTextures(4, shadowTex);
+  for (int i = 0; i < 4; ++i) {
     glBindTexture(GL_TEXTURE_2D, shadowTex[i]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 2048, 2048, 0,
                  GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
@@ -181,8 +209,9 @@ SurfaceRenderer::~SurfaceRenderer() {
   glDeleteVertexArrays(1, &vao);
   glDeleteTextures(1, &material);
   glDeleteTextures(1, &canopy);
-  glDeleteTextures(2, shadowTex);
-  glDeleteFramebuffers(2, shadowFbo);
+  glDeleteTextures(1, &reliefMaterial);
+  glDeleteTextures(4, shadowTex);
+  glDeleteFramebuffers(4, shadowFbo);
 }
 void SurfaceRenderer::resize(int w, int h) {
   if (width == w && height == h)
@@ -227,6 +256,8 @@ void SurfaceRenderer::upload(SurfaceMesh m) {
                       geographicNorth(m.center)};
     Vec3 delta =
         (geographicUp(m.center) - geographicUp(mesh.center)) * surfaceRadius;
+    if (length(delta) > 2000.)
+      shadowsValid = false;
     double t[16]{};
     t[15] = 1;
     for (int i = 0; i < 3; ++i) {
@@ -261,19 +292,60 @@ void SurfaceRenderer::upload(SurfaceMesh m) {
                  mesh.indices.size() * sizeof(uint32_t), mesh.indices.data(),
                  GL_STATIC_DRAW);
 }
-void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds) {
-  if (s.sunLocal.y <= 0.)
+void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
+  Vec3 side = cross(Vec3{0, 1, 0}, sun);
+  if (length(side) < 1.e-8)
+    side = cross(Vec3{0, 0, 1}, sun);
+  const Vec3 right = normalized(side), up = cross(sun, right);
+  const double extent = cascade ? 60000. : 8000., depth = extent * 3.;
+  auto *m = shadowMatrices[slot];
+  std::fill(m, m + 16, 0.f);
+  m[0] = right.x / extent;
+  m[4] = right.y / extent;
+  m[8] = right.z / extent;
+  m[12] = -dot(eye, right) / extent;
+  m[1] = up.x / extent;
+  m[5] = up.y / extent;
+  m[9] = up.z / extent;
+  m[13] = -dot(eye, up) / extent;
+  m[2] = -sun.x / depth;
+  m[6] = -sun.y / depth;
+  m[10] = -sun.z / depth;
+  m[14] = dot(eye, sun) / depth;
+  m[15] = 1;
+  glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo[slot]);
+  glViewport(0, 0, 2048, 2048);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  glUseProgram(shadowProgram);
+  glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "uShadowMatrix"), 1,
+                     GL_FALSE, m);
+  glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
+  ++shadowDraws;
+}
+void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds,
+                              double daySeconds) {
+  if (s.sunLocal.y <= 0. || !mesh.hasLand)
     return;
-  bool initial = shadowMatrices[0][15] == 0 || shadowMatrices[1][15] == 0;
-  // High sun moves mountain shadows much less than a grazing sun. Retain
-  // faster updates near sunrise/sunset; avoid full depth-map work every half
-  // second at noon, where it created the measured frame-time spikes.
-  const double interval = s.sunLocal.y > .5 ? 1. : .5;
-  double age[2] = {std::abs(seconds - shadowTime[0]) / interval,
-                   std::abs(seconds - shadowTime[1]) / (2 * interval)};
-  int chosen = age[0] > age[1] ? 0 : 1;
-  if (!initial && age[chosen] < 1. &&
-      length(s.sunLocal - shadowSun[chosen]) < .010)
+  // Calculate the actual future solar direction in the fixed mesh frame.
+  // Geographic north has the opposite sign from sceneAt's historical frame.
+  auto futureSun = [&](double instant) {
+    auto future = sceneAt(
+        instant, daySeconds, false,
+        {mesh.center.latitude, mesh.center.longitude, s.altitudeMeters});
+    return Vec3{future.sunLocal.x, future.sunLocal.y, -future.sunLocal.z};
+  };
+  auto interval = [&](int cascade, Vec3 sun) {
+    return std::max(1. / 30., (sun.y > .5 ? 1. : .5) * daySeconds / 1800.) *
+           (cascade ? 2. : 1.);
+  };
+  bool reset = !shadowsValid || shadowDay != daySeconds;
+  for (int i = 0; i < 2; ++i)
+    reset |= seconds < shadowBegin[i] ||
+             seconds > shadowEnd[i] + interval(i, s.sunLocal);
+  bool update = reset;
+  for (int i = 0; i < 2; ++i)
+    update |= seconds >= shadowEnd[i];
+  if (!update)
     return;
   GLint oldPolygon = glIsEnabled(GL_POLYGON_OFFSET_FILL);
   GLfloat oldFactor, oldUnits;
@@ -281,44 +353,31 @@ void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds) {
   glGetFloatv(GL_POLYGON_OFFSET_UNITS, &oldUnits);
   glEnable(GL_POLYGON_OFFSET_FILL);
   glPolygonOffset(2.5f, 4.f);
-  Vec3 sun = s.sunLocal, right = normalized(cross(Vec3{0, 1, 0}, sun)),
-       up = cross(sun, right);
   for (int i = 0; i < 2; ++i) {
-    if (!initial && i != chosen)
-      continue;
-    double extent = i ? 60000. : 8000., depth = extent * 3.;
-    auto *m = shadowMatrices[i];
-    for (int j = 0; j < 16; ++j)
-      m[j] = 0;
-    m[0] = right.x / extent;
-    m[4] = right.y / extent;
-    m[8] = right.z / extent;
-    m[12] = -dot(eye, right) / extent;
-    m[1] = up.x / extent;
-    m[5] = up.y / extent;
-    m[9] = up.z / extent;
-    m[13] = -dot(eye, up) / extent;
-    m[2] = -sun.x / depth;
-    m[6] = -sun.y / depth;
-    m[10] = -sun.z / depth;
-    m[14] = dot(eye, sun) / depth;
-    m[15] = 1;
-    glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo[i]);
-    glViewport(0, 0, 2048, 2048);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glUseProgram(shadowProgram);
-    glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "uShadowMatrix"), 1,
-                       GL_FALSE, m);
-    glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
-    shadowTime[i] = seconds;
-    shadowSun[i] = sun;
+    if (reset) {
+      shadowBegin[i] = seconds;
+      // Stagger the far cascade so normal updates do not share a frame.
+      shadowEnd[i] = seconds + interval(i, s.sunLocal) * (i ? .75 : 1.);
+      shadowMap(shadowCurrent[i], i, s.sunLocal, eye);
+      shadowMap(shadowNext[i], i, futureSun(shadowEnd[i]), eye);
+    } else if (seconds >= shadowEnd[i]) {
+      // The old future becomes current without changing a single depth pixel.
+      // Only the now-hidden old map is recycled for another future state.
+      std::swap(shadowCurrent[i], shadowNext[i]);
+      shadowBegin[i] = shadowEnd[i];
+      shadowEnd[i] += interval(i, futureSun(shadowBegin[i]));
+      shadowMap(shadowNext[i], i, futureSun(shadowEnd[i]), eye);
+    }
   }
+  shadowsValid = true;
+  shadowDay = daySeconds;
   glPolygonOffset(oldFactor, oldUnits);
   if (!oldPolygon)
     glDisable(GL_POLYGON_OFFSET_FILL);
 }
 GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
-                               int h, double seconds, GLuint scene,
+                               int h, double seconds, double daySeconds,
+                               GLuint scene,
                                const std::function<void(GLuint)> &lighting) {
   auto delta = [&](TravelLocation c) {
     Vec3 point = geographicUp(location) * surfaceRadius -
@@ -406,7 +465,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glDepthFunc(GL_LESS);
   glDepthMask(GL_TRUE);
   glClearDepthf(1.);
-  shadows(shadowScene, eye, seconds);
+  shadows(shadowScene, eye, seconds, daySeconds);
   glBindFramebuffer(GL_FRAMEBUFFER, multisample);
   glViewport(0, 0, w, h);
   glClearColor(0, 0, 0, 0);
@@ -426,6 +485,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   scalar(program, "uEclipse", s.sunVisibility);
   scalar(program, "uSceneScale", 4096);
   scalar(program, "uObserverHeight", s.altitudeMeters / 1000.);
+  glUniform1i(glGetUniformLocation(program, "uTerrainShadows"), mesh.hasLand);
   double globalX = surfaceRadius * mesh.center.longitude,
          globalZ = surfaceRadius * mesh.center.latitude;
   glUniform2f(glGetUniformLocation(program, "uMaterialOffset"),
@@ -433,20 +493,43 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
               std::remainder(globalZ, 24. * 310.));
   glUniform2f(glGetUniformLocation(program, "uCanopyOffset"),
               std::remainder(globalX, 512.), std::remainder(globalZ, 512.));
+  auto reliefCenter =
+      terrain.reliefCoordinates(mesh.center.latitude, mesh.center.longitude);
+  glUniform2f(glGetUniformLocation(program, "uReliefOffset"),
+              std::remainder(reliefCenter[0] + .5 * terrain.reliefTexelMeters(),
+                             terrain.reliefSpan()),
+              std::remainder(reliefCenter[1] + .5 * terrain.reliefTexelMeters(),
+                             terrain.reliefSpan()));
+  scalar(program, "uReliefSpan", terrain.reliefSpan());
+  scalar(program, "uReliefLongitudeScale", 1. / std::cos(location.latitude));
   glUniform2f(
       glGetUniformLocation(program, "uWaveOffset"),
       std::remainder(globalX * .17 + globalZ * .23 * .4 + seconds * .496,
                      2 * pi),
       std::remainder(globalZ * .23 - globalX * .17 * .35 + seconds * .157,
                      2 * pi));
-  glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 2,
+  glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 4,
                      GL_FALSE, shadowMatrices[0]);
 
   bind(program, 2, "uScene", scene);
   bind(program, 3, "uMaterial", material);
-  bind(program, 4, "uShadowNear", shadowTex[0]);
-  bind(program, 5, "uShadowFar", shadowTex[1]);
+  bind(program, 4, "uShadowNear", shadowTex[shadowCurrent[0]]);
+  bind(program, 5, "uShadowFar", shadowTex[shadowCurrent[1]]);
+  bind(program, 9, "uShadowNearNext", shadowTex[shadowNext[0]]);
+  bind(program, 10, "uShadowFarNext", shadowTex[shadowNext[1]]);
+  float mix[2]{};
+  for (int i = 0; i < 2; ++i) {
+    const double duration = shadowEnd[i] - shadowBegin[i];
+    double t = duration > 0
+                   ? std::clamp((seconds - shadowBegin[i]) / duration, 0., 1.)
+                   : 0.;
+    mix[i] = t * t * (3. - 2. * t);
+  }
+  glUniform2fv(glGetUniformLocation(program, "uShadowBlend"), 1, mix);
+  glUniform4i(glGetUniformLocation(program, "uShadowSlots"), shadowCurrent[0],
+              shadowNext[0], shadowCurrent[1], shadowNext[1]);
   bind(program, 7, "uCanopy", canopy);
+  bind(program, 6, "uReliefMaterial", reliefMaterial);
   glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, multisample);

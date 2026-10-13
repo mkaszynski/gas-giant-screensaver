@@ -81,23 +81,79 @@ def material(size=512):
     return np.round(a * 255).astype("u1")
 
 
-def measured_relief(source, swiss):
+def periodic_terrain(heights):
+    """Remove only the smooth boundary mismatch, preserving real landforms.
+
+    Original Poisson/FFT implementation of Moisan's periodic-plus-smooth
+    decomposition (2011), https://doi.org/10.1007/s10851-010-0227-1 .
+    This operates on numerical elevations, not photographs.
+    """
+    h = np.asarray(heights, dtype=np.float64)
+    boundary = np.zeros_like(h)
+    boundary[0, :] = h[-1, :] - h[0, :]
+    boundary[-1, :] = -boundary[0, :]
+    boundary[:, 0] += h[:, -1] - h[:, 0]
+    boundary[:, -1] += h[:, 0] - h[:, -1]
+    rows, cols = h.shape
+    eigen = (
+        2 * np.cos(2 * np.pi * np.arange(rows) / rows)[:, None]
+        + 2 * np.cos(2 * np.pi * np.arange(cols) / cols)[None, :]
+        - 4
+    )
+    eigen[0, 0] = 1
+    spectrum = np.fft.fft2(boundary) / eigen
+    spectrum[0, 0] = 0
+    relief = h - np.fft.ifft2(spectrum).real
+    return relief - relief.mean()
+
+
+def relief_material(heights, spacing):
+    """Residual slope, landform curvature and terrain skylight occlusion."""
+    h = np.asarray(heights, dtype=np.float64)
+    residual = h - gaussian_filter(h, 2.0, mode="wrap")
+    dx = (np.roll(residual, -1, axis=1) - np.roll(residual, 1, axis=1)) / (2 * spacing)
+    dz = (np.roll(residual, -1, axis=0) - np.roll(residual, 1, axis=0)) / (2 * spacing)
+    length = np.sqrt(1 + dx * dx + dz * dz)
+    # Valley/ridge signal at ~250 m, independent of the small crown texture.
+    broad = gaussian_filter(h, 8.0, mode="wrap")
+    curvature = np.clip(
+        0.5 + (broad - gaussian_filter(broad, 16.0, mode="wrap")) / 200.0, 0, 1
+    )
+    horizon = np.zeros_like(h)
+    for x, z in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)):
+        angle = np.zeros_like(h)
+        for step in (2, 4, 8, 16, 32, 64):
+            neighbor = np.roll(h, (z * step, x * step), axis=(0, 1))
+            angle = np.maximum(
+                angle, np.arctan2(neighbor - h, spacing * step * np.hypot(x, z))
+            )
+        horizon += np.cos(angle) ** 2 / 8
+    data = np.stack(
+        (0.5 - 0.5 * dx / length, 0.5 - 0.5 * dz / length, curvature, horizon), axis=-1
+    )
+    return np.round(np.clip(data, 0, 1) * 255).astype("u1")
+
+
+def measured_relief(source, swiss, output):
     from bake_terrain import Landscape, SOURCE_SHA256
 
     if hashlib.sha256(Path(source).read_bytes()).hexdigest() != SOURCE_SHA256:
         raise ValueError("Distant relief source checksum mismatch")
 
     land = Landscape(source, swiss)
-    a = (np.arange(1024) + 0.5) * 8
-    x, z = np.meshgrid(a - 1000, a - 4096)
+    # Keep complete 32 km valleys/ridges. The previous 8 km high-pass window
+    # and superposition stripped away drainage and made repetitive round hills.
+    spacing, size = 16.0, 2048
+    a = (np.arange(size) + 0.5 - size * 0.5) * spacing
+    x, z = np.meshgrid(a, a)
     heights = land.base(x, z)
-    detail = heights - gaussian_filter(heights, 128, mode="reflect")
-    window = np.sin(np.pi * (np.arange(1024) + 0.5) / 1024) ** 4
-    detail *= window[:, None] * window[None, :]
-    return (
-        struct.pack("<8sIIf", b"GGRELIF1", 1024, 1024, 8.0)
-        + np.round(detail).astype("<i2").tobytes()
+    detail = gaussian_filter(periodic_terrain(heights), 0.6, mode="wrap")
+    detail *= 0.65
+    detail = np.round(detail).astype("<i2")
+    Image.fromarray(relief_material(detail, spacing)).save(
+        output / "relief-material.png"
     )
+    return struct.pack("<8sIIf", b"GGRELIF1", size, size, spacing) + detail.tobytes()
 
 
 def main():
@@ -108,13 +164,16 @@ def main():
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
     if a.source is not None:
-        (a.output / "relief.ggrelief").write_bytes(measured_relief(a.source, a.swiss))
+        (a.output / "relief.ggrelief").write_bytes(
+            measured_relief(a.source, a.swiss, a.output)
+        )
     if not (a.output / "relief.ggrelief").exists():
         p.error("--source is required for the first bake")
     data = build()
     (a.output / "moon.ggworld").write_bytes(data)
     Image.fromarray(material()).save(a.output / "material.png")
     from bake_canopy import build_canopy
+
     Image.fromarray(build_canopy()).save(a.output / "canopy.png")
     manifest = {
         "format": "GGWORLD1",
@@ -123,12 +182,19 @@ def main():
         "seed": 734,
         "geometry": "Seamless spherical continental elevation and climate; stable meter-scale runtime detail",
         "photographic_input": False,
-        "canopy_sha256": hashlib.sha256((a.output/"canopy.png").read_bytes()).hexdigest(),
+        "canopy_sha256": hashlib.sha256(
+            (a.output / "canopy.png").read_bytes()
+        ).hexdigest(),
         "elevation_sha256": hashlib.sha256(data).hexdigest(),
     }
     manifest["measured_relief"] = {
         "source": "Federal Office of Topography swisstopo / Mapzen Skadi",
-        "spacing_m": 8,
+        "spacing_m": 16,
+        "landform_span_m": 32768,
+        "processing": "Periodic-plus-smooth boundary correction; coherent measured ridges and valleys",
+        "material_sha256": hashlib.sha256(
+            (a.output / "relief-material.png").read_bytes()
+        ).hexdigest(),
         "file_sha256": hashlib.sha256(
             (a.output / "relief.ggrelief").read_bytes()
         ).hexdigest(),

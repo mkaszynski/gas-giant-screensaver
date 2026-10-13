@@ -1,4 +1,5 @@
 #define GLFW_INCLUDE_ES3
+#include "debug_overlay.hpp"
 #include "renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -39,7 +40,8 @@ int main(int argc, char **argv) {
            timeStep = 1.0 / 30, lightningBrightness = 5,
            auroraBrightness = 1000, travelTime = -1, travelSpeed = 1;
     SurfaceOptions surface{true};
-    bool fullscreen = false, drawRings = true, drawEmissions = true;
+    bool fullscreen = false, drawRings = true, drawEmissions = true,
+         debug = false;
     StarfieldOptions starfield;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
@@ -78,12 +80,19 @@ int main(int argc, char **argv) {
                "  --travel-speed N        Preview travel rate (default 1)\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
+               "  --debug                 Time slider: day, flight or year; "
+               "release to seek\n"
+               "Space pauses; Home resets the slider; Left/Right step time.\n"
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
       }
       if (a == "--fixed-view") {
         surface.enabled = false;
+        continue;
+      }
+      if (a == "--debug") {
+        debug = true;
         continue;
       }
       if (a == "--fullscreen") {
@@ -152,6 +161,8 @@ int main(int argc, char **argv) {
     }
     if (!capture.empty() && !record.empty())
       throw std::runtime_error("Use either --capture or --record");
+    if (debug && (!capture.empty() || !record.empty() || benchmark))
+      throw std::runtime_error("--debug requires an interactive preview");
     if (!record.empty())
       std::filesystem::create_directories(record);
     std::signal(SIGINT, stop);
@@ -177,6 +188,11 @@ int main(int argc, char **argv) {
         glfwCreateWindow(w, h, "Gas Giant Observatory", monitor, nullptr);
     if (!window)
       throw std::runtime_error("Cannot create GLES 3 window");
+    if (debug) {
+      // Retain short clicks/key presses between capped render frames.
+      glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+      glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
     std::cerr << "Renderer: " << glGetString(GL_RENDERER) << "\n";
@@ -204,6 +220,11 @@ int main(int argc, char **argv) {
         time = sceneClockNow();
       if (weatherTime < 0)
         weatherTime = time;
+      std::unique_ptr<DebugOverlay> controls;
+      if (debug)
+        controls = std::make_unique<DebugOverlay>(time, day);
+      // Shader/asset loading is not part of the interactive timeline.
+      start = Clock::now();
       int frames = 0;
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
@@ -212,6 +233,8 @@ int main(int argc, char **argv) {
         if (timeout > 0 && elapsed >= timeout)
           break;
         glfwPollEvents();
+        if (controls)
+          controls->input(window, elapsed);
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
           break;
@@ -225,16 +248,24 @@ int main(int argc, char **argv) {
         auto measure = Clock::now();
         if (query)
           glBeginQuery(0x88BF, query);
-        const double weatherElapsed = !record.empty()
+        const double sceneTime =
+            controls
+                ? controls->time(elapsed)
+                : time + (!record.empty() ? frames * timeStep
+                                          : (capture.empty() ? elapsed : 0));
+        const double weatherElapsed = controls ? sceneTime - time
+                                      : !record.empty()
                                           ? frames * timeStep
                                           : (capture.empty() ? elapsed : 0);
-        renderer.render(
-            w, h,
-            time + (!record.empty() ? frames * timeStep
-                                    : (capture.empty() ? elapsed : 0)),
-            day, 1, true, drawRings,
-            {drawEmissions ? weatherTime + weatherElapsed : -1, 1. / fps, true,
-             true, lightningBrightness, auroraBrightness});
+        renderer.render(w, h, sceneTime, day, 1, true, drawRings,
+                        {drawEmissions ? weatherTime + weatherElapsed : -1,
+                         1. / fps, true, true, lightningBrightness,
+                         auroraBrightness});
+        if (controls) {
+          int ww, wh;
+          glfwGetWindowSize(window, &ww, &wh);
+          controls->draw(w, h, ww, wh, elapsed);
+        }
         if (benchmark) {
           if (query)
             glEndQuery(0x88BF);

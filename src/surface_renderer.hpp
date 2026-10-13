@@ -12,7 +12,8 @@ public:
   const SurfaceWorld &world() const { return terrain; }
   double coverageFraction() const { return fraction; }
   size_t meshRevision() const { return revision; }
-  GLuint render(const Scene &, TravelLocation, int, int, double, GLuint,
+  size_t shadowRevision() const { return shadowDraws; }
+  GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
 
 private:
@@ -20,20 +21,23 @@ private:
   SurfaceMesh mesh;
   std::future<SurfaceMesh> pending;
   GLuint vao = 0, vertices = 0, indices = 0, program = 0, shadowProgram = 0,
-         material = 0, canopy = 0;
+         material = 0, canopy = 0, reliefMaterial = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, resolved = 0,
          texture = 0;
-  GLuint shadowFbo[2]{}, shadowTex[2]{};
-  float shadowMatrices[2][16]{};
+  GLuint shadowFbo[4]{}, shadowTex[4]{};
+  float shadowMatrices[4][16]{};
   int width = 0, height = 0, samples = 1;
   size_t vertexCapacity = 0;
   size_t revision = 0;
-  double shadowTime[2] = {-1e30, -1e30};
+  double shadowBegin[2]{}, shadowEnd[2]{}, shadowDay = 0;
+  int shadowCurrent[2] = {0, 2}, shadowNext[2] = {1, 3};
+  size_t shadowDraws = 0;
+  bool shadowsValid = false;
   double fraction = 1;
-  Vec3 shadowSun[2]{};
   void upload(SurfaceMesh);
   void resize(int, int);
   void releaseTargets();
-  void shadows(const Scene &, Vec3, double);
+  void shadows(const Scene &, Vec3, double, double);
+  void shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye);
 };
 } // namespace observatory

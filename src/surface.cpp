@@ -178,7 +178,18 @@ double SurfaceWorld::localRelief(double x, double z) const {
   return std::lerp(std::lerp(at(ix, iz), at(ix + 1, iz), fx),
                    std::lerp(at(ix, iz + 1), at(ix + 1, iz + 1), fx), fz);
 }
+std::array<double, 2> SurfaceWorld::reliefCoordinates(double lat,
+                                                      double lon) const {
+  double x = surfaceRadius * std::remainder(lon, 2 * pi),
+         z = surfaceRadius * lat;
+  return {x + (noise(x, z, 37000, 338) - .5) * 900,
+          z + (noise(x, z, 43000, 611) - .5) * 900};
+}
 double SurfaceWorld::elevation(double lat, double lon) const {
+  return elevationAt(lat, lon, reliefCoordinates(lat, lon));
+}
+double SurfaceWorld::elevationAt(double lat, double lon,
+                                 std::array<double, 2> coordinates) const {
   // Longitude/pole-safe local relief, anchored in moon-fixed coordinates.
   // The orbit never reaches the poles, but the field remains well-defined
   // there.
@@ -187,25 +198,20 @@ double SurfaceWorld::elevation(double lat, double lon) const {
   double h = coarse(lat, lon), u = field(uplift, lat, lon);
   double seam =
       1. - smooth(pi - .04, pi, std::abs(std::remainder(lon, 2 * pi)));
-  double measured = (localRelief(x + (noise(x, z, 19000, 338) - .5) * 2200,
-                                 z + (noise(x, z, 27000, 611) - .5) * 1700) +
-                     .6 * localRelief(z + 3700, -x + 1900)) *
-                    (.45 + 1.15 * u);
+  double measured =
+      localRelief(coordinates[0], coordinates[1]) * (.65 + .75 * u);
   h += seam * smooth(-100, 500, h) * measured;
-  double ridge = 1. - std::abs(2 * noise(x, z, 2600, 1931) - 1);
-  h += seam * smooth(-250, 450, h) *
-       ((ridge * ridge - .35) * (160 + 300 * u) +
-        (noise(x, z, 430, 827) - .5) * (35 + 80 * u) +
-        (noise(x, z, 85, 977) - .5) * (5 + 16 * u));
+  h += seam * smooth(-250, 450, h) * ((noise(x, z, 85, 977) - .5) * 2.5);
   h += seam * (noise(x, z, 17, 477) - .5) * 1.4 * smooth(-20, 100, h);
   return h;
 }
 SurfaceSample SurfaceWorld::sample(double lat, double lon) const {
-  double h = elevation(lat, lon), m = field(moisture, lat, lon),
+  auto coordinates = reliefCoordinates(lat, lon);
+  double h = elevationAt(lat, lon, coordinates), m = field(moisture, lat, lon),
          u = field(uplift, lat, lon);
   const double temp =
       30. - 55. * std::pow(std::sin(lat), 2) - std::max(0., h) * .006;
-  return {h, 0., m, u, temp};
+  return {h, 0., m, u, temp, coordinates};
 }
 
 TravelLocation SurfaceWorld::location(double seconds) const {
@@ -287,6 +293,8 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   mesh.vertices.reserve((radial + 1) * angular);
   Vec3 origin = geographicUp(center), east = geographicEast(center),
        north = geographicNorth(center);
+  auto reliefCenter =
+      world.reliefCoordinates(center.latitude, center.longitude);
   Vec3 bearing = normalized(Vec3{1, 0, 0} - origin * origin.x);
   const double azimuth =
       std::atan2(dot(bearing, east), dot(bearing, north)) + .12;
@@ -304,6 +312,8 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
       double lat = std::asin(direction.y),
              lon = std::atan2(direction.z, direction.x);
       auto v = world.sample(lat, lon);
+      mesh.hasLand |= v.ground > 0;
+      auto coordinates = v.relief;
       double forest =
           smooth(.35, .63, v.moisture) * smooth(-5., 8., v.temperature) *
           (1. - smooth(1800, 2600, v.ground)) * smooth(2, 15, v.ground);
@@ -323,7 +333,9 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
            float(v.moisture), float(v.temperature),
            float(std::remainder(lon - center.longitude, 2 * pi) *
                  surfaceRadius),
-           float((lat - center.latitude) * surfaceRadius)});
+           float((lat - center.latitude) * surfaceRadius),
+           float(coordinates[0] - reliefCenter[0]),
+           float(coordinates[1] - reliefCenter[1]), float(v.uplift)});
     }
   }
   // Conservative blocks let each frame project thousands of boxes instead
