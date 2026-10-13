@@ -4,12 +4,14 @@ in vec3 vPosition,vNormal,vProperties,vMesh;
 out vec4 color;
 #include "atmosphere.glsl"
 #include "scene.glsl"
+#include "clouds.glsl"
 uniform highp sampler2D uScene;
-uniform sampler2D uMaterial;
+uniform sampler2D uMaterial,uCanopy;
 uniform highp sampler2DShadow uShadowNear,uShadowFar;
 uniform mat4 uShadowMatrix[2];
-uniform vec2 uMaterialOffset,uWaveOffset;
+uniform vec2 uMaterialOffset,uWaveOffset,uCanopyOffset;
 uniform float uSceneScale;
+uniform vec3 uPlanetDirection;
 in vec2 vMaterial;
 float shadowAt(highp sampler2DShadow tex,vec3 p,float bias){
  vec3 q=p*.5+.5;
@@ -48,16 +50,24 @@ void main(){
  vec3 tundra=mix(vec3(.10,.085,.055),vec3(.08,.115,.062),detail.g);
  vec3 albedo=mix(meadow,sand,dry*smoothstep(5.,17.,temp));
  float forest=smoothstep(.35,.63,moisture)*smoothstep(-5.,8.,temp)*(1.-smoothstep(1800.,2600.,vProperties.x));
- albedo=mix(albedo,vec3(.014,.032,.010)*mix(.8,1.1,broad.g),forest*smoothstep(800.,1800.,distance));
+ forest*=1.-smoothstep(.18,.40,slope);
+ vec4 crown=texture(uCanopy,(vMaterial+uCanopyOffset)/512.);
+ vec3 woodland=mix(vec3(.020,.052,.013),vec3(.040,.082,.023),broad.g)*mix(.8,1.07,crown.b);
+ albedo=mix(albedo,woodland,forest);
  albedo=mix(albedo,tundra,cold*(1.-rock));albedo=mix(albedo,stone,rock);
  float snow=(1.-smoothstep(-7.,1.,temp))*smoothstep(.3,.8,N.y);
  albedo=mix(albedo,vec3(.72,.76,.80)*mix(.89,1.01,detail.g),snow);
  // Fine relief perturbs lighting without displacement/noise at distant scales.
  vec2 grain=(detail.rg-.5)*.065*(1.-snow*.6);
- N=normalize(N+vec3(grain.x,0.,grain.y));
- vec3 direct=transmission(uTrans,uObserverHeight,uSun.y)*max(dot(N,uSun),0.)*surfaceShadow(N)*uEclipse*.24;
+ vec2 crownSlope=crown.rg*2.-1.;
+ vec3 crownNormal=normalize(vec3(crownSlope.x,sqrt(max(.03,1.-dot(crownSlope,crownSlope))),crownSlope.y));
+ N=normalize(N+vec3(grain.x,0.,grain.y)+forest*(crownNormal-vec3(0,1,0))*.65);
+ vec3 direct=transmission(uTrans,uObserverHeight,uSun.y)*max(dot(N,uSun),0.)*surfaceShadow(N)*cloudTransmission(vPosition/1000.)*uEclipse*.24;
  vec3 ambient=(sky(vec3(0,1,0))*.40+sky(normalize(N+vec3(0,.4,0)))*.60)*2.2;
- vec3 planet=vec3(.10,.16,.24)*uPlanetLight*.10*max(.2,N.y);
+ // Planet light uses the same irradiance-to-radiance scale as sunlight.
+ // Its extended, nearly white disk gently lights the canopy at night.
+ vec3 planet=vec3(.97,.98,1.)*uPlanetLight*.24*max(.05,dot(N,uPlanetDirection));
+ ambient*=mix(1.,crown.a,forest);
  vec3 land=albedo*.72*(direct+ambient+planet+vec3(.00004)/uDarkGain);
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,temp);
  vec2 phase=vec2(vMaterial.x*.17+vMaterial.y*.23*.4,vMaterial.y*.23-vMaterial.x*.17*.35),foot=fwidth(phase);
@@ -73,7 +83,9 @@ void main(){
   vec3 body=vec3(.003,.013,.016)*(sky(vec3(0,1,0))*.8+vec3(.00003)/uDarkGain);
   land=mix(land,L*fresnel+body*(1.-fresnel),water);
  }
- vec3 T=exp(-distance*vec3(.000020,.000031,.000047));
+ float meanHeight=max(0.,uObserverHeight+.0005*vPosition.y+dot(vPosition.xz,vPosition.xz)/(4.*6371000000.));
+ vec3 extinction=betaR*exp(-meanHeight/8.)+betaM*1.11*exp(-meanHeight/1.2);
+ vec3 T=exp(-distance*.001*extinction);
  land=land*T+sky(d)*(1.-T);
  color=vec4(min(land*uSceneScale,vec3(60000.)),1.);
 }

@@ -1,7 +1,7 @@
 # World terrain credits
 
 The fictional continental field, climate field, stochastic material cache and
-numerically drawn tree atlas are original outputs of the MIT-licensed producer
+dense crown-normal/occlusion field and flight envelope are original outputs of the MIT-licensed producer
 scripts in this repository. No photographic landscape or vegetation input is
 used.
 

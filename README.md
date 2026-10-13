@@ -1,6 +1,6 @@
 # Gas Giant Observatory
 
-A three-day journey across oceans, forests and mountains on a synchronously rotating moon.
+A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
@@ -40,7 +40,7 @@ nix run . -- --capture galaxy.png --fixed-view --time 437625 --width 1920 --heig
 
 Compare with `--no-galaxy`, `--no-stars`, or both. See
 [sky sources, calibration, efficiency and limitations](docs/GALAXY.md).
-The moving surface feature remains on `feat/surface-circuit` until operator review.
+The airborne biome feature remains on `feat/airborne-biomes` until operator review.
 
 [Eclipse sky capture](docs/images/galaxy-eclipse.png) ·
 [Sky beside the sunlit giant](docs/images/galaxy-night.png)
@@ -102,8 +102,8 @@ Installing the preview does not change any host configuration or idle timeout.
 - Observer orbit: **10° inclined to the giant’s equator**. Other moon planes
   span **1–10°** from that same equator, with different nodes.
 - A closed circuit across the Jupiter-facing hemisphere takes **72 real hours**,
-  crossing latitudes up to **59.5° north/south**, with the camera **50 m above
-  ground or water**. Mean synchronous rotation preserves orbital libration.
+  crossing latitudes up to **59.5° north/south**, with a smooth, hill-anticipating altitude profile **at least 600 m above
+  ground or water**, without sideways detours or ground-following bobbing. Mean synchronous rotation preserves orbital libration.
   `--fixed-view` retains the original 38° N, 50° observer for comparisons.
 - Twenty moons includes the observer moon. Visibility and apparent size follow
   geometry; the renderer does not arrange all nineteen others in the frame.
@@ -115,7 +115,7 @@ Installing the preview does not change any host configuration or idle timeout.
 - Finite solar disk (about 0.53° across), atmospheric aureole, soft optical glare,
   mutual eclipses, and planetshine approximation.
 - Moving spherical terrain with ocean, sea ice, snowy uplands, drylands, grassland
-  and forests; cached measured relief, instanced foliage, terrain shadows and
+  and forests; cached measured relief, continuous overlapping forest canopies, cloud/terrain shadows and
   multisample silhouettes. See [surface circuit](docs/SURFACE.md). The previous
   fixed alpine landscape remains available with `--fixed-view`.
 - Generated gas giant band texture; runtime

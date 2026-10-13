@@ -75,20 +75,6 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
     : terrain(root + "/assets/world/moon.ggworld") {
   program = link(root, "surface.vert", "surface.frag");
   shadowProgram = link(root, "surface_shadow.vert", "surface_shadow.frag");
-  treeProgram = link(root, "surface_tree.vert", "surface_tree.frag");
-  treeShadowProgram =
-      link(root, "surface_tree.vert", "surface_tree_shadow.frag");
-  glGenVertexArrays(1, &treeVao);
-  glBindVertexArray(treeVao);
-  glGenBuffers(1, &treeBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, treeBuffer);
-  for (int i = 0; i < 2; ++i) {
-    glEnableVertexAttribArray(i);
-    glVertexAttribPointer(
-        i, 3, GL_FLOAT, GL_FALSE, sizeof(SurfaceTree),
-        reinterpret_cast<void *>(size_t(i) * 3 * sizeof(float)));
-    glVertexAttribDivisor(i, 1);
-  }
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
   glGenBuffers(1, &vertices);
@@ -124,26 +110,26 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  png_image tree{};
-  tree.version = PNG_IMAGE_VERSION;
+  png_image crowns{};
+  crowns.version = PNG_IMAGE_VERSION;
   if (!png_image_begin_read_from_file(
-          &tree, (root + "/assets/world/trees.png").c_str()))
-    throw std::runtime_error("Missing tree atlas");
-  tree.format = PNG_FORMAT_RGBA;
-  std::vector<unsigned char> pixels(PNG_IMAGE_SIZE(tree));
-  if (!png_image_finish_read(&tree, nullptr, pixels.data(), 0, nullptr))
-    throw std::runtime_error(tree.message);
-  glGenTextures(1, &treeTexture);
-  glBindTexture(GL_TEXTURE_2D, treeTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, tree.width, tree.height, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-  png_image_free(&tree);
+          &crowns, (root + "/assets/world/canopy.png").c_str()))
+    throw std::runtime_error("Missing canopy field");
+  crowns.format = PNG_FORMAT_RGBA;
+  std::vector<unsigned char> crownData(PNG_IMAGE_SIZE(crowns));
+  if (!png_image_finish_read(&crowns, nullptr, crownData.data(), 0, nullptr))
+    throw std::runtime_error(crowns.message);
+  glGenTextures(1, &canopy);
+  glBindTexture(GL_TEXTURE_2D, canopy);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, crowns.width, crowns.height, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, crownData.data());
+  png_image_free(&crowns);
   glGenerateMipmap(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   GLint counts = 0;
   glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_NUM_SAMPLE_COUNTS, 1,
                         &counts);
@@ -188,17 +174,13 @@ SurfaceRenderer::~SurfaceRenderer() {
   if (pending.valid())
     pending.wait();
   releaseTargets();
-  glDeleteProgram(treeProgram);
-  glDeleteProgram(treeShadowProgram);
-  glDeleteBuffers(1, &treeBuffer);
-  glDeleteVertexArrays(1, &treeVao);
-  glDeleteTextures(1, &treeTexture);
   glDeleteProgram(program);
   glDeleteProgram(shadowProgram);
   glDeleteBuffers(1, &vertices);
   glDeleteBuffers(1, &indices);
   glDeleteVertexArrays(1, &vao);
   glDeleteTextures(1, &material);
+  glDeleteTextures(1, &canopy);
   glDeleteTextures(2, shadowTex);
   glDeleteFramebuffers(2, shadowFbo);
 }
@@ -264,6 +246,7 @@ void SurfaceRenderer::upload(SurfaceMesh m) {
     }
   }
   mesh = std::move(m);
+  ++revision;
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, vertices);
   const size_t vertexBytes = mesh.vertices.size() * sizeof(SurfaceVertex);
@@ -277,26 +260,20 @@ void SurfaceRenderer::upload(SurfaceMesh m) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  mesh.indices.size() * sizeof(uint32_t), mesh.indices.data(),
                  GL_STATIC_DRAW);
-  glBindVertexArray(treeVao);
-  glBindBuffer(GL_ARRAY_BUFFER, treeBuffer);
-  const size_t treeBytes = mesh.trees.size() * sizeof(SurfaceTree);
-  if (treeBytes > treeCapacity || !treeCapacity) {
-    treeCapacity =
-        ((mesh.trees.size() + 255) / 256 + 1) * 256 * sizeof(SurfaceTree);
-    glBufferData(GL_ARRAY_BUFFER, treeCapacity, nullptr, GL_DYNAMIC_DRAW);
-  }
-  glBufferSubData(GL_ARRAY_BUFFER, 0, treeBytes, mesh.trees.data());
-  glBindVertexArray(vao);
 }
 void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds) {
   if (s.sunLocal.y <= 0.)
     return;
   bool initial = shadowMatrices[0][15] == 0 || shadowMatrices[1][15] == 0;
-  double age[2] = {std::abs(seconds - shadowTime[0]) / .5,
-                   std::abs(seconds - shadowTime[1])};
+  // High sun moves mountain shadows much less than a grazing sun. Retain
+  // faster updates near sunrise/sunset; avoid full depth-map work every half
+  // second at noon, where it created the measured frame-time spikes.
+  const double interval = s.sunLocal.y > .5 ? 1. : .5;
+  double age[2] = {std::abs(seconds - shadowTime[0]) / interval,
+                   std::abs(seconds - shadowTime[1]) / (2 * interval)};
   int chosen = age[0] > age[1] ? 0 : 1;
   if (!initial && age[chosen] < 1. &&
-      length(s.sunLocal - shadowSun[chosen]) < .005)
+      length(s.sunLocal - shadowSun[chosen]) < .010)
     return;
   GLint oldPolygon = glIsEnabled(GL_POLYGON_OFFSET_FILL);
   GLfloat oldFactor, oldUnits;
@@ -309,7 +286,7 @@ void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds) {
   for (int i = 0; i < 2; ++i) {
     if (!initial && i != chosen)
       continue;
-    double extent = i ? 18000. : 1800., depth = extent * 3.;
+    double extent = i ? 60000. : 8000., depth = extent * 3.;
     auto *m = shadowMatrices[i];
     for (int j = 0; j < 16; ++j)
       m[j] = 0;
@@ -333,16 +310,6 @@ void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds) {
     glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "uShadowMatrix"), 1,
                        GL_FALSE, m);
     glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
-    glUseProgram(treeShadowProgram);
-    glUniform1i(glGetUniformLocation(treeShadowProgram, "uShadowPass"), 1);
-    glUniformMatrix4fv(
-        glGetUniformLocation(treeShadowProgram, "uTreeShadowMatrix"), 1,
-        GL_FALSE, m);
-    vec(treeShadowProgram, "uTreeRight", right);
-    bind(treeShadowProgram, 0, "uTrees", treeTexture);
-    glBindVertexArray(treeVao);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, mesh.trees.size());
-    glBindVertexArray(vao);
     shadowTime[i] = seconds;
     shadowSun[i] = sun;
   }
@@ -372,7 +339,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
       pending.get();
     upload(buildSurfaceMesh(terrain, location));
     eye = delta(mesh.center);
-  } else if (length(eye) > 128. && !pending.valid())
+  } else if (length(eye) > 750. && !pending.valid())
     pending = std::async(std::launch::async, [this, location] {
       return buildSurfaceMesh(terrain, location);
     });
@@ -402,30 +369,28 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   // pixels.
   int crop = 1;
   double tanFov = std::tan(29 * pi / 180);
-  for (auto v : mesh.vertices) {
-    Vec3 p{v.x - eye.x, v.y - eye.y, v.z - eye.z};
-    Vec3 local{frame[0] * p.x + frame[3] * p.y + frame[6] * p.z,
-               frame[1] * p.x + frame[4] * p.y + frame[7] * p.z,
-               frame[2] * p.x + frame[5] * p.y + frame[8] * p.z};
-    double z = dot(local, s.forward);
-    if (z <= 1.)
+  for (auto box : mesh.bounds) {
+    double minForward = 1.e30, maxForward = -1.e30, minRight = 1.e30,
+           maxRight = -1.e30, maxUp = -1.e30;
+    for (int corner = 0; corner < 8; ++corner) {
+      Vec3 p{(corner & 1 ? box.maximum.x : box.minimum.x) - eye.x,
+             (corner & 2 ? box.maximum.y : box.minimum.y) - eye.y,
+             (corner & 4 ? box.maximum.z : box.minimum.z) - eye.z};
+      Vec3 local{frame[0] * p.x + frame[3] * p.y + frame[6] * p.z,
+                 frame[1] * p.x + frame[4] * p.y + frame[7] * p.z,
+                 frame[2] * p.x + frame[5] * p.y + frame[8] * p.z};
+      double z = dot(local, s.forward), x = dot(local, s.right);
+      minForward = std::min(minForward, z);
+      maxForward = std::max(maxForward, z);
+      minRight = std::min(minRight, x);
+      maxRight = std::max(maxRight, x);
+      maxUp = std::max(maxUp, dot(local, s.cameraUp));
+    }
+    if (maxForward <= 1 || minRight > maxForward * tanFov * w / h * 1.05 ||
+        maxRight < -maxForward * tanFov * w / h * 1.05)
       continue;
-    double x = dot(local, s.right) / (z * tanFov * w / h);
-    if (std::abs(x) > 1.05)
-      continue;
-    double y = .5 + .5 * dot(local, s.cameraUp) / (z * tanFov);
-    crop = std::max(crop,
-                    int(std::clamp(std::ceil(y * h) + h * .03, 1., double(h))));
-  }
-  for (auto tree : mesh.trees) {
-    Vec3 p{tree.x - eye.x, tree.y + tree.height - eye.y, tree.z - eye.z};
-    Vec3 local{frame[0] * p.x + frame[3] * p.y + frame[6] * p.z,
-               frame[1] * p.x + frame[4] * p.y + frame[7] * p.z,
-               frame[2] * p.x + frame[5] * p.y + frame[8] * p.z};
-    double z = dot(local, s.forward);
-    if (z <= 1.)
-      continue;
-    double y = .5 + .5 * dot(local, s.cameraUp) / (z * tanFov);
+    double denominator = maxUp < 0 ? maxForward : std::max(1., minForward);
+    double y = .5 + .5 * maxUp / (denominator * tanFov);
     crop = std::max(crop,
                     int(std::clamp(std::ceil(y * h) + h * .03, 1., double(h))));
   }
@@ -457,6 +422,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   scalar(program, "uTanFov", std::tan(29 * pi / 180));
   glUniform2f(glGetUniformLocation(program, "uResolution"), w, h);
   scalar(program, "uPlanetLight", s.giantLight);
+  vec(program, "uPlanetDirection", normalized(s.local(-s.observer)));
   scalar(program, "uEclipse", s.sunVisibility);
   scalar(program, "uSceneScale", 4096);
   scalar(program, "uObserverHeight", s.altitudeMeters / 1000.);
@@ -465,6 +431,8 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glUniform2f(glGetUniformLocation(program, "uMaterialOffset"),
               std::remainder(globalX, 24. * 310.),
               std::remainder(globalZ, 24. * 310.));
+  glUniform2f(glGetUniformLocation(program, "uCanopyOffset"),
+              std::remainder(globalX, 512.), std::remainder(globalZ, 512.));
   glUniform2f(
       glGetUniformLocation(program, "uWaveOffset"),
       std::remainder(globalX * .17 + globalZ * .23 * .4 + seconds * .496,
@@ -478,28 +446,8 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   bind(program, 3, "uMaterial", material);
   bind(program, 4, "uShadowNear", shadowTex[0]);
   bind(program, 5, "uShadowFar", shadowTex[1]);
+  bind(program, 7, "uCanopy", canopy);
   glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
-  lighting(treeProgram);
-  vec(treeProgram, "uEye", eye);
-  glUniformMatrix3fv(glGetUniformLocation(treeProgram, "uMeshFrame"), 1,
-                     GL_FALSE, frame);
-  vec(treeProgram, "uTreeRight",
-      {frame[0] * s.right.x + frame[1] * s.right.y + frame[2] * s.right.z,
-       frame[3] * s.right.x + frame[4] * s.right.y + frame[5] * s.right.z,
-       frame[6] * s.right.x + frame[7] * s.right.y + frame[8] * s.right.z});
-  glUniform1i(glGetUniformLocation(treeProgram, "uShadowPass"), 0);
-  glUniformMatrix4fv(glGetUniformLocation(treeProgram, "uShadowMatrix[0]"), 2,
-                     GL_FALSE, shadowMatrices[0]);
-  bind(treeProgram, 3, "uTrees", treeTexture);
-  bind(treeProgram, 4, "uShadowNear", shadowTex[0]);
-  bind(treeProgram, 5, "uShadowFar", shadowTex[1]);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-  glDepthMask(GL_FALSE);
-  glBindVertexArray(treeVao);
-  glDrawArraysInstanced(GL_TRIANGLES, 0, 6, mesh.trees.size());
-  glDepthMask(GL_TRUE);
-  glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, multisample);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resolved);

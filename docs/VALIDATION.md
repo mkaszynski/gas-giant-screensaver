@@ -1,38 +1,63 @@
 # Validation
 
-## Three-day moving surface
+## Three-day airborne biomes
 
-The default scene is the closed 72-hour surface circuit documented in
-[SURFACE.md](SURFACE.md). Historical static captures/benchmarks below use
-`--fixed-view`; moving latitude/longitude can change visible eclipse contact
-times and sky orientation.
+The default scene is the 72-hour flight documented in [SURFACE.md](SURFACE.md).
+Historical static captures below use `--fixed-view`. Moving latitude/longitude
+changes sky orientation and local eclipse times.
 
-Local validation includes 29 CPU/CLI checks, 11 galaxy model tests, eight fixed
-terrain model tests, seven world/foliage model tests and nine GPU suites. The
-route sweep covers 8,192 positions at both small and Unix-scale sky times. It
-checks exact 72-hour closure, six biome categories, north/south latitude range,
-50 m camera clearance, shared celestial altitude and Jupiter above the horizon.
-The minimum sampled giant center elevation is 16.09 degrees. An independent
-128-position / 128-phase libration sweep keeps the upper limb above 35.63
-degrees on the preserved mean bearing. The offline planner checked 1,105,920
-interpolated positions with zero failed samples; the maximum tested ridge was
-27.98 degrees against its 28-degree limit. A 552,960-point cubic route cache
-adds only 2.1 MiB and no runtime search. Asset hashes bind it to both terrain
-elevation sources.
+The CPU/CLI gate contains 29 checks. An 8,192-position route sweep at both small
+and Unix-scale sky times checks closure, six climate categories, north/south
+latitude range, shared terrain/celestial altitude, ground clearance and bounded
+vertical speed. The route has no terrain-dependent lateral offset. Camera
+bearing is independent of accelerated orbital libration, and east follows the
+physical moon rotation. The minimum sampled giant center elevation is 16.11
+degrees. An independent 128-position / 128-phase libration sweep keeps its upper
+limb above 35.66 degrees on the mean subplanet bearing.
 
-The moving GPU suite checks actual opaque ground coverage, fractional silhouette
-and foliage coverage, no upper-sky crop rectangle, celestial occlusion by land,
-identical-phase three-day image periodicity, motion, streamed/fresh mesh agreement and host GL
-state restoration. The original static-landscape tests remain intact.
+The offline flight builder checked 2,097,152 positions. Minimum ground clearance
+was **620 m**, maximum climb/descent **3.32672 m/s**, and maximum sampled ridge
+on the preserved bearing **0.01295 degrees** (below its 28-degree safety limit).
+A 128 KiB periodic B-spline cache replaces the old 2.1 MiB lateral-detour cache.
+Runtime performs no route planning or horizon scanning.
 
-An initial benchmark exposed shadow/target update spikes. Cached cascade updates,
-moon-fixed shadow transforms and persistent cropped multisample capacity reduce
-them. A 180-frame 1920x1080 forest run on AMD Renoir measured **7.53 ms median /
-12.74 ms p95 GPU**, and **10.21 / 15.31 ms** synchronized CPU+GPU time. This
-is a shared-desktop timing sample, not a watt reading or a guarantee for every
-biome/driver. Final repeated packaged measurements are recorded separately.
+The moving GPU suite checks opaque terrain coverage, fractional silhouettes,
+no upper-sky crop rectangle, celestial occlusion, identical-phase loop images,
+actual flight motion, mesh replacement/fresh geometry agreement, ground shadows
+from the visible cloud field and host GL state restoration. The source hardware
+check measured **0 codes** maximum at identical loop phases and **0.009 codes**
+mean difference between streamed and fresh geometry. It checks parallax over
+ten seconds at airplane height rather than the old one-second close-ground view.
 
+Offline world tests include deterministic canopy fields, packed normal bounds,
+dense overlapping crown coverage and source-bound cache hashes. Conservative crop bounds contain sampled geometry;
+a 1080p forest comparison before/after this CPU optimization was pixel-identical.
+The GPU gate also checks that planetshine visibly illuminates nighttime land. The original
+fixed-landscape and astronomical tests remain in the full gate.
 
+Three alternating 180-frame runs per biome at 1920x1080 / 30 fps on AMD Renoir
+measured the following medians of run summaries (milliseconds):
+
+| Biome | GPU median | GPU p95 | CPU+GPU median | CPU+GPU p95 |
+|---|---:|---:|---:|---:|
+| Ocean | 10.22 | 28.62 | 12.13 | 30.98 |
+| Forest | 8.50 | 20.11 | 10.42 | 23.49 |
+| Snow | 8.21 | 23.20 | 10.11 | 25.13 |
+
+Raw repetitions are in [surface-benchmark.json](surface-benchmark.json); every
+run, including high first-round forest/snow outliers, is retained. These are
+shared-desktop timings, not watts or universal frame-time guarantees. The
+[earlier shadow/crop measurements](surface-shadow-before.json) recorded roughly
+14–19 ms synchronized medians. Cached block bounds eliminate most repeated CPU
+projection work; removing invisible close trees and adapting shadow cadence
+reduce wasted work. The original smaller-mesh streaming measurements remain
+as historical diagnostics in [surface-streaming-before.json](surface-streaming-before.json).
+
+The final Nix preview and native Hyprlock widget build and pass configuration
+checks. An isolated compositor run verified actual rendering, cyan input and
+unlock without locking the user's desktop. Review images in [SURFACE.md](SURFACE.md)
+come from this package. Biome art remains subject to operator visual review;
+water/hydrology and silhouette limits are documented there.
 
 ## Relightable terrain
 

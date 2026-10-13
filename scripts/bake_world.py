@@ -114,9 +114,8 @@ def main():
     data = build()
     (a.output / "moon.ggworld").write_bytes(data)
     Image.fromarray(material()).save(a.output / "material.png")
-    from bake_tree_atlas import build_tree_atlas
-
-    Image.fromarray(build_tree_atlas()).save(a.output / "trees.png")
+    from bake_canopy import build_canopy
+    Image.fromarray(build_canopy()).save(a.output / "canopy.png")
     manifest = {
         "format": "GGWORLD1",
         "radius_m": 6371000,
@@ -124,6 +123,7 @@ def main():
         "seed": 734,
         "geometry": "Seamless spherical continental elevation and climate; stable meter-scale runtime detail",
         "photographic_input": False,
+        "canopy_sha256": hashlib.sha256((a.output/"canopy.png").read_bytes()).hexdigest(),
         "elevation_sha256": hashlib.sha256(data).hexdigest(),
     }
     manifest["measured_relief"] = {

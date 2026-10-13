@@ -26,6 +26,9 @@ public:
                    bool drawBodies = true, bool drawRings = true,
                    EmissionFrame emission = {});
   static std::string defaultDataDirectory();
+  size_t surfaceMeshRevision() const {
+    return surface ? surface->meshRevision() : 0;
+  }
 
 private:
   struct Target {
@@ -62,6 +65,7 @@ private:
   void release(Target &);
   void bind(GLuint, int, const char *, GLuint);
   void common(GLuint, const Scene &, int, int);
+  void cloudUniforms(GLuint, const Scene &, double);
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,

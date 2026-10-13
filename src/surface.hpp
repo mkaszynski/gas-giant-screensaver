@@ -19,9 +19,11 @@ struct SurfaceSample {
 };
 class SurfaceWorld {
 public:
-  explicit SurfaceWorld(const std::string &file, bool allowMissingRoute = false,
-                        const std::string &circuitFile = {});
+  explicit SurfaceWorld(const std::string &file,
+                        bool allowMissingFlight = false,
+                        const std::string &flightFile = {});
   TravelLocation location(double realSeconds) const;
+  double flightAltitude(double realSeconds) const;
   double horizon(TravelLocation, Vec3 heading, double altitude,
                  int samples = 80) const;
   SurfaceSample sample(double latitude, double longitude) const;
@@ -30,7 +32,7 @@ public:
 private:
   int width = 0, height = 0;
   std::vector<int16_t> heights, relief;
-  std::vector<float> route;
+  std::vector<float> flight;
   int reliefWidth = 0;
   double reliefSpacing = 8;
   double localRelief(double x, double z) const;
@@ -48,14 +50,14 @@ struct SurfaceVertex {
   float x, y, z, nx, ny, nz, ground, moisture, temperature, materialX,
       materialZ;
 };
-struct SurfaceTree {
-  float x, y, z, height, type, variation;
-};
 struct SurfaceMesh {
+  struct Bounds {
+    Vec3 minimum, maximum;
+  };
   TravelLocation center{};
   std::vector<SurfaceVertex> vertices;
-  std::vector<SurfaceTree> trees;
   std::vector<uint32_t> indices;
+  std::vector<Bounds> bounds;
 };
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation);
 } // namespace observatory

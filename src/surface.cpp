@@ -74,8 +74,8 @@ TravelLocation travelLocation(double seconds, double radialMetres) {
   return {std::asin(std::sin(rho) * std::cos(angle)),
           std::atan2(std::sin(rho) * std::sin(angle), std::cos(rho))};
 }
-SurfaceWorld::SurfaceWorld(const std::string &file, bool allowMissingRoute,
-                           const std::string &circuitFile) {
+SurfaceWorld::SurfaceWorld(const std::string &file, bool allowMissingFlight,
+                           const std::string &flightFile) {
   std::ifstream f(file, std::ios::binary);
   char magic[8]{};
   f.read(magic, 8);
@@ -132,29 +132,29 @@ SurfaceWorld::SurfaceWorld(const std::string &file, bool allowMissingRoute,
   for (size_t i = 0; i < relief.size(); ++i)
     relief[i] =
         int16_t(uint16_t(bytes[2 * i]) | (uint16_t(bytes[2 * i + 1]) << 8));
-  std::ifstream path(circuitFile.empty()
+  std::ifstream path(flightFile.empty()
                          ? std::filesystem::path(file).parent_path() /
-                               "circuit.ggroute"
-                         : std::filesystem::path(circuitFile),
+                               "flight.ggflight"
+                         : std::filesystem::path(flightFile),
                      std::ios::binary);
-  if (!path && allowMissingRoute)
+  if (!path && allowMissingFlight)
     return;
   path.read(magic, 8);
-  if (std::string(magic, 8) != "GGROUTE1")
-    throw std::runtime_error("Missing/invalid surface circuit");
+  if (std::string(magic, 8) != "GGFLY001")
+    throw std::runtime_error("Missing/invalid flight profile");
   uint32_t size = read32(path);
   if (size < 512 || size > 1000000)
-    throw std::runtime_error("Invalid circuit point count");
+    throw std::runtime_error("Invalid flight point count");
   path.seekg(0, std::ios::end);
   if (path.tellg() != std::streamoff(12 + size * 4))
-    throw std::runtime_error("Invalid circuit file length");
+    throw std::runtime_error("Invalid flight file length");
   path.seekg(12);
-  route.resize(size);
-  for (float &v : route) {
+  flight.resize(size);
+  for (float &v : flight) {
     uint32_t bits = read32(path);
     std::memcpy(&v, &bits, 4);
-    if (!std::isfinite(v) || std::abs(v) > 6000)
-      throw std::runtime_error("Invalid circuit detour");
+    if (!std::isfinite(v) || v < 600 || v > 12000)
+      throw std::runtime_error("Invalid flight altitude");
   }
 }
 double SurfaceWorld::field(const std::vector<uint8_t> &a, double lat,
@@ -209,24 +209,29 @@ SurfaceSample SurfaceWorld::sample(double lat, double lon) const {
 }
 
 TravelLocation SurfaceWorld::location(double seconds) const {
+  // One constant-speed small circle. No terrain-dependent sideways detours.
+  return travelLocation(seconds);
+}
+double SurfaceWorld::flightAltitude(double seconds) const {
   if (!std::isfinite(seconds))
     throw std::invalid_argument("Nonfinite travel clock");
-  if (route.empty())
-    return travelLocation(seconds);
+  if (flight.empty())
+    throw std::runtime_error("No baked flight profile");
   double f = std::remainder(seconds, travelPeriod) / travelPeriod;
   f -= std::floor(f);
-  f *= route.size();
+  f *= flight.size();
   int i = int(std::floor(f));
   f -= i;
   auto at = [&](int j) {
-    return double(
-        route[(j % int(route.size()) + int(route.size())) % int(route.size())]);
+    return double(flight[(j % int(flight.size()) + int(flight.size())) %
+                         int(flight.size())]);
   };
   double a = at(i - 1), b = at(i), c = at(i + 1), d = at(i + 2);
-  double offset =
-      .5 * (2 * b + (-a + c) * f + (2 * a - 5 * b + 4 * c - d) * f * f +
-            (-a + 3 * b - 3 * c + d) * f * f * f);
-  return travelLocation(seconds, offset);
+  // Uniform cubic B-spline: C2 continuity and positive weights. The baked
+  // envelope anticipates hills; no live max(ground, eye) introduces bobbing.
+  return (a * std::pow(1 - f, 3) + b * (3 * f * f * f - 6 * f * f + 4) +
+          c * (-3 * f * f * f + 3 * f * f + 3 * f + 1) + d * f * f * f) /
+         6.;
 }
 double SurfaceWorld::horizon(TravelLocation p, Vec3 heading, double altitude,
                              int samples) const {
@@ -247,21 +252,20 @@ double SurfaceWorld::horizon(TravelLocation p, Vec3 heading, double altitude,
 Scene travelScene(const SurfaceWorld &world, double seconds,
                   double routeSeconds, double day, bool rings) {
   auto p = world.location(routeSeconds);
-  auto ground = world.sample(p.latitude, p.longitude);
-  auto s = sceneAt(
-      seconds, day, rings,
-      {p.latitude, -p.longitude, std::max(ground.ground, ground.water) + 50.});
-  // The legacy fixed observer measures longitude toward +Z from the -X
-  // subplanet meridian: its "north" basis points toward decreasing latitude.
-  // The geographic world uses eastward longitude and increasing-latitude north.
-  // Reverse longitude and both tangent axes to keep an orthonormal frame and
-  // make terrain, astronomical rays and illumination share those conventions.
-  s.longitude = p.longitude;
-  s.east = -s.east;
+  auto s =
+      sceneAt(seconds, day, rings,
+              {p.latitude, p.longitude, world.flightAltitude(routeSeconds)});
+  // Legacy "north" points toward decreasing latitude. East already follows
+  // the moon's prograde spin; only north needs correcting for geography.
   s.north = -s.north;
   s.sunLocal = s.local(s.sun);
-  Vec3 bearing = normalized(s.local(-s.observer));
-  double az = std::atan2(bearing.x, bearing.z) + .12;
+  // Follow the fixed subplanet meridian, not the accelerated orbital libration.
+  // The giant can move naturally within the frame without steering the camera.
+  Vec3 up = geographicUp(p);
+  Vec3 bearing = normalized(Vec3{1, 0, 0} - up * up.x);
+  double az = std::atan2(dot(bearing, geographicEast(p)),
+                         dot(bearing, geographicNorth(p))) +
+              .12;
   constexpr double elevation = 19 * pi / 180;
   s.forward = {std::sin(az) * std::cos(elevation), std::sin(elevation),
                std::cos(az) * std::cos(elevation)};
@@ -273,24 +277,42 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   // A bounded radial mesh. Fine rings near the camera, progressively larger
   // triangles past the visible horizon. One immutable CPU result per stream
   // job.
-  constexpr int angular = 384, radial = 256;
+  // Spend almost all angular samples inside the visible hemisphere. A coarse
+  // back sector retains full spherical ground/shadow coverage. More radial
+  // samples resolve steep measured relief from the airplane-height view.
+  constexpr int visible = 512, angular = visible + 32, radial = 1024;
   constexpr double far = 145000.;
   SurfaceMesh mesh;
   mesh.center = center;
   mesh.vertices.reserve((radial + 1) * angular);
   Vec3 origin = geographicUp(center), east = geographicEast(center),
        north = geographicNorth(center);
+  Vec3 bearing = normalized(Vec3{1, 0, 0} - origin * origin.x);
+  const double azimuth =
+      std::atan2(dot(bearing, east), dot(bearing, north)) + .12;
   for (int j = 0; j <= radial; ++j) {
     double r = j == 0 ? 0. : 2. * std::expm1(std::log1p(far / 2.) * j / radial);
     for (int i = 0; i < angular; ++i) {
-      double a = 2 * pi * i / angular, x = r * std::sin(a), z = r * std::cos(a);
+      double a = azimuth - pi / 3 +
+                 (i < visible ? (2 * pi / 3) * i / visible
+                              : 2 * pi / 3 + (4 * pi / 3) * (i - visible) /
+                                                 (angular - visible));
+      double x = r * std::sin(a), z = r * std::cos(a);
       Vec3 direction =
           origin * std::sqrt(1. - r * r / (surfaceRadius * surfaceRadius)) +
           east * (x / surfaceRadius) + north * (z / surfaceRadius);
       double lat = std::asin(direction.y),
              lon = std::atan2(direction.z, direction.x);
       auto v = world.sample(lat, lon);
-      double h = std::max(v.ground, v.water);
+      double forest =
+          smooth(.35, .63, v.moisture) * smooth(-5., 8., v.temperature) *
+          (1. - smooth(1800, 2600, v.ground)) * smooth(2, 15, v.ground);
+      // From airplane height the canopy is a continuous volume. Crown normals
+      // and occlusion are mip-filtered in the material, rather than sparse
+      // dots.
+      double h = std::max(v.ground, v.water) +
+                 forest * (12. + 6. * noise(surfaceRadius * lon,
+                                            surfaceRadius * lat, 80, 1397));
       double curvature =
           -(r * r) /
           (surfaceRadius + std::sqrt(surfaceRadius * surfaceRadius - r * r));
@@ -304,49 +326,26 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
            float((lat - center.latitude) * surfaceRadius)});
     }
   }
-  // Sparse, stable moon-fixed tree cells, never screen-space random placement.
-  const double cosine = std::cos(center.latitude);
-  const double cell = 35.;
-  int64_t cx = int64_t(std::floor(center.longitude * surfaceRadius / cell)),
-          cz = int64_t(std::floor(center.latitude * surfaceRadius / cell));
-  for (int iz = -58; iz <= 58; ++iz)
-    for (int ix = -int(58 / cosine); ix <= int(58 / cosine); ++ix) {
-      int64_t gx = cx + ix, gz = cz + iz;
-      uint32_t seed = hash(gx, gz, 719);
-      double lon = (gx + .15 + .7 * double(seed & 65535) / 65535.) * cell /
-                   surfaceRadius;
-      double lat =
-          (gz + .15 + .7 * double(seed >> 16) / 65535.) * cell / surfaceRadius;
-      double dx = std::remainder(lon - center.longitude, 2 * pi) *
-                  surfaceRadius * cosine,
-             dz = (lat - center.latitude) * surfaceRadius;
-      if (dx * dx + dz * dz > 2000. * 2000.)
-        continue;
-      auto v = world.sample(lat, lon);
-      double density = smooth(.35, .63, v.moisture) *
-                       smooth(-5., 8., v.temperature) *
-                       (1. - smooth(1800, 2600, v.ground));
-      if (v.ground < 2 ||
-          double(hash(gx, gz, 833)) / 4294967295. > density * .75)
-        continue;
-      double slope =
-          std::hypot(
-              world.elevation(lat + 4 / surfaceRadius, lon) - v.ground,
-              world.elevation(lat, lon + 4 / (surfaceRadius * std::cos(lat))) -
-                  v.ground) /
-          4.;
-      if (slope > .65)
-        continue;
-      Vec3 p = geographicUp({lat, lon}) * (surfaceRadius + v.ground) -
-               origin * surfaceRadius;
-      float height = 12. + 12. * double(hash(gx, gz, 372)) / 4294967295.;
-      mesh.trees.push_back(
-          {float(dot(p, east)), float(dot(p, origin)), float(dot(p, north)),
-           height, float(v.temperature > 18), float((seed & 255) / 255.)});
+  // Conservative blocks let each frame project thousands of boxes instead
+  // of every terrain vertex. Back-sector blocks are narrower because those
+  // angular cells are deliberately coarse.
+  for (int j = 0; j < radial; j += 16)
+    for (int i = 0; i < angular;) {
+      int columns = i < visible ? 16 : 1;
+      SurfaceMesh::Bounds b{{1.e30, 1.e30, 1.e30}, {-1.e30, -1.e30, -1.e30}};
+      for (int z = j; z <= std::min(j + 16, radial); ++z)
+        for (int x = i; x <= i + columns; ++x) {
+          const auto &v = mesh.vertices[z * angular + x % angular];
+          b.minimum = {std::min(b.minimum.x, double(v.x)),
+                       std::min(b.minimum.y, double(v.y)),
+                       std::min(b.minimum.z, double(v.z))};
+          b.maximum = {std::max(b.maximum.x, double(v.x)),
+                       std::max(b.maximum.y, double(v.y)),
+                       std::max(b.maximum.z, double(v.z))};
+        }
+      mesh.bounds.push_back(b);
+      i += columns;
     }
-  std::sort(mesh.trees.begin(), mesh.trees.end(), [](auto a, auto b) {
-    return a.x * a.x + a.z * a.z > b.x * b.x + b.z * b.z;
-  });
   mesh.indices.reserve(radial * angular * 6);
   for (int j = 0; j < radial; ++j)
     for (int i = 0; i < angular; ++i) {

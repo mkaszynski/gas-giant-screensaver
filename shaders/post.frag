@@ -6,16 +6,12 @@ in vec2 uv;out vec4 color;
 uniform highp sampler2D uScene,uSurface;
 uniform bool uMovingSurface;
 uniform float uSurfaceFraction;
-uniform highp sampler2D uNoise;
 uniform float uOpacity;
 uniform float uSceneScale;
-uniform vec2 uCloudOffset[5];
-uniform float uCloudLongitudeScale;
+#include "clouds.glsl"
 vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/uSceneScale;}
 // Wrap stationary spatial coordinates before adding small wind offsets.
 // Adding wind to a large grazing ray coordinate discards subframe precision.
-float n2(vec2 p,vec2 wind){return texture(uNoise,(mod(p,256.)+wind)/256.).r;}
-float clouds(vec2 p){return .55*n2(p,uCloudOffset[0])+.27*n2(p*2.01,uCloudOffset[1])+.12*n2(p*4.03,uCloudOffset[2])+.06*n2(p*8.07,uCloudOffset[3]);}
 vec3 tonemap(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
 vec3 cloudScene(vec3 d,vec3 L){
  // Thin curved cloud sheet, with apparent wind motion and sun-dependent silver edges.

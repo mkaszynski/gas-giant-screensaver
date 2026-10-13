@@ -533,6 +533,25 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   bind(p, 0, "uSky", sky.texture);
   bind(p, 1, "uTrans", trans.texture);
 }
+void Renderer::cloudUniforms(GLuint p, const Scene &s, double seconds) {
+  // Reduce each octave separately at the repeating noise texture's period.
+  // A single wrapped clock cannot preserve noninteger octave frequencies.
+  // Upload small offsets so Unix-scale time never loses subframe precision
+  // in a float shader. Same five texture samples and no new render pass.
+  const double frequencies[] = {1., 2.01, 4.03, 8.07, .045};
+  float offsets[10];
+  double cloudEast = surface ? surfaceRadius * s.longitude / 1000. * .85 : 0.;
+  double cloudNorth = surface ? surfaceRadius * s.latitude / 1000. * 1.9 : 0.;
+  scalar(p, "uCloudLongitudeScale", surface ? 1. / std::cos(s.latitude) : 1.);
+  for (int i = 0; i < 5; ++i) {
+    offsets[2 * i] =
+        std::remainder((seconds * .007 + cloudEast) * frequencies[i], 256.);
+    offsets[2 * i + 1] =
+        std::remainder((seconds * .003 + cloudNorth) * frequencies[i], 256.);
+  }
+  glUniform2fv(glGetUniformLocation(p, "uCloudOffset[0]"), 5, offsets);
+  bind(p, 8, "uNoise", noise);
+}
 void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
   integer(p, "uRingsEnabled", enabled);
   vector(p, "uRingCenter", s.local(-s.observer));
@@ -734,9 +753,11 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     emissions(s, w, h, emission, drawRings, day);
   GLuint surfaceTexture = 0;
   if (surface)
-    surfaceTexture =
-        surface->render(s, surfaceLocation, w, h, seconds, scene.texture,
-                        [&](GLuint p) { common(p, s, w, h); });
+    surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds,
+                                     scene.texture, [&](GLuint p) {
+                                       common(p, s, w, h);
+                                       cloudUniforms(p, s, seconds);
+                                     });
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);
@@ -744,26 +765,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   scalar(postProgram, "uSurfaceFraction",
          surface ? surface->coverageFraction() : 1.);
   bind(postProgram, 9, "uSurface", surfaceTexture ? surfaceTexture : mountains);
-  // Reduce each octave separately at the repeating noise texture's period.
-  // A single wrapped clock cannot preserve noninteger octave frequencies.
-  // Upload small offsets so Unix-scale time never loses subframe precision
-  // in a float shader. Same five texture samples and no new render pass.
-  const double frequencies[] = {1., 2.01, 4.03, 8.07, .045};
-  float offsets[10];
-  double cloudEast =
-      surface ? surfaceRadius * surfaceLocation.longitude / 1000. * .85 : 0.;
-  double cloudNorth =
-      surface ? surfaceRadius * surfaceLocation.latitude / 1000. * 1.9 : 0.;
-  scalar(postProgram, "uCloudLongitudeScale",
-         surface ? 1. / std::cos(surfaceLocation.latitude) : 1.);
-  for (int i = 0; i < 5; ++i) {
-    offsets[2 * i] =
-        std::remainder((seconds * .007 + cloudEast) * frequencies[i], 256.);
-    offsets[2 * i + 1] =
-        std::remainder((seconds * .003 + cloudNorth) * frequencies[i], 256.);
-  }
-  glUniform2fv(glGetUniformLocation(postProgram, "uCloudOffset[0]"), 5,
-               offsets);
+  cloudUniforms(postProgram, s, seconds);
   bind(postProgram, 2, "uScene", scene.texture);
   bind(postProgram, 3, "uMountains", mountains);
   bind(postProgram, 4, "uNoise", noise);

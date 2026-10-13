@@ -19,7 +19,7 @@ std::vector<unsigned char> pixels(int w, int h) {
 }
 struct Fixture {
   std::filesystem::path path;
-  Fixture() {
+  Fixture(bool mask = true) {
     char n[] = "/tmp/observatory-surface-XXXXXX";
     path = mkdtemp(n);
     auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
@@ -31,12 +31,25 @@ struct Fixture {
     std::ostringstream b;
     b << in.rdbuf();
     auto s = b.str();
-    s.insert(s.rfind('}'),
-             "vec4 "
-             "coverage=texture(uSurface,vec2(uv.x,uv.y/"
-             "uSurfaceFraction));if(uv.y>uSurfaceFraction)coverage=vec4(0.);"
-             "color=vec4(vec3(coverage.a),1.);\n");
+    if (mask)
+      s.insert(s.rfind('}'),
+               "vec4 "
+               "coverage=texture(uSurface,vec2(uv.x,uv.y/"
+               "uSurfaceFraction));if(uv.y>uSurfaceFraction)coverage=vec4(0.);"
+               "color=vec4(vec3(coverage.a),1.);\n");
     std::ofstream(f) << s;
+    if (!mask) {
+      auto shader = path / "shaders/surface.frag";
+      std::ifstream source(shader);
+      std::ostringstream text;
+      text << source.rdbuf();
+      auto code = text.str();
+      const std::string term = "cloudTransmission(vPosition/1000.)";
+      auto offset = code.find(term);
+      require(offset != std::string::npos, "cloud shadow fixture");
+      code.replace(offset, term.size(), "1.");
+      std::ofstream(shader) << code;
+    }
   }
   ~Fixture() { std::filesystem::remove_all(path); }
 };
@@ -54,7 +67,7 @@ int main() {
       constexpr int w = 640, h = 360;
       Fixture fixture;
       Renderer mask(fixture.path.string(), {}, {true, 0, 162000});
-      mask.render(w, h, 1710);
+      mask.render(w, h, 510);
       auto coverage = pixels(w, h);
       int opaque = 0, partial = 0;
       for (int i = 0; i < w * h; ++i) {
@@ -62,7 +75,8 @@ int main() {
         opaque += a == 255;
         partial += a > 0 && a < 255;
       }
-      require(opaque > w * h * .15, "substantial terrain at 50m height");
+      require(opaque > w * h * .15,
+              "substantial terrain below airborne camera");
       require(partial > 30, "terrain and foliage silhouette antialiasing "
                             "actually produces partial coverage");
       for (int y = h * 3 / 4; y < h; ++y)
@@ -70,9 +84,9 @@ int main() {
           require(coverage[(y * w + x) * 4] == 0,
                   "no cropped framebuffer rectangle in upper sky");
       Renderer r(Renderer::defaultDataDirectory(), {}, {true, 0, 162000});
-      r.render(w, h, 1710, 1800, 1, true);
+      r.render(w, h, 510, 1800, 1, true);
       auto bodies = pixels(w, h);
-      r.render(w, h, 1710, 1800, 1, false);
+      r.render(w, h, 510, 1800, 1, false);
       auto none = pixels(w, h);
       int solid = 0, maxDiff = 0;
       for (int y = 0; y < h / 8; ++y)
@@ -87,15 +101,48 @@ int main() {
         }
       require(solid > w * h * .08, "meaningful opaque foreground");
       require(maxDiff == 0, "celestial bodies never bleed through opaque land");
+      Fixture noClouds(false);
+      Renderer noShadow(noClouds.path.string(), {}, {true, 0, 162000});
+      noShadow.render(w, h, 510);
+      auto unshadowed = pixels(w, h);
+      int cloudPixels = 0, cloudPeak = 0;
+      for (int i = 0; i < w * h / 4; ++i)
+        for (int c = 0; c < 3; ++c) {
+          int difference =
+              std::abs(int(bodies[4 * i + c]) - int(unshadowed[4 * i + c]));
+          cloudPixels += difference > 0;
+          cloudPeak = std::max(cloudPeak, difference);
+        }
+      std::cout << "Cloud shadow changed " << cloudPixels
+                << " terrain channels, peak " << cloudPeak << " codes\n";
+      require(cloudPixels > 100 && cloudPeak > 0,
+              "shared moving clouds actually shadow the land");
+      auto night = travelScene(SurfaceWorld(Renderer::defaultDataDirectory() +
+                                            "/assets/world/moon.ggworld"),
+                               1200, 162000);
+      require(night.sunLocal.y < -.2,
+              "night lighting fixture has no direct sunlight");
+      r.renderScene(w, h, night, 1200);
+      auto litNight = pixels(w, h);
+      night.giantLight = 0;
+      r.renderScene(w, h, night, 1200);
+      auto darkNight = pixels(w, h);
+      int nightPixels = 0;
+      for (int i = 0; i < w * h / 8; ++i)
+        if (coverage[i * 4] == 255)
+          for (int c = 0; c < 3; ++c)
+            nightPixels += litNight[i * 4 + c] > darkNight[i * 4 + c];
+      require(nightPixels > 100,
+              "sunlit gas giant visibly lights the land during night");
       // Compare identical phases across the period. CPU tests separately bound
       // motion through the boundary; two different positions can legitimately
       // change bright, subpixel ring edges by more than two display codes.
       Renderer endA(Renderer::defaultDataDirectory(), {},
                     {true, 0, travelPeriod - .00001});
       Renderer endB(Renderer::defaultDataDirectory(), {}, {true, 0, -.00001});
-      endA.render(w, h, 450);
+      endA.render(w, h, 1740);
       auto a = pixels(w, h);
-      endB.render(w, h, 450);
+      endB.render(w, h, 1740);
       auto b = pixels(w, h);
       int wrap = 0;
       for (size_t i = 0; i < a.size(); ++i)
@@ -104,13 +151,22 @@ int main() {
       require(wrap <= 2,
               "identical route phases render identically across a circuit");
       Renderer moving(Renderer::defaultDataDirectory(), {},
-                      {true, 1, 162000 - 1710});
-      moving.render(w, h, 1710);
+                      {true, 1, 162000 - 510});
+      moving.render(w, h, 510);
       auto first = pixels(w, h);
-      moving.render(w, h, 1711);
+      size_t initialRevision = moving.surfaceMeshRevision();
+      // Ten seconds gives measurable parallax at airplane height.
+      moving.render(w, h, 520);
       auto beforeRefresh = pixels(w, h);
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-      moving.render(w, h, 1711);
+      auto deadline =
+          std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (moving.surfaceMeshRevision() == initialRevision &&
+             std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        moving.render(w, h, 520);
+      }
+      require(moving.surfaceMeshRevision() > initialRevision,
+              "background terrain replacement actually finishes and uploads");
       auto travelled = pixels(w, h);
       long pop = 0;
       for (int i = 0; i < w * h / 4; ++i)
@@ -127,8 +183,8 @@ int main() {
           delta += std::abs(int(first[i * 4 + c]) - int(travelled[i * 4 + c]));
       require(delta > w * h, "surface actually moves through space");
       Renderer fresh(Renderer::defaultDataDirectory(), {},
-                     {true, 1, 162000 - 1710});
-      fresh.render(w, h, 1711);
+                     {true, 1, 162000 - 510});
+      fresh.render(w, h, 520);
       auto reference = pixels(w, h);
       long seam = 0;
       for (int i = 0; i < w * h / 4; ++i)
@@ -140,7 +196,7 @@ int main() {
       require(seamMean < 3., "streaming and fresh geometry agree visually");
       GLfloat expected[4] = {.13f, .17f, .21f, .29f};
       glClearColor(expected[0], expected[1], expected[2], expected[3]);
-      moving.render(w, h, 1711.1);
+      moving.render(w, h, 520.1);
       GLfloat restored[4];
       glGetFloatv(GL_COLOR_CLEAR_VALUE, restored);
       for (int i = 0; i < 4; ++i)

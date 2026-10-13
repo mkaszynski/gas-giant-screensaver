@@ -18,7 +18,7 @@ struct RouteFixture {
     char name[] = "/tmp/observatory-circuit-tests-XXXXXX";
     const char *directory = mkdtemp(name);
     require(directory, "temporary route fixture");
-    path = std::filesystem::path(directory) / "bad.ggroute";
+    path = std::filesystem::path(directory) / "bad.ggflight";
   }
   ~RouteFixture() { std::filesystem::remove_all(path.parent_path()); }
   void rejected(const std::string &bytes) {
@@ -37,16 +37,28 @@ int main() {
   try {
     SurfaceWorld w(SURFACE_ASSET_DIR "/moon.ggworld");
     RouteFixture invalid;
-    invalid.rejected("GGROUTE1");
-    std::string bytes = "GGROUTE1";
+    invalid.rejected("GGFLY001");
+    std::string bytes = "GGFLY001";
     bytes.append("\0\2\0\0", 4); // 512 points, little-endian.
     invalid.rejected(bytes);
     bytes.resize(12 + 512 * 4, '\0');
+    float safe = 620.;
+    uint32_t safeBits;
+    std::memcpy(&safeBits, &safe, 4);
+    for (int j = 0; j < 512; ++j)
+      for (int k = 0; k < 4; ++k)
+        bytes[12 + 4 * j + k] = char(safeBits >> (8 * k));
+    std::ofstream(invalid.path, std::ios::binary)
+        .write(bytes.data(), bytes.size());
+    SurfaceWorld validFixture(SURFACE_ASSET_DIR "/moon.ggworld", false,
+                              invalid.path.string());
+    require(validFixture.flightAltitude(0) == 620,
+            "valid bounded flight fixture accepted");
     uint32_t nan = 0x7fc00000;
     for (int i = 0; i < 4; ++i)
       bytes[12 + i] = char(nan >> (8 * i));
     invalid.rejected(bytes);
-    float excessive = 7000;
+    float excessive = 13000;
     uint32_t bits;
     std::memcpy(&bits, &excessive, 4);
     for (int i = 0; i < 4; ++i)
@@ -70,8 +82,8 @@ int main() {
       require(length(geographicUp(p) - geographicUp(a)) < 1.e-12,
               "route closes without teleport");
       require(std::abs(dot(geographicUp(p), {1, 0, 0}) -
-                       std::cos(59.5 * pi / 180)) < .001,
-              "route stays on facing hemisphere");
+                       std::cos(59.5 * pi / 180)) < 1.e-12,
+              "flight has no sideways detours");
       maxLatitude = std::max(maxLatitude, p.latitude);
       minLatitude = std::min(minLatitude, p.latitude);
       auto v = w.sample(p.latitude, p.longitude);
@@ -92,18 +104,29 @@ int main() {
         const double epsilon = 1.e-5;
         auto northward =
             sceneAt(skyTime, 1800, true,
-                    {p.latitude + epsilon, -p.longitude, s.altitudeMeters});
+                    {p.latitude + epsilon, p.longitude, s.altitudeMeters});
         auto eastward =
             sceneAt(skyTime, 1800, true,
-                    {p.latitude, -p.longitude - epsilon, s.altitudeMeters});
+                    {p.latitude, p.longitude + epsilon, s.altitudeMeters});
         require(dot(northward.up - s.up, s.north) > 0 &&
                     dot(eastward.up - s.up, s.east) > 0,
                 "celestial tangent axes match geographic terrain axes");
         require(length(s.sunLocal - s.local(s.sun)) < 1.e-12,
                 "surface sunlight follows corrected geographic frame");
-        double expected = std::max(v.ground, v.water) + 50;
+        require(dot(s.east, normalized(cross(orbitNormal(makeOrbits()[0]),
+                                             s.up))) > .999999,
+                "east follows the moon's prograde spin");
+        double expected = w.flightAltitude(time);
+        require(expected - std::max(v.ground, v.water) >= 600,
+                "airplane flight safely clears hills and forest canopy");
+        require(std::abs(w.flightAltitude(time + 1) - expected) < 3.5,
+                "altitude changes gradually without terrain-following bobbing");
+        require(length(s.forward -
+                       travelScene(w, skyTime + 900, time).forward) < 1.e-12,
+                "camera bearing does not wiggle with accelerated orbital "
+                "libration");
         require(std::abs(s.altitudeMeters - expected) < 1.e-9,
-                "camera exactly 50m above terrain or ocean");
+                "camera uses smooth precomputed flight altitude");
         double altitude =
             (length(s.observer - s.bodies[1].position) - s.bodies[1].radius) *
             71492000.;
@@ -198,8 +221,23 @@ int main() {
               "longitude seam is continuous");
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
-    require(mesh.vertices.size() <= 100000 && mesh.indices.size() <= 600000,
+    require(mesh.vertices.size() <= 600000 && mesh.indices.size() <= 3500000,
             "bounded mesh complexity");
+    require(mesh.bounds.size() <= 8192,
+            "per-frame crop work uses bounded terrain blocks");
+    for (size_t i = 0; i < 1024; ++i) {
+      auto v = mesh.vertices[(i * 7919) % mesh.vertices.size()];
+      bool covered = false;
+      for (auto box : mesh.bounds)
+        if (v.x >= box.minimum.x && v.x <= box.maximum.x &&
+            v.y >= box.minimum.y && v.y <= box.maximum.y &&
+            v.z >= box.minimum.z && v.z <= box.maximum.z) {
+          covered = true;
+          break;
+        }
+      require(covered,
+              "conservative terrain blocks contain sampled mesh vertices");
+    }
     for (auto v : mesh.vertices) {
       require(std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z),
               "finite spherical mesh");
@@ -227,10 +265,8 @@ int main() {
     // including while the cache center trails the traveller by one second.
     for (double dt : {0., .5, 1.}) {
       auto p = w.location(16200 + dt);
-      auto sample = w.sample(p.latitude, p.longitude);
       Vec3 eye =
-          geographicUp(p) *
-              (surfaceRadius + std::max(sample.ground, sample.water) + 50.) -
+          geographicUp(p) * (surfaceRadius + w.flightAltitude(16200 + dt)) -
           geographicUp(center) * surfaceRadius;
       double x = dot(eye, geographicEast(center)),
              y = dot(eye, geographicUp(center)),
@@ -248,18 +284,25 @@ int main() {
         if (u < -1.e-6 || v < -1.e-6 || u + v > 1.000001)
           continue;
         double ground = a.y + u * (b.y - a.y) + v * (c.y - a.y);
-        require(y - ground > 40 && y - ground < 60,
-                "rendered ground clearance stays near 50 metres");
+        require(y - ground > 500,
+                "actual streamed mesh stays safely below airborne camera");
         found = true;
         break;
       }
       require(found, "streamed mesh actually covers camera position");
     }
     auto forest = buildSurfaceMesh(w, w.location(162000));
-    require(forest.trees.size() > 1000,
-            "forest contains real world-anchored tree instances");
-    for (auto t : forest.trees)
-      require(t.height > 0 && t.height < 30, "tree height below 50m clearance");
+    int canopyVertices = 0;
+    for (auto v : forest.vertices) {
+      double distance = std::hypot(v.x, v.z);
+      if (distance > 3000 || distance < 500)
+        continue;
+      double crown = v.y + distance * distance / (2 * surfaceRadius) - v.ground;
+      if (crown > 8 && crown < 22)
+        ++canopyVertices;
+    }
+    require(canopyVertices > 1000,
+            "forest is a continuous raised canopy, not spaced tree dots");
     for (double lat : {-.8, 0., .8}) {
       TravelLocation p{lat, .2};
       auto n = geographicNorth(p);

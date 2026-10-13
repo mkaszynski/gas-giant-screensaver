@@ -1,87 +1,92 @@
-# Three-day surface circuit
+# Three-day flight over the moon
 
-The default preview and native Hyprlock widget now travel over an Earth-size
-moon. The route is a **closed circuit around a nominal 59.5-degree small circle
-from the mean subplanet point**, entirely on the Jupiter-facing hemisphere.
-Cached detours of up to 5 km follow higher ground to preserve the view of Jupiter
-without increasing camera clearance. It crosses approximately
-59.5 degrees north and south. One circuit takes **259,200 real seconds (72 hours)**;
-the route clock is independent of the accelerated orbital/day/year clock.
-Default startup uses Unix time, so opening another preview does not restart the
-journey. Only the route angle wraps; astronomical clocks do not reset with it.
+The default preview and native Hyprlock widget fly over an Earth-size moon.
+The closed route is a constant-speed small circle 59.5 degrees from the mean
+subplanet point, entirely on the Jupiter-facing hemisphere. It crosses
+59.5 degrees north and south, forests, grasslands, drylands, tundra, snowy
+uplands, coasts, open water and sea ice. One circuit takes **259,200 real seconds
+(72 hours)**. Its approximately 34,500 km length gives about 133 m/s ground speed.
 
-The path is about 34,500 km long, giving approximately 133 m/s ground speed.
-Jupiter's apparent direction changes with latitude and physical orbital
-libration. The camera follows its bearing. Sampled center elevation remains
-above 16 degrees in the tested sweep. Terrain can cover the lower limb, and large rings can extend
-outside the frame; the view does not falsify their orientation or size.
+This is an airplane-height flight. There are **no sideways terrain detours**,
+and the camera does not follow every ground bump. A cached altitude envelope
+anticipates hills, stays at least 600 metres above the terrain, and limits
+normal climb/descent to 3.5 m/s. Over valleys it can be higher. A periodic cubic
+B-spline makes altitude, velocity and acceleration continuous at the loop.
 
-## Camera and world
+The flight clock is independent of the accelerated astronomical clock. Default
+startup uses Unix time; opening another preview resumes the world's journey.
+Only the route phase wraps, never the astronomical year. The camera faces the
+mean subplanet meridian rather than chasing accelerated orbital libration.
+Jupiter moves naturally within the frame and remains visible through the route.
+Large rings can extend outside the frame. Its physical size and orientation
+are preserved.
 
-One terrain query sets the camera to `max(ground, water) + 50 m`. The same
-altitude and geographic position determine astronomical parallax, eclipses,
-atmospheric scattering and cloud projection. Eastward longitude and physical
-north are translated into the legacy astronomical frame at one boundary, so
-terrain normals and sunlight agree as latitude changes. This replaces the old 2.3 m
-terrain-cache camera / 200 m celestial-camera mismatch. Viewing elevation is
-19 degrees with the existing 58-degree vertical field of view, showing more
-ground from this height. Travel is a flying viewpoint, not a walking character.
+## Camera, terrain and lighting
 
-The offline builder caches a 2048x1024 spherical continental height field,
-moisture and mountain uplift in `moon.ggworld`. It includes ocean floor,
-irregular coastlines and mountain belts. Climate classification uses latitude,
-altitude and moisture: ocean, sea ice, snowy/tundra uplands, drylands, grassland
-and forest all occur on the actual route. Climate is an idealized Earth-like
-annual map, not a coupled weather/hydrology or tidally locked climate simulation.
+The same geographic position and flight altitude feed terrain, celestial
+parallax, eclipses, atmospheric scattering and clouds. Geographic north is
+corrected at the boundary to the legacy astronomical frame; east follows the
+moon's prograde rotation. Viewing elevation is 19 degrees with the existing
+58-degree vertical field of view. There is no walking animation or camera roll.
 
-A separate 1024x1024 relief cache contains detrended measured Swiss/Skadi
-terrain at 8 m spacing. Smooth edges, two transformed samples and long-scale
-coordinate warping prevent hard tile seams. Stable world-coordinate relief
-adds detail between the broad cached landforms. Source attribution remains in
-[world credits](../assets/world/ATTRIBUTION.md). There is no photographic RGB
-landscape input.
+A cached 2048x1024 continental field supplies heights, moisture and mountain
+uplift. A 1024x1024 relief cache contains detrended measured Swiss/Skadi terrain
+at 8 m spacing. Warped and transformed samples with smooth tile boundaries
+supply terrain detail. Climate uses latitude, altitude and moisture. It is an
+idealized annual Earth-like climate, not a coupled weather or hydrology model.
+See [world credits](../assets/world/ATTRIBUTION.md) for the numerical elevation
+sources. No photographic landscape or vegetation inputs are used.
 
-## Rendering and bounds
+Forests form a continuous canopy volume, rather than widely separated dots.
+A cached 1024x1024 field stores densely packed, overlapping crown normals,
+heights and ambient occlusion. Hardware mips filter crowns at distance. Broad
+material variation breaks up color repetition. Individual close tree cutouts and their draw/shadow work have been removed: at
+this height those nearby trees cannot enter the frame. The canopy stays dense
+and relightable without spending resources on invisible branch details.
 
-A radial mesh holds 98,688 vertices and 589,824 indices, covering a 145 km
-radius. Logarithmic spacing concentrates geometry near the camera. Vertices,
-normals and camera transforms use spherical geometry; double precision is used
-before converting local coordinates to GPU floats. Area-weighted normals come
-from the actual triangles, avoiding four extra terrain samples per vertex.
-Water-wave normals retain the spherical sea normal. One background job prepares
-replacement geometry after 128 m of movement. Normal frames retain the old
-mesh until the new one is ready. Initial loading and explicit jumps over 2 km
-build synchronously. Vertex and instance buffers retain capacity across uploads;
-unchanged triangle topology uploads once. There is no runtime network or GIS
-dependency.
+Direct light uses atmospheric solar transmission, terrain shadows and eclipses.
+Soft skylight and directional, nearly white planetshine light shaded surfaces;
+planetshine uses the same irradiance-to-radiance scale as direct sunlight. Terrain cloud shadows
+sample the same spherical cloud sheet and wind offsets as the visible clouds.
+Aerial transmission uses the atmosphere's Rayleigh/Mie coefficients and height
+densities. Forest crown orientation and occlusion affect lighting instead of
+being painted highlights.
 
-Eight numerically generated conifer/deciduous cutouts are instanced at stable,
-jittered surface positions. Heights, tint, moisture, temperature and slope
-control placement; distance fading blends into far canopy color. Trees are
-billboards, not complete branch meshes. Meter-scale surface texture variation
-uses cached stochastic fields with mip filtering. Geological height includes
-measured relief; this is not a survey-accurate reproduction of a real continent.
+## Rendering bounds
 
-Terrain and vegetation have two cached 2048px depth-shadow cascades (1.8 km and
-18 km extents). Normally at most one cascade updates per frame, with 0.5/1 s
-intervals. Receiver-plane bias and raster slope offset prevent contour-like
-self-shadow aliasing. Shadow transforms retain their moon-fixed position when
-new geometry arrives.
+A spherical radial mesh holds **557,600 vertices and 3,342,336 indices**, covering
+145 km. Of 544 angular samples, 512 cover the forward 120-degree sector and 32
+cover the back sector for shadows. 1,024 radial rings concentrate resolution
+near the camera. Double precision precedes conversion to local GPU coordinates.
+Area-weighted normals come from actual triangles.
 
-Up to 4x multisample geometry coverage is resolved in linear HDR, then
-composited before exposure/tonemapping. A conservative screen bound crops the
-multisample target to the terrain region. Quantized capacity grows rather than
-reallocating when a ridge crosses a pixel row. Opaque surfaces cover celestial
-objects and solar glare; coverage blends only edges and foliage gaps. The old
-88 MiB angular landscape cache is not loaded in moving mode.
+One background worker replaces geometry after 750 m of flight. Normal frames
+retain the old mesh until the replacement is ready. Initial loading and
+explicit jumps over 2 km build synchronously. Vertex/instance buffers retain
+capacity; unchanged triangle topology uploads once. There is no runtime route
+search, horizon scan, network access or GIS dependency.
 
-Oceans use Fresnel reflection, absorbing water color, filtered wind-wave normals
-and the existing HDR celestial scene. Out-of-frustum reflection uses atmospheric
-radiance. **Coastal land/tree reflections, lakes/rivers, shoreline surf and full
-seasonal climate are not implemented in this moving-world version.** The old
-fixed alpine lake keeps its terrain reflections in comparison mode. This is a
-working terrain-travel beta, not a claim of completed photographic-quality
-vegetation or a physically complete water renderer.
+Two cached 2048-pixel shadow cascades cover 8 km and 60 km extents. Normally
+only one updates per frame, at 1/2-second intervals under a high sun and
+0.5/1-second intervals near sunrise/sunset. Receiver-plane bias and
+raster slope offset suppress self-shadow stripes. Shadows retain their physical
+world position across mesh uploads.
+
+Up to 4x multisample HDR coverage is resolved before exposure/tonemapping.
+Cached conservative bounds for 4,096 terrain blocks replace per-frame projection
+of all 557,600 vertices. This optimization preserved the checked forest image
+pixel for pixel. A conservative screen bound crops storage and resolve to terrain pixels, with
+quantized capacity to avoid reallocating for individual rows. Opaque terrain
+occludes celestial objects and solar glare; only silhouettes
+blend coverage. The old 88 MiB angular landscape cache is not loaded in flight.
+
+Ocean shading includes Fresnel sky/celestial reflections, absorbing water color,
+and filtered wind-wave normals. **Lakes/rivers, shoreline surf, coastal land/tree
+reflections and coupled seasonal climate are not implemented in this version.**
+The procedural world is fictional; it is not a surveyed Earth continent. This
+is an improved airborne biome beta, not a claim that every biome is finished
+at photographic quality. Distant rock silhouettes and water are areas for
+further visual review.
 
 ## Preview and reproduce
 
@@ -89,54 +94,44 @@ vegetation or a physically complete water renderer.
 nix build .#gas-giant-screensaver -o result-surface
 ./result-surface/bin/gas-giant-screensaver \
   --data-dir ./result-surface/share/gas-giant-screensaver \
-  --fullscreen --time 1710 --travel-time 162000
+  --fullscreen --time 510 --travel-time 162000
 ```
 
-`--travel-time` selects a point along the route, without changing sky time.
-`--travel-speed 0` holds position; a larger multiplier previews travel faster.
-Default speed is 1. Historical static captures/eclipse presets use `--fixed-view`.
-Previewing does not lock the desktop. Esc or Q closes the window.
+`--travel-time` selects a route position without changing sky time.
+`--travel-speed` changes the rate for review; default speed 1 completes the
+three-day flight. Previewing does not lock the desktop. Escape or Q closes it.
+The old fixed alpine renderer is retained only for regression comparisons.
 
-Offline regeneration uses the existing pinned elevation downloads and Python
-requirements. It never runs in the screensaver:
+Offline regeneration uses pinned elevation downloads and Python requirements:
 
 ```sh
 python scripts/bake_world.py --source /tmp/N46E007.hgt.gz \
   --swiss /tmp/terrain-swiss --output assets/world
 nix develop --command cmake -S . -B build -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release -DOBSERVATORY_BUILD_CIRCUIT_BAKER=ON
-nix develop --command cmake --build build --target circuit-baker --parallel 3
-python scripts/bake_circuit.py --executable ./build/circuit-baker --output assets/world
+  -DCMAKE_BUILD_TYPE=Release -DOBSERVATORY_BUILD_FLIGHT_BAKER=ON
+nix develop --command cmake --build build --target flight-baker --parallel 3
+python scripts/bake_flight.py --executable ./build/flight-baker --output assets/world
 python tests/test_world_bake.py
 ```
 
-The offline circuit planner samples a corridor, optimizes a continuous closed
-path and checks intervening positions against terrain along the mean Jupiter
-bearing. Its 28-degree ridge limit retains a visible part of the disk through
-orbital libration; it does not force every part of Jupiter above every mountain. It runs
-only when rebuilding world assets. Runtime reads the resulting float-offset
-cache with periodic cubic interpolation; no search or horizon scan runs per frame.
-Regenerating terrain also requires regenerating the circuit. Its manifest binds
-the route to both elevation caches by SHA-256.
+The offline flight builder samples **2,097,152 terrain positions**, computes
+an upper envelope with bounded slope, filters it, and validates interpolated
+clearance, climb rate and Jupiter visibility before replacing the asset. The
+32,768-point `GGFLY001` float-height cache is just **128 KiB**. Its periodic
+B-spline lookup takes four cached values per frame. The manifest binds it to
+both elevation caches with SHA-256. Rebuilding terrain requires rebuilding
+this profile.
 
-Assets are checked into the package. See [validation](VALIDATION.md) for the
-GPU, route continuity, clearance and performance checks.
+## Review captures
 
-## Review captures and visual follow-up
-
-These are 1920x1080 captures from the actual Nix package:
+These are actual 1920x1080 framebuffer captures:
 
 | Surface | Sky time | Route time | Capture |
 |---|---:|---:|---|
-| Ocean | 450 | 0 | [Ocean](images/surface/ocean.png) |
-| Drylands | 480 | 16200 | [Drylands](images/surface/drylands.png) |
-| Forest | 1710 | 162000 | [Forest](images/surface/forest.png) |
-| Snowy uplands | 30 | 210600 | [Snow](images/surface/snow.png) |
+| Ocean | 1740 | 0 | [Ocean](images/surface/ocean.png) |
+| Drylands | 1710 | 16200 | [Drylands](images/surface/drylands.png) |
+| Forest | 510 | 162000 | [Forest](images/surface/forest.png) |
+| Snowy uplands | 360 | 210600 | [Snow](images/surface/snow.png) |
+| Forest twilight | 960 | 162000 | [Twilight](images/surface/twilight.png) |
 
-The travel and occlusion behavior is verified, but the moving biome art is
-still visibly a beta. The forest has fairly regular spacing and cutout trees;
-snowy slopes expose the radial mesh's coarse distant triangles. More natural
-vegetation clustering and an adaptive mesh that spends geometry on visible
-ridges are the main visual follow-up. A larger uniform mesh would increase
-CPU generation and shadow work across terrain outside the view. Ocean surf,
-coastal reflections and hydrology remain the separate limits described above.
+See [validation](VALIDATION.md) for automated checks and measured performance.

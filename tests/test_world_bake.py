@@ -8,7 +8,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from bake_world import build, noise3, material
-from bake_tree_atlas import build_tree_atlas
+from bake_canopy import build_canopy
 
 
 class WorldBakeTests(unittest.TestCase):
@@ -42,13 +42,15 @@ class WorldBakeTests(unittest.TestCase):
         self.assertGreater(a.std(), 10)
         self.assertEqual(a.shape, (128, 128, 4))
 
-    def test_foliage_has_fine_cutouts(self):
-        a = build_tree_atlas()
-        np.testing.assert_array_equal(a, build_tree_atlas())
-        self.assertEqual(a.shape, (512, 2048, 4))
-        for half in (a[:, :1024], a[:, 1024:]):
-            self.assertGreater((half[:, :, 3] == 255).sum(), 20000)
-            self.assertGreater((half[:, :, 3] == 0).sum(), 100000)
+    def test_canopy_is_dense_filtered_geometry_data(self):
+        a=build_canopy(256)
+        np.testing.assert_array_equal(a,build_canopy(256))
+        self.assertEqual(a.shape,(256,256,4))
+        self.assertGreater((a[:,:,2]>50).mean(),.98)
+        self.assertGreater(a[:,:,2].std(),15)
+        normals=a[:,:,:2]/255.*2-1
+        self.assertLessEqual((normals**2).sum(axis=-1).max(),1.03)
+        self.assertGreaterEqual(a[:,:,3].min(),140)
 
     def test_committed_asset_checksums(self):
         root = Path(__file__).resolve().parents[1] / "assets/world"
@@ -62,25 +64,26 @@ class WorldBakeTests(unittest.TestCase):
             m["measured_relief"]["file_sha256"],
         )
         self.assertEqual(m["route_period_real_seconds"], 259200)
+        self.assertEqual(hashlib.sha256((root/"canopy.png").read_bytes()).hexdigest(),m["canopy_sha256"])
 
     def test_cached_circuit_is_bound_to_current_world(self):
         root = Path(__file__).resolve().parents[1] / "assets/world"
         m = json.loads((root / "manifest.json").read_text())
-        cache = (root / "circuit.ggroute").read_bytes()
+        cache = (root / "flight.ggflight").read_bytes()
         magic, count = struct.unpack("<8sI", cache[:12])
-        self.assertEqual(magic, b"GGROUTE1")
+        self.assertEqual(magic, b"GGFLY001")
         self.assertEqual(len(cache), 12 + 4 * count)
         offsets = np.frombuffer(cache[12:], "<f4")
         self.assertTrue(np.isfinite(offsets).all())
-        self.assertLessEqual(np.max(np.abs(offsets)), 4992)
-        self.assertEqual(offsets[0], 0)
-        self.assertEqual(offsets[-1], 0)
-        self.assertLessEqual(np.max(np.abs(np.diff(offsets))), 192)
-        self.assertEqual(hashlib.sha256(cache).hexdigest(), m["circuit"]["file_sha256"])
-        self.assertEqual(count, m["circuit"]["points"])
-        self.assertEqual(m["circuit"]["world_sha256"], m["elevation_sha256"])
+        self.assertGreaterEqual(offsets.min(),600)
+        self.assertLessEqual(offsets.max(),12000)
+        self.assertLess(np.max(np.abs(np.diff(np.r_[offsets,offsets[0]]))),27)
+        self.assertEqual(m["flight"]["maximum_detour_m"],0)
+        self.assertEqual(hashlib.sha256(cache).hexdigest(), m["flight"]["file_sha256"])
+        self.assertEqual(count, m["flight"]["points"])
+        self.assertEqual(m["flight"]["world_sha256"], m["elevation_sha256"])
         self.assertEqual(
-            m["circuit"]["relief_sha256"], m["measured_relief"]["file_sha256"]
+            m["flight"]["relief_sha256"], m["measured_relief"]["file_sha256"]
         )
 
 
