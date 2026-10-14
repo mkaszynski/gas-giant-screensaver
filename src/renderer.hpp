@@ -38,6 +38,10 @@ public:
     return surface ? surface->uploadBytes() : 0;
   }
 
+  size_t surfaceReflectionRevision() const {
+    return surface ? surface->reflectionRevision() : 0;
+  }
+
 private:
   struct Target {
     GLuint texture = 0, framebuffer = 0, depth = 0;

@@ -30,6 +30,9 @@ def main():
         "relief_sha256": hashlib.sha256(
             (args.output / "relief.ggrelief").read_bytes()
         ).hexdigest(),
+        "landforms_manifest_sha256": hashlib.sha256(
+            (args.output / "landforms/manifest.json").read_bytes()
+        ).hexdigest(),
         "nominal_subplanet_angle_degrees": 59.5,
         "maximum_detour_m": 0,
         "horizon_limit_degrees": 28,

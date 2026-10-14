@@ -20,14 +20,15 @@ std::vector<unsigned char> capture(Renderer &renderer, double instant) {
 }
 struct Fixture {
   std::filesystem::path path;
-  Fixture(const char *term, const char *replacement) {
+  Fixture(const char *term, const char *replacement,
+          const char *shader = "surface.frag") {
     char name[] = "/tmp/observatory-fidelity-XXXXXX";
     path = mkdtemp(name);
     auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
     std::filesystem::copy(root / "shaders", path / "shaders",
                           std::filesystem::copy_options::recursive);
     std::filesystem::create_directory_symlink(root / "assets", path / "assets");
-    auto file = path / "shaders/surface.frag";
+    auto file = path / "shaders" / shader;
     std::ifstream in(file);
     std::ostringstream text;
     text << in.rdbuf();
@@ -54,6 +55,28 @@ int main() {
       Renderer reference(Renderer::defaultDataDirectory(), {},
                          {true, 0, 162000});
 
+      {
+        Renderer complete(Renderer::defaultDataDirectory(), {},
+                          {true, 0, 162000, false, false});
+        for (double instant : {510., 900., 1200.}) {
+          auto culled = capture(reference, instant);
+          auto full = capture(complete, instant);
+          require(culled == full,
+                  "terrain/shadow block culling must preserve every pixel");
+        }
+        std::cout << "Terrain/shadow culling: pixel-identical in daylight, "
+                     "sunset and night\n";
+      }
+
+      {
+        Fixture full("if(coverage>=1.)", "if(false)", "post.frag");
+        Renderer without(full.path.string(), {}, {true, 0, 162000});
+        auto fast = capture(reference, 510), complete = capture(without, 510);
+        require(fast == complete,
+                "opaque post shortcut must preserve every display pixel");
+        std::cout << "Opaque post shortcut: pixel-identical to full sky "
+                     "computation\n";
+      }
       struct Case {
         const char *name, *term, *replacement;
         double instant;

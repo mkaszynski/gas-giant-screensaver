@@ -11,6 +11,27 @@ tilted equator. Sunlight, phases and eclipse shadows follow that
 geometry. The sky changes through a 30-minute solar day, with thin drifting
 clouds and stars emerging at dusk.
 
+## Landscape fidelity beta
+
+`feat/landscape-fidelity` adds coherent alpine/canyon/coastal terrain, cached
+physical materials, dense crown shading, filtered water glints, wet shores and
+optional coarse coastal terrain reflections. Thin clouds have shared lighting, shadows
+and reflected coverage. Geometry streams in bounded uploads without replacing
+a partially drawn mesh. See [landscape design](docs/SURFACE.md) and
+[Phase 2 scope and validation](docs/LANDSCAPE_PHASE2.md).
+
+From this feature checkout:
+
+```sh
+nix build .#gas-giant-screensaver -o result-landscape-phase2
+./result-landscape-phase2/bin/gas-giant-screensaver --data-dir ./result-landscape-phase2/share/gas-giant-screensaver --fullscreen --debug --fps 30 --time 900 --travel-time 162000
+```
+
+Explicit packaged data prevents an older executable loading shaders from a
+newer working directory. The target is 30 fps at 1080p within 30% additional
+complete-renderer cost versus Phase 1. The [feature PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
+remains separate until operator review; the NixOS source pin is unchanged.
+
 ## Earth sky and Milky Way
 
 The renderer uses Earth's J2000 sky: 8,920 catalog stars with measured

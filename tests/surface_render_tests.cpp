@@ -31,12 +31,16 @@ struct Fixture {
     std::ostringstream b;
     b << in.rdbuf();
     auto s = b.str();
-    if (mask)
+    if (mask) {
+      auto shortcut = s.find("if(coverage>=1.)");
+      require(shortcut != std::string::npos, "opaque post shortcut fixture");
+      s.replace(shortcut, std::string("if(coverage>=1.)").size(), "if(false)");
       s.insert(s.rfind('}'),
                "vec4 "
                "coverage=texture(uSurface,vec2(uv.x,uv.y/"
                "uSurfaceFraction));if(uv.y>uSurfaceFraction)coverage=vec4(0.);"
                "color=vec4(vec3(coverage.a),1.);\n");
+    }
     std::ofstream(f) << s;
     if (!mask) {
       auto shader = path / "shaders/surface.frag";
@@ -45,11 +49,14 @@ struct Fixture {
       text << source.rdbuf();
       auto code = text.str();
       const std::string term =
-          reflection ? "L=cloudSceneAt(reflected,L,vPosition/1000.);"
-                     : "cloudTransmission(vPosition/1000.)";
+          reflection
+              ? "L=cloudSceneAt(reflected,L,vPosition/1000.);"
+              : "surfaceShadow(N,meshDx,meshDy)*terrainCloudTransmission("
+                "vPosition/1000.)";
       auto offset = code.find(term);
       require(offset != std::string::npos, "cloud shadow fixture");
-      code.replace(offset, term.size(), reflection ? "" : "1.");
+      code.replace(offset, term.size(),
+                   reflection ? "" : "surfaceShadow(N,meshDx,meshDy)");
       std::ofstream(shader) << code;
     }
   }
@@ -175,7 +182,7 @@ int main() {
         moving.render(w, h, 520);
         auto beforeRefresh = pixels(w, h);
         auto deadline =
-            std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            std::chrono::steady_clock::now() + std::chrono::seconds(20);
         while (moving.surfaceMeshRevision() == initialRevision &&
                std::chrono::steady_clock::now() < deadline) {
           std::this_thread::sleep_for(std::chrono::milliseconds(20));

@@ -14,7 +14,26 @@ vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/uSceneScale;}
 // Adding wind to a large grazing ray coordinate discards subframe precision.
 vec3 tonemap(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
 #include "terrain.glsl"
-void main(){vec3 d=ray();vec3 L=sceneColor(uv);
+vec4 displayColor(vec3 L){
+ vec3 mapped=pow(tonemap(L*uExposure),vec3(1./2.2));
+ float dither=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;
+ return vec4((mapped+dither)*uOpacity,uOpacity);
+}
+void main(){
+ vec4 surface=vec4(0.);
+ if(uMovingSurface&&uv.y<=uSurfaceFraction){
+  surface=texture(uSurface,vec2(uv.x,uv.y/uSurfaceFraction));
+  // All four lanes must agree before skipping derivative-dependent sky work.
+  // Fetch aligned coverage texels; partial silhouettes keep the full sky pass.
+  ivec2 q=ivec2(floor(gl_FragCoord.xy*.5))*2;
+  ivec2 size=textureSize(uSurface,0);
+  if(q.x+1<size.x&&q.y+1<size.y){
+   float coverage=min(min(texelFetch(uSurface,q,0).a,texelFetch(uSurface,q+ivec2(1,0),0).a),
+                      min(texelFetch(uSurface,q+ivec2(0,1),0).a,texelFetch(uSurface,q+ivec2(1,1),0).a));
+   if(coverage>=1.){color=displayColor(surface.rgb/uSceneScale);return;}
+  }
+ }
+ vec3 d=ray();vec3 L=sceneColor(uv);
  L=cloudScene(d,L);
  // Compact optical point-spread approximation. No blur pyramid or extra fullscreen passes.
  // Solar visibility includes eclipses; ridge/cloud coverage is evaluated at the light source.
@@ -28,8 +47,6 @@ void main(){vec3 d=ray();vec3 L=sceneColor(uv);
  L+=transmission(uTrans,uObserverHeight,uSun.y)*halo*solarVisibility;
  // Terrain coverage is premultiplied before mips, with no thresholding.
  if(uMovingSurface){
-  vec4 surface=texture(uSurface,vec2(uv.x,uv.y/uSurfaceFraction));
-  if(uv.y>uSurfaceFraction)surface=vec4(0.);
   L=L*(1.-surface.a)+surface.rgb/uSceneScale;
  }else{
  vec4 mountain=terrainSample(d);
@@ -38,7 +55,5 @@ void main(){vec3 d=ray();vec3 L=sceneColor(uv);
  float ridgeCoverage=mountain.a;
  L=ridgeCoverage>=1.?terrain:mix(L,terrain,ridgeCoverage);}
  }
- vec3 mapped=pow(tonemap(L*uExposure),vec3(1./2.2));
- float dither=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;
- color=vec4((mapped+dither)*uOpacity,uOpacity);
+ color=displayColor(L);
 }

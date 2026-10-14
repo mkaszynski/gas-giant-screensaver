@@ -12,16 +12,18 @@
     "spacing_m": 16,
     "landform_span_m": 32768,
     "processing": "Periodic-plus-smooth boundary correction; coherent measured ridges and valleys",
-    "material_sha256": "ff7226b4b0e44c6f6948e565072899224cea397bfecc0362ff79d5fb6de9d0f9",
+    "material_sha256": "5b6a26abdd2ed772c752a21ee82586dc30a0c363cbf9d2a31c5287ad6d96284e",
     "file_sha256": "5e9d52b21a50b6316dbdc55e9468e13936a1b0924f8612a6c9f848580a140008",
-    "source_manifest": "../terrain/sources.json"
+    "source_manifest": "../terrain/sources.json",
+    "normal_field": "Full measured height gradient; continental and canopy normals separate"
   },
   "flight": {
     "format": "GGFLY001",
     "points": 32768,
-    "file_sha256": "fa829d6d37235b3d3b63f5cd8464ff95413cf53998bebd9bd9d3a00e59e69b93",
+    "file_sha256": "c2fa97b045c0003ebedf7f29a973e72fabfeb0d1d371919cfe5749b3cb92edbd",
     "world_sha256": "2c0a1e7d710e7d2caa57048fbe0260c4076e0b3c7132b965756bb476fb0aa394",
     "relief_sha256": "5e9d52b21a50b6316dbdc55e9468e13936a1b0924f8612a6c9f848580a140008",
+    "landforms_manifest_sha256": "3cd352014b328fee3f35b78772237f04a3f539a7268d7f289f26b5a37cd22ba8",
     "nominal_subplanet_angle_degrees": 59.5,
     "maximum_detour_m": 0,
     "horizon_limit_degrees": 28,
@@ -31,5 +33,6 @@
     "validation_samples": 2097152
   },
   "canopy_model": "Touching broadleaf lobes and tapered conifers; height-derived normals and cavity occlusion",
-  "crown_shadows_manifest_sha256": "b1f28d2b4ffab7d5c26f4e9e3096aad038c175f95bc5a12c80f28d68700f825a"
+  "crown_shadows_manifest_sha256": "b1f28d2b4ffab7d5c26f4e9e3096aad038c175f95bc5a12c80f28d68700f825a",
+  "landforms_manifest_sha256": "3cd352014b328fee3f35b78772237f04a3f539a7268d7f289f26b5a37cd22ba8"
 }

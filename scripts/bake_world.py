@@ -108,11 +108,10 @@ def periodic_terrain(heights):
 
 
 def relief_material(heights, spacing):
-    """Residual slope, landform curvature and terrain skylight occlusion."""
+    """Full measured slopes, landform curvature and terrain sky occlusion."""
     h = np.asarray(heights, dtype=np.float64)
-    residual = h - gaussian_filter(h, 2.0, mode="wrap")
-    dx = (np.roll(residual, -1, axis=1) - np.roll(residual, 1, axis=1)) / (2 * spacing)
-    dz = (np.roll(residual, -1, axis=0) - np.roll(residual, 1, axis=0)) / (2 * spacing)
+    dx = (np.roll(h, -1, axis=1) - np.roll(h, 1, axis=1)) / (2 * spacing)
+    dz = (np.roll(h, -1, axis=0) - np.roll(h, 1, axis=0)) / (2 * spacing)
     length = np.sqrt(1 + dx * dx + dz * dz)
     # Valley/ridge signal at ~250 m, independent of the small crown texture.
     broad = gaussian_filter(h, 8.0, mode="wrap")
@@ -188,6 +187,9 @@ def main():
         "crown_shadows_manifest_sha256": hashlib.sha256(
             (a.output / "crown-shadows/manifest.json").read_bytes()
         ).hexdigest(),
+        "landforms_manifest_sha256": hashlib.sha256(
+            (a.output / "landforms/manifest.json").read_bytes()
+        ).hexdigest(),
         "elevation_sha256": hashlib.sha256(data).hexdigest(),
     }
     manifest["measured_relief"] = {
@@ -202,6 +204,7 @@ def main():
             (a.output / "relief.ggrelief").read_bytes()
         ).hexdigest(),
         "source_manifest": "../terrain/sources.json",
+        "normal_field": "Full measured height gradient; continental and canopy normals separate",
     }
     (a.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 

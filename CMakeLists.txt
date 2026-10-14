@@ -127,3 +127,8 @@ add_test(NAME native-frame-pacing COMMAND frame-pacing-tests)
 
 add_executable(fidelity-render-tests tests/fidelity_render_tests.cpp)
 target_link_libraries(fidelity-render-tests PRIVATE observatory PkgConfig::GLFW)
+
+add_executable(water-render-tests tests/water_render_tests.cpp)
+target_link_libraries(water-render-tests PRIVATE observatory PkgConfig::GLFW)
+add_test(NAME cli-no-terrain-reflections COMMAND gas-giant-screensaver --no-terrain-reflections --help)
+add_test(NAME cli-terrain-reflections COMMAND gas-giant-screensaver --terrain-reflections --help)

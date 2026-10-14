@@ -1,6 +1,55 @@
 # Validation
 
-## Three-day airborne biomes
+## Landscape fidelity beta
+
+The refinement on `feat/landscape-fidelity` targets 30 fps at 1080p, with a
+30% complete-renderer cost allowance against frozen Phase 1. It remains a beta;
+operator review and frame-tail acceptance precede merging or changing the NixOS
+source pin. The complete measurement is retained in
+[landscape-phase2-resolution-benchmark.json](landscape-phase2-resolution-benchmark.json).
+
+The visible mesh has 512,800 vertices with 1.5× angular and roughly 2× near-view
+radial resolution versus the earlier beta. Independent triangle-interior checks
+use the cached elevation field, rather than merely counting vertices:
+
+| Height fixture | Earlier beta mean error | Refined mean error |
+|---|---:|---:|
+| Dryland | 5.087 m | 2.259 m |
+| Forest | 2.537 m | 1.134 m |
+| Coast | 0.076 m | 0.044 m |
+
+Full cached relief gradients give small gullies and cliffs consistent lighting
+without duplicating the mesh slope. Coarse warm-water interiors retain every
+fine boundary edge. Ocean/coast day/night comparison images differ by at most
+one display code; land and the horizon band retain fine geometry. Frustum
+culling preserves every pixel in day/sunset/night hardware and Mesa tests.
+
+Three alternating 180-frame runs per scene at 1920×1080 / 30 fps measured the
+following medians of whole-renderer run summaries on AMD Renoir:
+
+| Scene | Phase 1 median | Beta median | Added cost | Beta p95 |
+|---|---:|---:|---:|---:|
+| Ocean | 11.652 ms | 12.155 ms | 4.3% | 26.540 ms |
+| Forest | 11.025 ms | 13.076 ms | 18.6% | 22.066 ms |
+| Snow | 10.859 ms | 11.620 ms | 7.0% | 20.010 ms |
+| Coast | 12.118 ms | 15.102 ms | 24.6% | 36.024 ms |
+
+The median cost allowance passes. The p95 allowance and zero-missed-deadline
+requirement **do not pass** on the shared desktop: the candidate recorded
+26 / 12 / 5 / 25 steady frames over 33.33 ms across the three ocean / forest /
+snow / coast runs, excluding the first ten startup frames in each. One ocean
+run had a 28.57 ms median; it remains in the raw report. These figures do not
+establish an uninterrupted 30 fps guarantee. Do not discard the slow runs or
+replace the frozen baseline. Coastal terrain reflections were over budget and
+are opt-in (`--terrain-reflections`) in the refined profile.
+
+The local gate contains 40 CPU/CLI checks, 38 offline model/cache tests, and 13
+GPU executables exercised on hardware and Mesa. The actual CSV benchmark is
+also tested for bounded uploads and file failures. Existing astronomical,
+opacity, antialiasing, cloud, shadow, debug and route-loop checks remain in the
+gate. The source PR stays draft while performance acceptance is outstanding.
+
+## Three-day airborne biomes (Phase 1)
 
 The default scene is the 72-hour flight documented in [SURFACE.md](SURFACE.md).
 Historical static captures below use `--fixed-view`. Moving latitude/longitude

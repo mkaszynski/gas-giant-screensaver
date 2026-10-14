@@ -7,13 +7,15 @@
 namespace observatory {
 class SurfaceRenderer {
 public:
-  explicit SurfaceRenderer(const std::string &root);
+  explicit SurfaceRenderer(const std::string &root, bool reflections = false,
+                           bool culling = true, bool waterLod = true);
   ~SurfaceRenderer();
   SurfaceRenderer(const SurfaceRenderer &) = delete;
   const SurfaceWorld &world() const { return terrain; }
   double coverageFraction() const { return fraction; }
   size_t meshRevision() const { return revision; }
   size_t shadowRevision() const { return shadowDraws; }
+  size_t reflectionRevision() const { return reflectionDraws; }
   size_t uploadBytes() const { return lastUploadBytes; }
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
@@ -29,6 +31,14 @@ private:
          material = 0, canopy = 0, reliefMaterial = 0, physicalAlbedo = 0,
          physicalNormal = 0;
   GLuint crownShadows = 0;
+  GLuint reflectionProgram = 0, reflectionIndices = 0;
+  GLuint reflectionFbo = 0, reflectionTexture = 0, reflectionDepth = 0;
+  int reflectionWidth = 0, reflectionHeight = 0;
+  size_t reflectionIndexCount = 0, reflectionDraws = 0;
+  bool reflectionsEnabled = true;
+  bool cullingEnabled = true;
+  bool waterLodEnabled = true;
+  GLuint waterIndices = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, resolved = 0,
          texture = 0;
   GLuint shadowFbo[4]{}, shadowTex[4]{};
@@ -45,8 +55,10 @@ private:
   void stageUpload();
   void vertexAttributes();
   void resize(int, int);
+  void resizeReflection(int, int);
   void releaseTargets();
   void shadows(const Scene &, Vec3, double, double);
   void shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye);
+  void draw(const std::array<SurfacePlane, 6> &, bool waterLod = false);
 };
 } // namespace observatory

@@ -354,7 +354,9 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   }
   giant = imageTexture("giant.png");
   if (surfaceOptions.enabled) {
-    surface = std::make_unique<SurfaceRenderer>(root);
+    surface = std::make_unique<SurfaceRenderer>(
+        root, surfaceOptions.reflections, surfaceOptions.culling,
+        surfaceOptions.waterLod);
     unsigned char empty[4]{};
     glGenTextures(1, &mountains);
     textures.push_back(mountains);

@@ -5,38 +5,83 @@ out vec4 color;
 #include "atmosphere.glsl"
 #include "scene.glsl"
 #include "clouds.glsl"
-uniform highp sampler2D uScene;
-uniform sampler2D uMaterial,uCanopy,uReliefMaterial;
+uniform highp sampler2D uScene,uLandReflection;
+uniform bool uLandReflectionEnabled;
+uniform sampler2D uMaterial,uCanopy;
+uniform highp sampler2DArray uReliefMaterial;
+in vec2 vLandforms;
 uniform highp sampler2DArray uPhysicalAlbedo,uPhysicalNormal,uCrownShadows;
 uniform highp sampler2DShadow uShadowNear,uShadowFar,uShadowNearNext,uShadowFarNext;
 uniform mat4 uShadowMatrix[4];
 uniform ivec4 uShadowSlots;
 uniform vec2 uShadowBlend;
-uniform vec2 uMaterialOffset,uWaveOffset,uCanopyOffset;
+uniform vec2 uMaterialOffset,uCanopyOffset;
+uniform vec4 uWaves[4];
 uniform vec2 uReliefOffset;
-uniform float uReliefSpan,uReliefLongitudeScale;
+uniform float uReliefSpan,uReliefLongitudeScale,uGeologyPhase;
 uniform mat3 uMeshFrame;
 uniform float uSceneScale;
 uniform vec3 uPlanetDirection;
 uniform bool uTerrainShadows;
 in vec2 vMaterial;
 in vec2 vRelief;
-in float vUplift;
-vec3 oceanRadiance(vec3 d,vec3 normal,vec2 wave,float amplitudeX,float amplitudeY){
- vec3 wn=normalize(normal+vec3(sin(mod(wave.x,2.*PI)+uWaveOffset.x)*amplitudeX,0.,sin(mod(wave.y,2.*PI)+uWaveOffset.y)*amplitudeY));
+in float vReliefStrength;
+float frameConfidence(vec2 p){return smoothstep(0.,.04,min(min(p.x,1.-p.x),min(p.y,1.-p.y)));}
+float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0);
+vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude){
+ vec2 slope=vec2(0.);float unresolved=0.;
+ for(int i=0;i<4;++i){
+  slope+=normalize(uWaves[i].xy)*sin(mod(phase[i],2.*PI)+uWaves[i].z)*amplitude[i];
+  unresolved+=(uWaves[i].w*uWaves[i].w-amplitude[i]*amplitude[i])*.5;
+ }
+ vec3 wn=normalize(normal+uMeshFrame*vec3(slope.x*uReliefLongitudeScale,0.,slope.y));
  vec3 reflected=reflect(d,wn);float z=dot(reflected,uForward);vec3 L=sky(reflected);
  if(z>0.){vec2 p=.5+.5*vec2(dot(reflected,uRight)/(z*uTanFov*uResolution.x/uResolution.y),dot(reflected,uUp)/(z*uTanFov));
-  if(all(greaterThanEqual(p,vec2(0)))&&all(lessThanEqual(p,vec2(1))))L=texture(uScene,p).rgb/uSceneScale;}
- float angleSquared=dot(reflected-uSun,reflected-uSun);
- L+=transmission(uTrans,0.,uSun.y)*uEclipse*smoothstep(-.006,.008,uSun.y)*.38*exp(-.5*angleSquared/(.009*.009));
+  if(all(greaterThanEqual(p,vec2(0)))&&all(lessThanEqual(p,vec2(1))))L=mix(L,texture(uScene,p).rgb/uSceneScale,frameConfidence(p));}
+ // Solar energy is integrated by the filtered BRDF below. Remove the sharp
+ // background solar disk from this sample to avoid counting it twice.
+ if(dot(reflected,uSun)>cos(.006))L=sky(reflected);
  L=cloudSceneAt(reflected,L,vPosition/1000.);
+ if(uLandReflectionEnabled){
+  vec3 rf=vec3(uForward.x,-uForward.y,uForward.z),rr=vec3(uRight.x,-uRight.y,uRight.z),ru=vec3(uUp.x,-uUp.y,uUp.z);
+  float rz=dot(reflected,rf);
+  if(rz>0.){
+   vec2 p=.5+.5*vec2(dot(reflected,rr)/(rz*uTanFov*1.5*uResolution.x/uResolution.y),dot(reflected,ru)/(rz*uTanFov*1.5));
+   if(all(greaterThanEqual(p,vec2(0)))&&all(lessThanEqual(p,vec2(1)))){
+    vec4 ground=texture(uLandReflection,p)*frameConfidence(p);L=L*(1.-ground.a)+ground.rgb/uSceneScale;
+   }
+  }
+ }
  float fresnel=.0204+.9796*pow(1.-max(0.,dot(-d,wn)),5.);
- vec3 body=vec3(.003,.013,.016)*(sky(vec3(0,1,0))*.8+vec3(.00003)/uDarkGain);
- return L*fresnel+body*(1.-fresnel);
+ float depth=max(0.,-vProperties.x);
+ vec3 attenuation=exp(-vec3(.45,.14,.08)*depth);
+ vec3 seaSolar=transmission(uTrans,0.,uSun.y)*uEclipse;
+ vec3 illumination=sky(vec3(0,1,0))+seaSolar*max(0.,uSun.y)/PI+vec3(.00003)/uDarkGain;
+ vec3 body=mix(vec3(.003,.013,.016),vec3(.18,.145,.09),attenuation)*illumination;
+ float roughness=max(.09,pow(max(0.,unresolved),.25));
+ float spec=dielectricSpecular(wn,-d,uSun,roughness,.0204);
+ vec3 glint=seaSolar*max(dot(wn,uSun),0.)*spec;
+ // Attenuating imperceptible highlights would spend five cloud lookups on
+ // nearly every water pixel. Keep the BRDF tail, skip only its tiny shadow term.
+ if(max(max(glint.r,glint.g),glint.b)*uExposure>.0001)glint*=cloudTransmission(vPosition/1000.);
+ return L*fresnel+body*(1.-fresnel)+glint;
 }
 vec3 aerialTransmission(float distance){
  float meanHeight=max(0.,uObserverHeight+.0005*vPosition.y+dot(vPosition.xz,vPosition.xz)/(4.*6371000000.));
+ #ifdef SURFACE_REFLECTION
+ // Mirror geometry lies below the local sea plane; the real light path stays
+ // above it. Integrate the absolute-height segments instead of negative air.
+ float groundHeight=max(0.,vPosition.y*.001-uObserverHeight+dot(vPosition.xz,vPosition.xz)/(2.*6371000000.));
+ meanHeight=(uObserverHeight*uObserverHeight+groundHeight*groundHeight)/(2.*max(.001,uObserverHeight+groundHeight));
+ #endif
  return exp(-distance*.001*(betaR*exp(-meanHeight/8.)+betaM*1.11*exp(-meanHeight/1.2)));
+}
+float terrainCloudTransmission(vec3 point){
+ #ifdef SURFACE_REFLECTION
+ return cloudTransmissionAt(point,-uObserverHeight);
+ #else
+ return cloudTransmission(point);
+ #endif
 }
 float shadowAt(highp sampler2DShadow tex,vec3 p,float bias,vec3 qx,vec3 qy){
  vec3 q=p*.5+.5;
@@ -73,6 +118,7 @@ float surfaceShadow(vec3 N,vec3 dx,vec3 dy){
 // Dielectric GGX, energy-conserving Fresnel and correlated Smith visibility.
 // Roughness includes normal variation so distant highlights do not shimmer.
 float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0){
+ if(dot(N,V)<=0.||dot(N,L)<=0.)return 0.;
  vec3 H=normalize(V+L);float NoV=max(.001,dot(N,V)),NoL=max(.001,dot(N,L));
  float NoH=max(0.,dot(N,H)),VoH=max(0.,dot(V,H));
  float alpha=roughness*roughness,a2=alpha*alpha;
@@ -81,14 +127,15 @@ float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0){
  float visibility=.5/(NoL*sqrt(NoV*NoV*(1.-a2)+a2)+NoV*sqrt(NoL*NoL*(1.-a2)+a2));
  return D*visibility*(f0+(1.-f0)*pow(1.-VoH,5.));
 }
-void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,float snow,
+void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,float snow,float soil,
                       out vec3 albedo,out vec3 normal,out float roughness,out float cavity){
- float weights[5];weights[0]=rock*(1.-snow);
- weights[1]=(1.-rock)*(1.-snow)*(1.-dry)*(1.-cold);
- weights[2]=(1.-rock)*(1.-snow)*dry*(1.-cold);
- weights[3]=(1.-rock)*(1.-snow)*cold;weights[4]=snow;
+ float weights[6];weights[0]=rock*(1.-snow);
+ weights[1]=(1.-rock)*(1.-snow)*(1.-soil)*(1.-dry)*(1.-cold);
+ weights[2]=(1.-rock)*(1.-snow)*(1.-soil)*dry*(1.-cold);
+ weights[3]=(1.-rock)*(1.-snow)*(1.-soil)*cold;weights[4]=snow;
+ weights[5]=(1.-rock)*(1.-snow)*soil;
  albedo=vec3(0.);normal=vec3(0.);roughness=0.;cavity=0.;
- for(int layer=0;layer<5;++layer){
+ for(int layer=0;layer<6;++layer){
   float w=weights[layer];if(w<=.0001)continue;
   vec4 a=textureGrad(uPhysicalAlbedo,vec3(uv,float(layer)),dx,dy);
   vec4 n=textureGrad(uPhysicalNormal,vec3(uv,float(layer)),dx,dy);
@@ -99,8 +146,9 @@ void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,fl
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
- vec2 phase=vec2(vMaterial.x*.17+vMaterial.y*.23*.4,vMaterial.y*.23-vMaterial.x*.17*.35),foot=fwidth(phase);
- vec2 amplitude=exp(-foot*foot*.5)*vec2(.003,.002);
+ vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
+ vec4 foot=fwidth(phase);
+ vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
  // Sphere normal avoids coastal land slopes tilting the sea reflection.
  vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
  // Pure water avoids land's shadow/normal/material work. Mixed shore pixels
@@ -110,16 +158,28 @@ void main(){
  vec2 mdx=dFdx(material),mdy=dFdy(material),bdx=dFdx(broadUV),bdy=dFdy(broadUV);
  vec2 rdx=dFdx(reliefUV),rdy=dFdy(reliefUV),cdx=dFdx(canopyUV),cdy=dFdy(canopyUV);
  vec3 meshDx=dFdx(vMesh),meshDy=dFdy(vMesh);
+ #ifdef SURFACE_REFLECTION
+ if(water>.001)discard;
+ #endif
  if(water>=1.){
-  vec3 L=oceanRadiance(d,waterNormal,phase,amplitude.x,amplitude.y),T=aerialTransmission(distance);
+  vec3 L=oceanRadiance(d,waterNormal,phase,amplitude),T=aerialTransmission(distance);
   color=vec4(min((L*T+sky(d)*(1.-T))*uSceneScale,vec3(60000.)),1.);return;
  }
  vec3 N=normalize(vNormal);
- vec4 landform=textureGrad(uReliefMaterial,reliefUV,rdx,rdy);
- float reliefStrength=(.65+.75*vUplift)*smoothstep(2.,120.,vProperties.x);
- vec2 residual=landform.rg*2.-1.;
- float vertical=sqrt(max(.03,1.-dot(residual,residual)));
- N=normalize(N/max(.05,N.y)+uMeshFrame*vec3(residual.x*uReliefLongitudeScale,0,residual.y)*reliefStrength/vertical);
+ vec3 weights=vec3(max(0.,1.-vLandforms.x-vLandforms.y),vLandforms);
+ vec4 landform=vec4(0.);
+ vec2 reliefSlope=vec2(0.);
+ for(int i=0;i<3;++i){if(weights[i]>.0001){
+  vec4 field=textureGrad(uReliefMaterial,vec3(reliefUV,float(i)),rdx,rdy);
+  vec2 encoded=field.rg*2.-1.;
+  reliefSlope+=weights[i]*encoded/sqrt(max(.03,1.-dot(encoded,encoded)));
+  landform+=weights[i]*field;
+ }}
+ float reliefStrength=vReliefStrength;
+ // Vertex normals contain continental/canopy curvature only. The full DEM
+ // gradient restores small gullies without double-counting geometry slopes.
+ vec2 correction=reliefSlope*vec2(uReliefLongitudeScale,1.)*reliefStrength;
+ N=normalize(N/max(.05,N.y)+uMeshFrame*vec3(correction.x,0.,correction.y));
 
 
  vec4 broad=textureGrad(uMaterial,broadUV,bdx,bdy);
@@ -130,8 +190,15 @@ void main(){
  float cold=1.-smoothstep(-9.,3.,temp);
  float snow=(1.-smoothstep(-7.,1.,temp))*smoothstep(.3,.8,N.y);
  vec3 albedo,materialNormal;float roughness,cavity;
- physicalMaterial(material,mdx,mdy,dry,cold,rock,snow,albedo,materialNormal,roughness,cavity);
+ float soil=smoothstep(.52,.76,moisture)*(1.-smoothstep(.35,.55,landform.b));
+ physicalMaterial(material,mdx,mdy,dry,cold,rock,snow,soil,albedo,materialNormal,roughness,cavity);
  albedo*=mix(.84,1.12,broad.r);
+ // Regional mineral tint and tilted sediment beds follow world height. Their
+ // footprint filters the bands instead of turning distant cliffs into stripes.
+ float beddingPhase=(vProperties.x+vMaterial.x*.03+vMaterial.y*.015)*(2.*PI/50.)+uGeologyPhase;
+ float beddingFoot=fwidth(beddingPhase);
+ float bedding=sin(beddingPhase)*exp(-.5*beddingFoot*beddingFoot);
+ albedo*=mix(vec3(1.),vec3(1.32,.79,.52)*(1.+bedding*.10),rock*vLandforms.x);
  albedo*=mix(vec3(.82,.94,.81),vec3(1.10,1.05,.96),landform.b)*(1.-snow)+vec3(snow);
  float forest=smoothstep(.35,.63,moisture)*smoothstep(-5.,8.,temp)*(1.-smoothstep(1800.,2600.,vProperties.x));
  forest*=1.-smoothstep(.18,.40,slope);
@@ -159,7 +226,7 @@ void main(){
                    solarElevation<55.?mix(visibilityLevels.g,visibilityLevels.b,(solarElevation-25.)/30.):
                    mix(visibilityLevels.b,visibilityLevels.a,clamp((solarElevation-55.)/30.,0.,1.));
  }
- float visibility=surfaceShadow(N,meshDx,meshDy)*cloudTransmission(vPosition/1000.)*uEclipse;
+ float visibility=surfaceShadow(N,meshDx,meshDy)*terrainCloudTransmission(vPosition/1000.)*uEclipse;
  visibility*=mix(1.,canopyShade,forest);
  vec3 irradiance=transmission(uTrans,uObserverHeight,uSun.y)*visibility;
  float NoL=max(dot(N,uSun),0.);
@@ -173,9 +240,12 @@ void main(){
  land+=albedo*irradiance*leafBack*.12;
  float variance=min(.25,dot(dFdx(N),dFdx(N))+dot(dFdy(N),dFdy(N)));
  roughness=sqrt(min(1.,roughness*roughness+variance));
- float spec=dielectricSpecular(N,-d,uSun,max(.40,roughness),.04);
+ float wetness=(1.-smoothstep(.4,6.,vProperties.x))*(1.-cold);
+ land*=mix(1.,.62,wetness);
+ roughness=mix(roughness,.28,wetness);
+ float spec=dielectricSpecular(N,-d,uSun,max(.28,roughness),.04);
  land+=irradiance*NoL*spec*mix(1.,.35,forest);
- if(water>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude.x,amplitude.y),water);
+ if(water>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude),water);
  vec3 T=aerialTransmission(distance);
  land=land*T+sky(d)*(1.-T);
  color=vec4(min(land*uSceneScale,vec3(60000.)),1.);

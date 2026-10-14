@@ -12,6 +12,16 @@ from bake_canopy import build_canopy, crown_visibility
 
 
 class WorldBakeTests(unittest.TestCase):
+    def test_relief_normals_retain_broad_gully_slopes(self):
+        x = np.arange(256) * 2 * np.pi / 256
+        h = np.broadcast_to(200 * np.sin(x)[None, :], (256, 256))
+        field = relief_material(h, 16.0)
+        slope = (np.roll(h, -1, axis=1) - np.roll(h, 1, axis=1)) / 32.0
+        nx = field[..., 0] / 255.0 * 2 - 1
+        expected = -slope / np.sqrt(1 + slope * slope)
+        np.testing.assert_allclose(nx, expected, atol=1 / 255.0)
+        self.assertGreater(nx.std(), 0.20)
+
     def test_boundary_correction_preserves_broad_landforms(self):
         a = np.arange(128) * 2 * np.pi / 128
         h = 600 * np.cos(a)[:, None] + 300 * np.sin(a)[None, :]
@@ -142,6 +152,13 @@ class WorldBakeTests(unittest.TestCase):
         self.assertEqual(m["flight"]["maximum_detour_m"], 0)
         self.assertEqual(hashlib.sha256(cache).hexdigest(), m["flight"]["file_sha256"])
         self.assertEqual(count, m["flight"]["points"])
+        self.assertEqual(
+            m["flight"]["landforms_manifest_sha256"], m["landforms_manifest_sha256"]
+        )
+        self.assertEqual(
+            hashlib.sha256((root / "landforms/manifest.json").read_bytes()).hexdigest(),
+            m["landforms_manifest_sha256"],
+        )
         self.assertEqual(m["flight"]["world_sha256"], m["elevation_sha256"])
         self.assertEqual(
             m["flight"]["relief_sha256"], m["measured_relief"]["file_sha256"]

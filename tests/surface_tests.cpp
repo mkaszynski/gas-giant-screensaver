@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <set>
 #include <stdexcept>
 using namespace observatory;
@@ -75,6 +76,7 @@ int main() {
     require(travelPeriod == 259200., "route takes precisely three real days");
     std::set<std::string> biomes;
     double maxLatitude = 0, minLatitude = 0, minGiant = 1;
+    bool aridRelief = false, coastalRelief = false, alpineRelief = false;
     for (int i = 0; i < 8192; ++i) {
       double time = travelPeriod * i / 8192.;
       auto p = w.location(time);
@@ -87,6 +89,12 @@ int main() {
       maxLatitude = std::max(maxLatitude, p.latitude);
       minLatitude = std::min(minLatitude, p.latitude);
       auto v = w.sample(p.latitude, p.longitude);
+      require(v.landforms[0] >= 0 && v.landforms[1] >= 0 &&
+                  v.landforms[0] + v.landforms[1] <= 1.000001,
+              "biome relief weights conserve height and lighting blends");
+      aridRelief |= v.ground > 0 && v.landforms[0] > .7;
+      coastalRelief |= v.ground > 0 && v.landforms[1] > .7;
+      alpineRelief |= v.ground > 0 && v.landforms[0] + v.landforms[1] < .3;
       require(std::isfinite(v.ground) && std::isfinite(v.temperature),
               "finite surface sample");
       if (v.ground < 0)
@@ -219,12 +227,51 @@ int main() {
       require(std::abs(w.elevation(lat, -pi + 1.e-9) -
                        w.elevation(lat, pi - 1.e-9)) < .01,
               "longitude seam is continuous");
+    require(aridRelief && coastalRelief && alpineRelief,
+            "flight actually crosses all three coherent landform types");
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
-    require(mesh.vertices.size() <= 280000 && mesh.indices.size() <= 1700000,
+    require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");
     require(mesh.bounds.size() <= 8192,
             "per-frame crop work uses bounded terrain blocks");
+    uint32_t end = 0;
+    for (auto box : mesh.bounds) {
+      require(box.firstIndex == end && box.indexCount > 0 &&
+                  box.indexCount % 3 == 0,
+              "contiguous blocks cover complete triangles without gaps");
+      for (uint32_t i = box.firstIndex; i < box.firstIndex + box.indexCount;
+           ++i) {
+        const auto &v = mesh.vertices.at(mesh.indices.at(i));
+        require(v.x >= box.minimum.x && v.x <= box.maximum.x &&
+                    v.y >= box.minimum.y && v.y <= box.maximum.y &&
+                    v.z >= box.minimum.z && v.z <= box.maximum.z,
+                "draw block contains every indexed vertex conservatively");
+      }
+      end += box.indexCount;
+    }
+    require(end == mesh.indices.size(), "no terrain triangles lost in blocks");
+    auto all = surfaceDrawRanges(mesh, {});
+    require(all.size() == 1 && all[0].firstIndex == 0 &&
+                all[0].indexCount == mesh.indices.size(),
+            "unrestricted culling coalesces the entire mesh into one draw");
+    std::array<SurfacePlane, 6> nowhere{};
+    nowhere[0] = {{0, 0, 0}, -1.};
+    require(surfaceDrawRanges(mesh, nowhere).empty(),
+            "empty frustum draws no terrain");
+    int detailRings = 0;
+    for (int row = 1; row < surfaceRadialSamples; ++row) {
+      const auto &v = mesh.vertices[row * surfaceAngularSamples];
+      const auto &next = mesh.vertices[(row + 1) * surfaceAngularSamples];
+      double radius = std::hypot(v.x, v.z);
+      if (radius >= 3500 && radius <= 25000) {
+        require(std::hypot(next.x - v.x, next.z - v.z) / radius < .0065,
+                "visible slopes retain fine radial height sampling");
+        ++detailRings;
+      }
+    }
+    require(detailRings > 300,
+            "hundreds of terrain rows resolve the visible aircraft footprint");
     for (size_t i = 0; i < 1024; ++i) {
       auto v = mesh.vertices[(i * 7919) % mesh.vertices.size()];
       bool covered = false;
@@ -248,6 +295,32 @@ int main() {
     auto ocean = buildSurfaceMesh(w, w.location(0));
     require(!ocean.hasLand,
             "open ocean skips unneeded terrain-shadow rendering");
+    require(ocean.waterIndices.size() < ocean.indices.size() / 3,
+            "deep water omits unneeded interior triangles");
+    for (size_t block : {size_t(0), size_t(1700), size_t(3167)}) {
+      const auto &box = ocean.bounds.at(block);
+      using Edge = std::pair<uint32_t, uint32_t>;
+      auto boundary = [](const std::vector<uint32_t> &indices, uint32_t first,
+                         uint32_t count) {
+        std::map<Edge, int> counts;
+        for (uint32_t i = first; i < first + count; i += 3)
+          for (int k = 0; k < 3; ++k) {
+            auto a = indices[i + k], b = indices[i + (k + 1) % 3];
+            ++counts[std::minmax(a, b)];
+          }
+        std::set<Edge> edges;
+        for (auto [edge, count] : counts) {
+          require(count <= 2, "water mesh has no non-manifold overlaps");
+          if (count == 1)
+            edges.insert(edge);
+        }
+        return edges;
+      };
+      require(boundary(ocean.indices, box.firstIndex, box.indexCount) ==
+                  boundary(ocean.waterIndices, box.waterFirstIndex,
+                           box.waterIndexCount),
+              "coarse water retains every fine boundary edge without cracks");
+    }
     int curvedWaterNormals = 0;
     for (auto v : ocean.vertices) {
       double radius = std::hypot(v.x, v.z);
@@ -292,6 +365,42 @@ int main() {
         break;
       }
       require(found, "streamed mesh actually covers camera position");
+    }
+    // Compare actual triangle interiors against the independent cached height
+    // field. More vertices alone do not prove improved terrain fidelity.
+    const double errorLimits[] = {2.5, 1.5, .08};
+    int fixture = 0;
+    for (double route : {16200., 162000., 5600.390625}) {
+      auto c = w.location(route);
+      auto detail = buildSurfaceMesh(w, c);
+      double totalError = 0;
+      int samples = 0;
+      for (size_t i = 0; i < detail.indices.size(); i += 3 * 277) {
+        if (detail.indices[i] % surfaceAngularSamples >= surfaceForwardSamples)
+          continue;
+        auto a = detail.vertices[detail.indices[i]],
+             b = detail.vertices[detail.indices[i + 1]],
+             d = detail.vertices[detail.indices[i + 2]];
+        Vec3 point{(a.x + b.x + d.x) / 3., (a.y + b.y + d.y) / 3.,
+                   (a.z + b.z + d.z) / 3.};
+        double radius = std::hypot(point.x, point.z);
+        if (radius < 3500 || radius > 25000)
+          continue;
+        Vec3 direction = normalized(
+            geographicUp(c) * (surfaceRadius + point.y) +
+            geographicEast(c) * point.x + geographicNorth(c) * point.z);
+        double actual = w.elevation(std::asin(direction.y),
+                                    std::atan2(direction.z, direction.x));
+        totalError += std::abs(actual - (a.ground + b.ground + d.ground) / 3.);
+        ++samples;
+      }
+      require(samples > 1500,
+              "substantial independent terrain precision sample");
+      std::cout << "Triangle height error route=" << route
+                << " mean=" << totalError / samples << " m (" << samples
+                << " samples)\n";
+      require(totalError / samples < errorLimits[fixture++],
+              "visible terrain interiors accurately follow measured relief");
     }
     auto forest = buildSurfaceMesh(w, w.location(162000));
     int canopyVertices = 0;

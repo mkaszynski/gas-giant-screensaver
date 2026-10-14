@@ -40,6 +40,7 @@ with tempfile.TemporaryDirectory(prefix="observatory-benchmark-") as directory:
         "mesh_revision",
         "shadow_revision",
         "upload_bytes",
+        "reflection_revision",
     }
     assert set(rows[0]) == required, rows[0]
     for frame, row in enumerate(rows):

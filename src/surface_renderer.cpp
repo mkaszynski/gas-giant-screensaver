@@ -36,10 +36,13 @@ GLuint compile(GLenum type, const std::string &source) {
   }
   return s;
 }
-GLuint link(const std::string &root, const char *vert, const char *frag) {
+GLuint link(const std::string &root, const char *vert, const char *frag,
+            bool reflection = false) {
+  auto fragment = shader(root, frag);
+  if (reflection)
+    fragment.insert(fragment.find('\n') + 1, "#define SURFACE_REFLECTION\n");
   GLuint v = compile(GL_VERTEX_SHADER, shader(root, vert)),
-         f = compile(GL_FRAGMENT_SHADER, shader(root, frag)),
-         p = glCreateProgram();
+         f = compile(GL_FRAGMENT_SHADER, fragment), p = glCreateProgram();
   glAttachShader(p, v);
   glAttachShader(p, f);
   glLinkProgram(p);
@@ -66,30 +69,26 @@ void bind(GLuint p, int unit, const char *n, GLuint t) {
   glBindTexture(GL_TEXTURE_2D, t);
   glUniform1i(glGetUniformLocation(p, n), unit);
 }
-GLuint materialArray(const std::string &root, const char *suffix,
-                     bool crowns = false) {
-  constexpr const char *names[] = {"rock",   "grass", "sand",
-                                   "tundra", "snow",  "soil"};
+GLuint arrayTexture(const std::vector<std::string> &files, int size) {
   GLuint texture = 0;
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
-  // Bounded layers with a complete ten-level mip chain. PNGs contain
-  // linear numerical reflectance/normal fields, so RGBA8 is intentional.
-  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 10, GL_RGBA8, 512, 512, crowns ? 8 : 6);
+  int levels = 1;
+  for (int n = size; n > 1; n /= 2)
+    ++levels;
+  // These are linear numerical fields. Allocate a complete bounded mip chain.
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY, levels, GL_RGBA8, size, size,
+                 files.size());
   try {
-    for (int i = 0; i < (crowns ? 8 : 6); ++i) {
+    for (size_t i = 0; i < files.size(); ++i) {
       png_image image{};
       image.version = PNG_IMAGE_VERSION;
-      const auto file = crowns ? root + "/assets/world/crown-shadows/" +
-                                     std::to_string(i) + ".png"
-                               : root + "/assets/world/materials/" + names[i] +
-                                     "-" + suffix + ".png";
-      if (!png_image_begin_read_from_file(&image, file.c_str()))
-        throw std::runtime_error("Missing physical surface material: " + file);
-      if (image.width != 512 || image.height != 512) {
+      if (!png_image_begin_read_from_file(&image, files[i].c_str()))
+        throw std::runtime_error("Missing surface field: " + files[i]);
+      if (image.width != unsigned(size) || image.height != unsigned(size)) {
         png_image_free(&image);
-        throw std::runtime_error("Invalid physical material dimensions: " +
-                                 file);
+        throw std::runtime_error("Invalid surface field dimensions: " +
+                                 files[i]);
       }
       image.format = PNG_FORMAT_RGBA;
       std::vector<unsigned char> data(PNG_IMAGE_SIZE(image));
@@ -98,7 +97,7 @@ GLuint materialArray(const std::string &root, const char *suffix,
         png_image_free(&image);
         throw std::runtime_error(error);
       }
-      glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 512, 512, 1, GL_RGBA,
+      glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, GL_RGBA,
                       GL_UNSIGNED_BYTE, data.data());
       png_image_free(&image);
     }
@@ -114,19 +113,39 @@ GLuint materialArray(const std::string &root, const char *suffix,
   glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
   return texture;
 }
+GLuint materialArray(const std::string &root, const char *suffix,
+                     bool crowns = false) {
+  constexpr const char *names[] = {"rock",   "grass", "sand",
+                                   "tundra", "snow",  "soil"};
+  std::vector<std::string> files;
+  for (int i = 0; i < (crowns ? 8 : 6); ++i)
+    files.push_back(crowns ? root + "/assets/world/crown-shadows/" +
+                                 std::to_string(i) + ".png"
+                           : root + "/assets/world/materials/" + names[i] +
+                                 "-" + suffix + ".png");
+  return arrayTexture(files, 512);
+}
 void check() {
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     throw std::runtime_error("Surface framebuffer unavailable");
 }
 } // namespace
-SurfaceRenderer::SurfaceRenderer(const std::string &root)
-    : terrain(root + "/assets/world/moon.ggworld") {
+SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
+                                 bool culling, bool waterLod)
+    : terrain(root + "/assets/world/moon.ggworld"),
+      reflectionsEnabled(reflections), cullingEnabled(culling),
+      waterLodEnabled(waterLod) {
   program = link(root, "surface.vert", "surface.frag");
+  if (reflectionsEnabled) {
+    reflectionProgram = link(root, "surface.vert", "surface.frag", true);
+    glGenBuffers(1, &reflectionIndices);
+  }
   shadowProgram = link(root, "surface_shadow.vert", "surface_shadow.frag");
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
   glGenBuffers(1, &vertices);
   glGenBuffers(1, &indices);
+  glGenBuffers(1, &waterIndices);
   glBindBuffer(GL_ARRAY_BUFFER, vertices);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   glGenBuffers(1, &stagingVertices);
@@ -171,28 +190,11 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  png_image reliefImage{};
-  reliefImage.version = PNG_IMAGE_VERSION;
-  if (!png_image_begin_read_from_file(
-          &reliefImage, (root + "/assets/world/relief-material.png").c_str()))
-    throw std::runtime_error("Missing relief material");
-  reliefImage.format = PNG_FORMAT_RGBA;
-  std::vector<unsigned char> reliefPixels(PNG_IMAGE_SIZE(reliefImage));
-  if (!png_image_finish_read(&reliefImage, nullptr, reliefPixels.data(), 0,
-                             nullptr))
-    throw std::runtime_error(reliefImage.message);
-  glGenTextures(1, &reliefMaterial);
-  glBindTexture(GL_TEXTURE_2D, reliefMaterial);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, reliefImage.width,
-               reliefImage.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-               reliefPixels.data());
-  png_image_free(&reliefImage);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  reliefMaterial =
+      arrayTexture({root + "/assets/world/relief-material.png",
+                    root + "/assets/world/landforms/arid-material.png",
+                    root + "/assets/world/landforms/coastal-material.png"},
+                   2048);
   physicalAlbedo = materialArray(root, "albedo");
   physicalNormal = materialArray(root, "normal");
   crownShadows = materialArray(root, "", true);
@@ -243,6 +245,9 @@ void SurfaceRenderer::vertexAttributes() {
   glEnableVertexAttribArray(4);
   glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
                         reinterpret_cast<void *>(11 * sizeof(float)));
+  glEnableVertexAttribArray(6);
+  glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(14 * sizeof(float)));
   glEnableVertexAttribArray(5);
   glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
                         reinterpret_cast<void *>(13 * sizeof(float)));
@@ -259,11 +264,17 @@ SurfaceRenderer::~SurfaceRenderer() {
   if (pending.valid())
     pending.wait();
   releaseTargets();
+  glDeleteProgram(reflectionProgram);
+  glDeleteFramebuffers(1, &reflectionFbo);
+  glDeleteTextures(1, &reflectionTexture);
+  glDeleteRenderbuffers(1, &reflectionDepth);
+  glDeleteBuffers(1, &reflectionIndices);
   glDeleteProgram(program);
   glDeleteProgram(shadowProgram);
   glDeleteBuffers(1, &vertices);
   glDeleteBuffers(1, &stagingVertices);
   glDeleteBuffers(1, &indices);
+  glDeleteBuffers(1, &waterIndices);
   glDeleteVertexArrays(1, &vao);
   glDeleteTextures(1, &material);
   glDeleteTextures(1, &canopy);
@@ -306,6 +317,33 @@ void SurfaceRenderer::resize(int w, int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, resolved);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          texture, 0);
+  check();
+}
+void SurfaceRenderer::resizeReflection(int w, int h) {
+  if (w == reflectionWidth && h == reflectionHeight)
+    return;
+  glDeleteFramebuffers(1, &reflectionFbo);
+  glDeleteTextures(1, &reflectionTexture);
+  glDeleteRenderbuffers(1, &reflectionDepth);
+  reflectionWidth = w;
+  reflectionHeight = h;
+  glGenFramebuffers(1, &reflectionFbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, reflectionFbo);
+  glGenTextures(1, &reflectionTexture);
+  glBindTexture(GL_TEXTURE_2D, reflectionTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         reflectionTexture, 0);
+  glGenRenderbuffers(1, &reflectionDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, reflectionDepth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, reflectionDepth);
   check();
 }
 void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
@@ -353,16 +391,43 @@ void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
     lastUploadBytes += vertexBytes;
   }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
-  if (topologyChanged)
+  if (topologyChanged) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  mesh.indices.size() * sizeof(uint32_t), mesh.indices.data(),
                  GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterIndices);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 mesh.waterIndices.size() * sizeof(uint32_t),
+                 mesh.waterIndices.data(), GL_STATIC_DRAW);
+    // Reuse every fourth row/column of the already resident mesh. The reflected
+    // view is quarter-resolution and wave-filtered; no second terrain build
+    // exists.
+    constexpr int columns = surfaceAngularSamples, rows = surfaceRadialSamples,
+                  step = 4;
+    static_assert(columns % step == 0 && rows % step == 0);
+    std::vector<uint32_t> coarse;
+    for (int row = 0; row < rows; row += step)
+      for (int column = 0; column < columns; column += step) {
+        uint32_t a = row * columns + column,
+                 b = row * columns + (column + step) % columns;
+        uint32_t c = a + step * columns, d = b + step * columns;
+        coarse.insert(coarse.end(), {a, c, b, b, c, d});
+      }
+    reflectionIndexCount = coarse.size();
+    if (reflectionsEnabled) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, reflectionIndices);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, coarse.size() * sizeof(uint32_t),
+                   coarse.data(), GL_STATIC_DRAW);
+    }
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
+  }
 }
 void SurfaceRenderer::stageUpload() {
   if (!staged)
     return;
-  // Populate the inactive buffer in bounded chunks while the complete old mesh
-  // remains visible. Switch geometry, bounds and its physical frame together.
+  // Populate the inactive buffer in bounded chunks while the complete old
+  // mesh remains visible. Switch geometry, bounds and its physical frame
+  // together.
   constexpr size_t chunk = 2 * 1024 * 1024;
   const size_t bytes = staged->vertices.size() * sizeof(SurfaceVertex);
   if (bytes > vertexCapacity)
@@ -382,6 +447,31 @@ void SurfaceRenderer::stageUpload() {
     staged.reset();
     stagedBytes = 0;
   }
+}
+void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
+                           bool waterLod) {
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
+  waterLod &= waterLodEnabled;
+  if (!cullingEnabled && !waterLod) {
+    glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
+    return;
+  }
+  // Adjacent visible blocks share one draw. No index rebuilding/upload or
+  // per-triangle CPU work occurs as the aircraft moves.
+  std::array<SurfacePlane, 6> unrestricted{};
+  bool waterBuffer = false;
+  for (auto range : surfaceDrawRanges(
+           mesh, cullingEnabled ? planes : unrestricted, waterLod)) {
+    if (range.water != waterBuffer) {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                   range.water ? waterIndices : indices);
+      waterBuffer = range.water;
+    }
+    glDrawElements(
+        GL_TRIANGLES, range.indexCount, GL_UNSIGNED_INT,
+        reinterpret_cast<void *>(size_t(range.firstIndex) * sizeof(uint32_t)));
+  }
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
 }
 void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
   Vec3 side = cross(Vec3{0, 1, 0}, sun);
@@ -410,7 +500,12 @@ void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
   glUseProgram(shadowProgram);
   glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "uShadowMatrix"), 1,
                      GL_FALSE, m);
-  glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
+  draw({{{right, extent - dot(eye, right)},
+         {-right, extent + dot(eye, right)},
+         {up, extent - dot(eye, up)},
+         {-up, extent + dot(eye, up)},
+         {sun, depth - dot(eye, sun)},
+         {-sun, depth + dot(eye, sun)}}});
   ++shadowDraws;
 }
 void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds,
@@ -563,80 +658,153 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glDepthMask(GL_TRUE);
   glClearDepthf(1.);
   shadows(shadowScene, eye, seconds, daySeconds);
+  glClearColor(0, 0, 0, 0);
+  auto uniforms = [&](GLuint drawProgram, const Scene &view, Vec3 passEye,
+                      int passWidth, int passHeight) {
+    const GLuint program = drawProgram;
+    lighting(program);
+    vec(program, "uEye", passEye);
+    glUniformMatrix3fv(glGetUniformLocation(program, "uMeshFrame"), 1, GL_FALSE,
+                       frame);
+    vec(program, "uForward", view.forward);
+    vec(program, "uRight", view.right);
+    vec(program, "uUp", view.cameraUp);
+    vec(program, "uSun", s.sunLocal);
+    scalar(program, "uTanFov", std::tan(29 * pi / 180));
+    glUniform2f(glGetUniformLocation(program, "uResolution"), passWidth,
+                passHeight);
+    scalar(program, "uPlanetLight", s.giantLight);
+    vec(program, "uPlanetDirection", normalized(s.local(-s.observer)));
+    scalar(program, "uEclipse", s.sunVisibility);
+    scalar(program, "uSceneScale", 4096);
+    scalar(program, "uObserverHeight", s.altitudeMeters / 1000.);
+    glUniform1i(glGetUniformLocation(program, "uTerrainShadows"), mesh.hasLand);
+    double globalX = surfaceRadius * mesh.center.longitude,
+           globalZ = surfaceRadius * mesh.center.latitude;
+    glUniform2f(glGetUniformLocation(program, "uMaterialOffset"),
+                std::remainder(globalX, 24. * 310.),
+                std::remainder(globalZ, 24. * 310.));
+    scalar(program, "uGeologyPhase",
+           std::remainder((globalX * .03 + globalZ * .015) * (2 * pi / 50.),
+                          2 * pi));
+    glUniform2f(glGetUniformLocation(program, "uCanopyOffset"),
+                std::remainder(globalX, 512.), std::remainder(globalZ, 512.));
+    auto reliefCenter =
+        terrain.reliefCoordinates(mesh.center.latitude, mesh.center.longitude);
+    glUniform2f(
+        glGetUniformLocation(program, "uReliefOffset"),
+        std::remainder(reliefCenter[0] + .5 * terrain.reliefTexelMeters(),
+                       terrain.reliefSpan()),
+        std::remainder(reliefCenter[1] + .5 * terrain.reliefTexelMeters(),
+                       terrain.reliefSpan()));
+    scalar(program, "uReliefSpan", terrain.reliefSpan());
+    scalar(program, "uReliefLongitudeScale", 1. / std::cos(location.latitude));
+    // Deep-water dispersion sets each wave's real-time period. Wrapping the
+    // moon-fixed phase on CPU retains precision over Unix-scale scene clocks.
+    constexpr double wavelengths[] = {48., 19., 7., 2.5};
+    constexpr double angles[] = {.27, -1.05, 2.62, .89};
+    constexpr double slopes[] = {.032, .024, .016, .010};
+    float waves[16];
+    for (int i = 0; i < 4; ++i) {
+      double k = 2 * pi / wavelengths[i], kx = std::cos(angles[i]) * k,
+             kz = std::sin(angles[i]) * k;
+      waves[4 * i] = kx;
+      waves[4 * i + 1] = kz;
+      waves[4 * i + 2] = std::remainder(
+          globalX * kx + globalZ * kz - seconds * std::sqrt(9.81 * k) + i * 1.7,
+          2 * pi);
+      waves[4 * i + 3] = slopes[i];
+    }
+    glUniform4fv(glGetUniformLocation(program, "uWaves[0]"), 4, waves);
+    glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 4,
+                       GL_FALSE, shadowMatrices[0]);
+
+    bind(program, 2, "uScene", scene);
+    bind(program, 3, "uMaterial", material);
+    bind(program, 4, "uShadowNear", shadowTex[shadowCurrent[0]]);
+    bind(program, 5, "uShadowFar", shadowTex[shadowCurrent[1]]);
+    bind(program, 9, "uShadowNearNext", shadowTex[shadowNext[0]]);
+    bind(program, 10, "uShadowFarNext", shadowTex[shadowNext[1]]);
+    float mix[2]{};
+    for (int i = 0; i < 2; ++i) {
+      const double duration = shadowEnd[i] - shadowBegin[i];
+      double t = duration > 0
+                     ? std::clamp((seconds - shadowBegin[i]) / duration, 0., 1.)
+                     : 0.;
+      mix[i] = t * t * (3. - 2. * t);
+    }
+    glUniform2fv(glGetUniformLocation(program, "uShadowBlend"), 1, mix);
+    glUniform4i(glGetUniformLocation(program, "uShadowSlots"), shadowCurrent[0],
+                shadowNext[0], shadowCurrent[1], shadowNext[1]);
+    bind(program, 7, "uCanopy", canopy);
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, reliefMaterial);
+    glUniform1i(glGetUniformLocation(program, "uReliefMaterial"), 6);
+    glActiveTexture(GL_TEXTURE11);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, physicalAlbedo);
+    glUniform1i(glGetUniformLocation(program, "uPhysicalAlbedo"), 11);
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, physicalNormal);
+    glUniform1i(glGetUniformLocation(program, "uPhysicalNormal"), 12);
+    glActiveTexture(GL_TEXTURE13);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, crownShadows);
+    glUniform1i(glGetUniformLocation(program, "uCrownShadows"), 13);
+  };
+  const bool reflectedLand =
+      reflectionsEnabled && mesh.hasLand && mesh.hasWater;
+  if (reflectedLand) {
+    resizeReflection(std::max(1, w / 4), std::max(1, h / 4));
+    glBindFramebuffer(GL_FRAMEBUFFER, reflectionFbo);
+    glViewport(0, 0, reflectionWidth, reflectionHeight);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    Scene mirror = s;
+    mirror.forward.y = -mirror.forward.y;
+    mirror.right.y = -mirror.right.y;
+    mirror.cameraUp.y = -mirror.cameraUp.y;
+    Vec3 virtualEye = geographicUp(location) * (surfaceRadius - altitude) -
+                      geographicUp(mesh.center) * surfaceRadius;
+    virtualEye = {dot(virtualEye, oldAxes[0]), dot(virtualEye, oldAxes[1]),
+                  dot(virtualEye, oldAxes[2])};
+    uniforms(reflectionProgram, mirror, virtualEye, reflectionWidth,
+             reflectionHeight);
+    // Overscan catches wave-deflected rays outside the primary view.
+    scalar(reflectionProgram, "uTanFov", std::tan(29 * pi / 180) * 1.5);
+    glActiveTexture(GL_TEXTURE14);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, reflectionIndices);
+    glDrawElements(GL_TRIANGLES, reflectionIndexCount, GL_UNSIGNED_INT,
+                   nullptr);
+    ++reflectionDraws;
+  }
   glBindFramebuffer(GL_FRAMEBUFFER, multisample);
   glViewport(0, 0, w, h);
-  glClearColor(0, 0, 0, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  lighting(program);
-  vec(program, "uEye", eye);
-  glUniformMatrix3fv(glGetUniformLocation(program, "uMeshFrame"), 1, GL_FALSE,
-                     frame);
-  vec(program, "uForward", s.forward);
-  vec(program, "uRight", s.right);
-  vec(program, "uUp", s.cameraUp);
-  vec(program, "uSun", s.sunLocal);
-  scalar(program, "uTanFov", std::tan(29 * pi / 180));
-  glUniform2f(glGetUniformLocation(program, "uResolution"), w, h);
-  scalar(program, "uPlanetLight", s.giantLight);
-  vec(program, "uPlanetDirection", normalized(s.local(-s.observer)));
-  scalar(program, "uEclipse", s.sunVisibility);
-  scalar(program, "uSceneScale", 4096);
-  scalar(program, "uObserverHeight", s.altitudeMeters / 1000.);
-  glUniform1i(glGetUniformLocation(program, "uTerrainShadows"), mesh.hasLand);
-  double globalX = surfaceRadius * mesh.center.longitude,
-         globalZ = surfaceRadius * mesh.center.latitude;
-  glUniform2f(glGetUniformLocation(program, "uMaterialOffset"),
-              std::remainder(globalX, 24. * 310.),
-              std::remainder(globalZ, 24. * 310.));
-  glUniform2f(glGetUniformLocation(program, "uCanopyOffset"),
-              std::remainder(globalX, 512.), std::remainder(globalZ, 512.));
-  auto reliefCenter =
-      terrain.reliefCoordinates(mesh.center.latitude, mesh.center.longitude);
-  glUniform2f(glGetUniformLocation(program, "uReliefOffset"),
-              std::remainder(reliefCenter[0] + .5 * terrain.reliefTexelMeters(),
-                             terrain.reliefSpan()),
-              std::remainder(reliefCenter[1] + .5 * terrain.reliefTexelMeters(),
-                             terrain.reliefSpan()));
-  scalar(program, "uReliefSpan", terrain.reliefSpan());
-  scalar(program, "uReliefLongitudeScale", 1. / std::cos(location.latitude));
-  glUniform2f(
-      glGetUniformLocation(program, "uWaveOffset"),
-      std::remainder(globalX * .17 + globalZ * .23 * .4 + seconds * .496,
-                     2 * pi),
-      std::remainder(globalZ * .23 - globalX * .17 * .35 + seconds * .157,
-                     2 * pi));
-  glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 4,
-                     GL_FALSE, shadowMatrices[0]);
-
-  bind(program, 2, "uScene", scene);
-  bind(program, 3, "uMaterial", material);
-  bind(program, 4, "uShadowNear", shadowTex[shadowCurrent[0]]);
-  bind(program, 5, "uShadowFar", shadowTex[shadowCurrent[1]]);
-  bind(program, 9, "uShadowNearNext", shadowTex[shadowNext[0]]);
-  bind(program, 10, "uShadowFarNext", shadowTex[shadowNext[1]]);
-  float mix[2]{};
-  for (int i = 0; i < 2; ++i) {
-    const double duration = shadowEnd[i] - shadowBegin[i];
-    double t = duration > 0
-                   ? std::clamp((seconds - shadowBegin[i]) / duration, 0., 1.)
-                   : 0.;
-    mix[i] = t * t * (3. - 2. * t);
-  }
-  glUniform2fv(glGetUniformLocation(program, "uShadowBlend"), 1, mix);
-  glUniform4i(glGetUniformLocation(program, "uShadowSlots"), shadowCurrent[0],
-              shadowNext[0], shadowCurrent[1], shadowNext[1]);
-  bind(program, 7, "uCanopy", canopy);
-  bind(program, 6, "uReliefMaterial", reliefMaterial);
-  glActiveTexture(GL_TEXTURE11);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, physicalAlbedo);
-  glUniform1i(glGetUniformLocation(program, "uPhysicalAlbedo"), 11);
-  glActiveTexture(GL_TEXTURE12);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, physicalNormal);
-  glUniform1i(glGetUniformLocation(program, "uPhysicalNormal"), 12);
-  glActiveTexture(GL_TEXTURE13);
-  glBindTexture(GL_TEXTURE_2D_ARRAY, crownShadows);
-  glUniform1i(glGetUniformLocation(program, "uCrownShadows"), 13);
-  glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
+  uniforms(program, s, eye, w, h);
+  glActiveTexture(GL_TEXTURE14);
+  glBindTexture(GL_TEXTURE_2D, reflectedLand ? reflectionTexture : scene);
+  glUniform1i(glGetUniformLocation(program, "uLandReflection"), 14);
+  glUniform1i(glGetUniformLocation(program, "uLandReflectionEnabled"),
+              reflectedLand);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
+  auto meshDirection = [&](Vec3 v) {
+    return Vec3{frame[0] * v.x + frame[1] * v.y + frame[2] * v.z,
+                frame[3] * v.x + frame[4] * v.y + frame[5] * v.z,
+                frame[6] * v.x + frame[7] * v.y + frame[8] * v.z};
+  };
+  const Vec3 forward = meshDirection(s.forward), right = meshDirection(s.right),
+             up = meshDirection(s.cameraUp);
+  std::array<SurfacePlane, 6> planes;
+  planes[0].normal = forward * (tanFov * w / h) + right;
+  planes[1].normal = forward * (tanFov * w / h) - right;
+  planes[2].normal = forward * tanFov + up;
+  planes[3].normal = forward * tanFov - up;
+  planes[4].normal = forward;
+  planes[5].normal = -forward;
+  for (auto &plane : planes)
+    plane.offset = -dot(plane.normal, eye);
+  planes[4].offset -= 1.;
+  planes[5].offset += 220000.;
+  draw(planes, true);
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, multisample);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resolved);

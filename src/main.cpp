@@ -83,6 +83,10 @@ int main(int argc, char **argv) {
                "72-hour "
                "route\n"
                "  --travel-speed N        Preview travel rate (default 1)\n"
+               "  --terrain-reflections  Enable optional coastal terrain "
+               "reflections\n"
+               "  --no-terrain-reflections  Disable coastal terrain "
+               "reflections\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
                "  --debug                 Time slider: day, flight or year; "
@@ -91,6 +95,14 @@ int main(int argc, char **argv) {
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
+      }
+      if (a == "--terrain-reflections") {
+        surface.reflections = true;
+        continue;
+      }
+      if (a == "--no-terrain-reflections") {
+        surface.reflections = false;
+        continue;
       }
       if (a == "--fixed-view") {
         surface.enabled = false;
@@ -243,7 +255,7 @@ int main(int argc, char **argv) {
         if (!frameLog)
           throw std::runtime_error("Cannot write benchmark output");
         frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
-                    "revision,upload_bytes\n";
+                    "revision,upload_bytes,reflection_revision\n";
         frameLog << std::setprecision(12);
       }
       int frames = 0;
@@ -310,7 +322,8 @@ int main(int argc, char **argv) {
               frameLog << gpuDurations.back();
             frameLog << "," << renderer.surfaceMeshRevision() << ","
                      << renderer.surfaceShadowRevision() << ","
-                     << renderer.surfaceUploadBytes() << "\n";
+                     << renderer.surfaceUploadBytes() << ","
+                     << renderer.surfaceReflectionRevision() << "\n";
             if (!frameLog)
               throw std::runtime_error("Cannot write benchmark frame");
           }

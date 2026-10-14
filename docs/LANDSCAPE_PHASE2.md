@@ -59,5 +59,59 @@ Operator review precedes merging or changing the NixOS source pin. Preserve the
 - Initial combined forest probe: 10.61 ms median / 16.05 ms p95; one 48.54 ms
   GPU stall after startup means the 30 fps acceptance is not yet established.
   These development probes are not the final paired performance comparison.
-- Work in progress: broader landforms, shores/water detail and final visual,
-  performance, memory, native and CI acceptance are outstanding.
+- Three coherent landform types now blend geometry and residual lighting. The
+  regenerated flight cache is bound to their hashes and passed 2,097,152 altitude
+  samples: minimum clearance 620 m and maximum climb/descent 3.32672 m/s.
+- Water: four footprint-filtered wave scales, deep-water dispersion, filtered
+  GGX solar glints, depth-dependent coastal color and wet shore materials. A
+  quarter-resolution coastal terrain reflection prototype reuses resident geometry
+  (64,000 triangles) and cached shadows; it skips pure-ocean/inland views.
+  Reflections overscan and fade boundaries; cloud shadows use the virtual
+  observer position, while aerial light integrates the real reflected path; tiny-step water tests change at most
+  one display code. Retention depends on the paired rendering-cost measurements.
+- Reference checkpoint `091c3cc`: full local hardware/software suites passed;
+  Nix preview/native builds and push/PR CI passed. Isolated native rendering,
+  cyan input and unlock transition passed with roughly 33 ms timer cadence.
+- New complete-renderer paired performance, final native build, memory checks,
+  review captures and CI acceptance are still in progress.
+
+### Cost tuning in progress
+
+Initial paired complete-renderer runs exceeded the allowed increase at coasts.
+The reflection target was reduced from half to quarter resolution (roughly
+1.5 MiB of color/depth storage at 1080p). Clear-cloud pixels skip invisible
+lighting, and negligible water glints retain their BRDF tail without five
+unneeded cloud-shadow lookups. A quad-coherent postprocessing shortcut skips
+sky/cloud/halo work behind fully opaque terrain; comparison renders prove it is
+pixel-identical to the full sky path. Partial silhouettes retain the full pass.
+The numerical fields and physical water glints remain enabled.
+
+The installed lock screen began sharing the GPU during performance tuning.
+Final acceptance requires an unlocked desktop, paired clean measurements and
+30 fps deadline checks; timings from the competing-renderer runs are diagnostic.
+
+### Terrain resolution refinement
+
+The finer beta mesh has 512,800 vertices and 3,072,000 indices. The visible
+1.5–45 km slopes receive almost all radial samples, doubling radial resolution
+near 3.5 km; angular sampling improves 1.5×. Full measured 16 m relief normals
+retain small gullies independently of the geometry LOD, using the existing
+texture array. Continental/canopy normals exclude measured slopes to avoid
+counting them twice. Camera/shadow block culling is pixel-identical to drawing
+the full mesh in daylight, sunset and night on hardware and Mesa.
+
+Warm deep water uses coarser interior fans, retaining every fine boundary edge;
+the outer horizon band stays fine. Day/night ocean/coast comparisons differ by
+at most one display code, with an identical watertight boundary. Land geometry
+and shadow casters retain the detailed mesh. The coastal terrain reflection
+prototype exceeds the budget and is now opt-in; sky/celestial/cloud reflections
+remain in the standard profile. Repeated whole-renderer budget measurements and
+final package/CI validation of this refinement are in progress.
+
+The tuned profile passes the **median** 30% allowance in all four fixtures
+(4.3% ocean, 18.6% forest, 7.0% snow, 24.6% coast). It does **not** pass the p95
+allowance or zero steady-frame deadline misses on the shared desktop. The full
+report and slow runs are retained in `landscape-phase2-resolution-benchmark.json`;
+see `VALIDATION.md`. Release performance acceptance remains open. The latest
+local gate passed 40 CPU/CLI checks, 38 offline tests, all 13 GPU suites on AMD
+hardware and Mesa, and the real benchmark CSV checks on both renderers.

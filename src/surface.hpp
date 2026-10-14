@@ -7,17 +7,23 @@
 namespace observatory {
 constexpr double surfaceRadius = 6371000.;
 constexpr double travelPeriod = 3. * 86400.;
+constexpr int surfaceForwardSamples = 768, surfaceAngularSamples = 800,
+              surfaceRadialSamples = 640;
 struct SurfaceOptions {
   bool enabled = false;
   double speed = 1, offset = 0;
+  bool reflections = false;
+  bool culling = true;
+  bool waterLod = true;
 };
 struct TravelLocation {
   double latitude, longitude;
 };
 TravelLocation travelLocation(double realSeconds, double radialMetres = 0.);
 struct SurfaceSample {
-  double ground, water, moisture, uplift, temperature;
-  std::array<double, 2> relief;
+  double ground, water, moisture, uplift, temperature, reliefStrength,
+      reliefHeight;
+  std::array<double, 2> relief, landforms;
 };
 class SurfaceWorld {
 public:
@@ -38,12 +44,14 @@ public:
 private:
   int width = 0, height = 0;
   std::vector<int16_t> heights, relief;
+  std::array<std::vector<int16_t>, 2> extraRelief;
   std::vector<float> flight;
   int reliefWidth = 0;
   double reliefSpacing = 8;
-  double localRelief(double x, double z) const;
+  double localRelief(double x, double z, int layer = 0) const;
   double elevationAt(double latitude, double longitude,
-                     std::array<double, 2> coordinates) const;
+                     std::array<double, 2> coordinates,
+                     double *reliefHeight = nullptr) const;
   std::vector<uint8_t> moisture, uplift;
   double field(const std::vector<uint8_t> &, double, double) const;
   double coarse(double, double) const;
@@ -56,17 +64,32 @@ Scene travelScene(const SurfaceWorld &, double sceneSeconds,
                   bool rings = true);
 struct SurfaceVertex {
   float x, y, z, nx, ny, nz, ground, moisture, temperature, materialX,
-      materialZ, reliefX, reliefZ, uplift;
+      materialZ, reliefX, reliefZ, reliefStrength, aridWeight, coastalWeight;
 };
 struct SurfaceMesh {
   struct Bounds {
     Vec3 minimum, maximum;
+    uint32_t firstIndex = 0, indexCount = 0;
+    uint32_t waterFirstIndex = 0, waterIndexCount = 0;
+    bool deepWater = true;
   };
   TravelLocation center{};
-  bool hasLand = false;
+  bool hasLand = false, hasWater = false;
   std::vector<SurfaceVertex> vertices;
   std::vector<uint32_t> indices;
+  std::vector<uint32_t> waterIndices;
   std::vector<Bounds> bounds;
 };
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation);
+struct SurfacePlane {
+  Vec3 normal;
+  double offset;
+};
+struct SurfaceDrawRange {
+  uint32_t firstIndex, indexCount;
+  bool water = false;
+};
+std::vector<SurfaceDrawRange>
+surfaceDrawRanges(const SurfaceMesh &, const std::array<SurfacePlane, 6> &,
+                  bool waterLod = false);
 } // namespace observatory
