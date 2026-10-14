@@ -1,15 +1,40 @@
 # Gas Giant Observatory
 
-A fixed view from a green mountain ridge on a synchronously rotating moon.
+A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
+
+For interactive review, add `--debug` to the preview command. A time slider
+offers day, three-day flight and year ranges; drag and release to fast-forward
+the whole scene. Space pauses/resumes. The native lock screen has no debug UI.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
 geometry. The sky changes through a 30-minute solar day, with thin drifting
 clouds and stars emerging at dusk.
 
-## Galaxy beta (`feat/galaxy`)
+## Landscape fidelity beta
 
-The review branch adds Earth's J2000 sky: 8,920 catalog stars with measured
+`feat/landscape-fidelity` adds coherent alpine/canyon/coastal terrain, cached
+physical materials, dense crown shading, filtered water glints, wet shores and
+optional coarse coastal terrain reflections. Thin clouds have shared lighting, shadows
+and reflected coverage. Geometry streams in bounded uploads without replacing
+a partially drawn mesh. See [landscape design](docs/SURFACE.md) and
+[Phase 2 scope and validation](docs/LANDSCAPE_PHASE2.md).
+
+From this feature checkout:
+
+```sh
+nix build .#gas-giant-screensaver -o result-landscape-phase2
+./result-landscape-phase2/bin/gas-giant-screensaver --data-dir ./result-landscape-phase2/share/gas-giant-screensaver --fullscreen --debug --fps 30 --time 900 --travel-time 162000
+```
+
+Explicit packaged data prevents an older executable loading shaders from a
+newer working directory. The target is 30 fps at 1080p within 30% additional
+complete-renderer cost versus Phase 1. The [feature PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
+remains separate until operator review; the NixOS source pin is unchanged.
+
+## Earth sky and Milky Way
+
+The renderer uses Earth's J2000 sky: 8,920 catalog stars with measured
 magnitudes and color indices, plus modeled Milky Way light and measured dust lanes.
 Coordinates and colors are baked once; one cached cubemap sample in the existing
 sky pass supplies the diffuse galaxy. Local atmosphere, clouds, mountains and
@@ -24,23 +49,23 @@ about 32 MiB with hardware BC6H compression and one lookup per sky pixel.
 Expensive integration runs offline, never during animation. The model's stellar
 populations and distant dust are approximations, described in the design notes.
 
-Preview the beta without changing the installed screensaver:
+Preview the merged galaxy version without changing the installed screensaver:
 
 ```sh
 nix run github:mkaszynski/gas-giant-screensaver/feat/galaxy -- \
   --fullscreen --time 437625
 ```
 
-From this checkout, `nix run . -- --fullscreen --time 437625` builds the current
+From this checkout, `nix run . -- --fullscreen --fixed-view --time 437625` builds the current
 branch. For a frozen review image:
 
 ```sh
-nix run . -- --capture galaxy.png --time 437625 --width 1920 --height 1080
+nix run . -- --capture galaxy.png --fixed-view --time 437625 --width 1920 --height 1080
 ```
 
 Compare with `--no-galaxy`, `--no-stars`, or both. See
 [sky sources, calibration, efficiency and limitations](docs/GALAXY.md).
-This beta remains on its feature branch until operator review.
+The airborne biome feature remains on `feat/airborne-biomes` until operator review.
 
 [Eclipse sky capture](docs/images/galaxy-eclipse.png) ·
 [Sky beside the sunlit giant](docs/images/galaxy-night.png)
@@ -101,8 +126,10 @@ Installing the preview does not change any host configuration or idle timeout.
   radii. This is a fictional, artist-directed system.
 - Observer orbit: **10° inclined to the giant’s equator**. Other moon planes
   span **1–10°** from that same equator, with different nodes.
-- Latitude 38° north, longitude 50° from the mean subplanet meridian. Mean
-  synchronous rotation preserves natural eccentric-orbit libration.
+- A closed circuit across the Jupiter-facing hemisphere takes **72 real hours**,
+  crossing latitudes up to **59.5° north/south**, with a smooth, hill-anticipating altitude profile **at least 600 m above
+  ground or water**, without sideways detours or ground-following bobbing. Mean synchronous rotation preserves orbital libration.
+  `--fixed-view` retains the original 38° N, 50° observer for comparisons.
 - Twenty moons includes the observer moon. Visibility and apparent size follow
   geometry; the renderer does not arrange all nineteen others in the frame.
 - Rings: **1.235–1.780 giant radii**, with narrow bands and a Cassini-like gap.
@@ -112,7 +139,12 @@ Installing the preview does not change any host configuration or idle timeout.
 - Faint nighttime airglow and ambient mountain light preserve subtle detail.
 - Finite solar disk (about 0.53° across), atmospheric aureole, soft optical glare,
   mutual eclipses, and planetshine approximation.
-- Photographic-style generated mountain albedo and giant band textures; runtime
+- Moving spherical terrain with ocean, sea ice, snowy uplands, drylands, grassland
+  and forests; connected measured ridges and valleys with cached surface normals and skylight occlusion,
+  continuous overlapping forest canopies, cloud/terrain shadows and
+  multisample silhouettes. See [surface circuit](docs/SURFACE.md). The previous
+  fixed alpine landscape remains available with `--fixed-view`.
+- Generated gas giant band texture; runtime
   lighting supplies their changing appearance. Mountain interiors fully occlude
   the sky, with antialiasing restricted to the silhouette.
 
@@ -136,7 +168,7 @@ The ordinary day/night appearance changes only subtly.
 [Actual eclipse-contact capture](assets/preview-atmosphere-contact.png)
 
 ```sh
-nix run . -- --fullscreen --time 376368
+nix run . -- --fullscreen --fixed-view --time 376368
 ```
 
 A small static lookup and a narrow, antialiased limb integration keep the cost
@@ -152,7 +184,9 @@ isotropic multiple-scattering table feed a small sky lookup texture. Only the
 sky table changes during the day. Sphere draws are bounded to screen rectangles;
 impossible shadow casters are rejected on the CPU. Clouds are thin texture
 layers, and solar glare adds no extra rendering pass. There is no runtime AI,
-network access, volumetric cloud marching, or per-frame texture upload.
+network access, volumetric cloud marching, or per-frame asset texture upload.
+The moving world streams bounded local geometry with one background worker;
+shadow updates and multisample rendering are limited to the visible terrain.
 
 Measurements and limitations: [validation report](docs/VALIDATION.md).
 The frame cap and output suspension matter more for power than peak FPS.
@@ -170,6 +204,8 @@ ctest --test-dir build --output-on-failure
 ./build/atmosphere-render-tests
 ./build/scattering-edge-tests
 ./build/emission-render-tests
+./build/sky-render-tests
+./build/terrain-render-tests
 nix flake check
 ```
 

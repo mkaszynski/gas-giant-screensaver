@@ -1,0 +1,102 @@
+{
+  "renderer": "AMD Radeon Graphics / radeonsi / renoir / ACO",
+  "resolution": [
+    1920,
+    1080
+  ],
+  "frames_per_run": 180,
+  "fps_cap": 30,
+  "measurement": "Total moving world render, alternating scenes on a shared desktop; no isolated sky comparison or watt measurement. Startup frame included.",
+  "runs": [
+    {
+      "scene": "ocean",
+      "run": 1,
+      "sky_seconds": 450,
+      "route_seconds": 0,
+      "gpu_median_ms": 7.07789,
+      "gpu_p95_ms": 38.5789,
+      "synchronized_median_ms": 9.68239,
+      "synchronized_p95_ms": 41.5286
+    },
+    {
+      "scene": "forest",
+      "run": 1,
+      "sky_seconds": 1710,
+      "route_seconds": 162000,
+      "gpu_median_ms": 7.70261,
+      "gpu_p95_ms": 40.1728,
+      "synchronized_median_ms": 10.3764,
+      "synchronized_p95_ms": 42.8147
+    },
+    {
+      "scene": "snow",
+      "run": 1,
+      "sky_seconds": 30,
+      "route_seconds": 210600,
+      "gpu_median_ms": 6.26798,
+      "gpu_p95_ms": 39.6349,
+      "synchronized_median_ms": 9.07597,
+      "synchronized_p95_ms": 45.0888
+    },
+    {
+      "scene": "ocean",
+      "run": 2,
+      "sky_seconds": 450,
+      "route_seconds": 0,
+      "gpu_median_ms": 6.98244,
+      "gpu_p95_ms": 43.4912,
+      "synchronized_median_ms": 9.44032,
+      "synchronized_p95_ms": 46.2837
+    },
+    {
+      "scene": "forest",
+      "run": 2,
+      "sky_seconds": 1710,
+      "route_seconds": 162000,
+      "gpu_median_ms": 7.70028,
+      "gpu_p95_ms": 41.1714,
+      "synchronized_median_ms": 10.5338,
+      "synchronized_p95_ms": 43.6492
+    },
+    {
+      "scene": "snow",
+      "run": 2,
+      "sky_seconds": 30,
+      "route_seconds": 210600,
+      "gpu_median_ms": 6.54834,
+      "gpu_p95_ms": 44.9468,
+      "synchronized_median_ms": 9.4392,
+      "synchronized_p95_ms": 47.5967
+    },
+    {
+      "scene": "ocean",
+      "run": 3,
+      "sky_seconds": 450,
+      "route_seconds": 0,
+      "gpu_median_ms": 7.35446,
+      "gpu_p95_ms": 41.1486,
+      "synchronized_median_ms": 9.83001,
+      "synchronized_p95_ms": 45.1573
+    },
+    {
+      "scene": "forest",
+      "run": 3,
+      "sky_seconds": 1710,
+      "route_seconds": 162000,
+      "gpu_median_ms": 7.9703,
+      "gpu_p95_ms": 41.1005,
+      "synchronized_median_ms": 10.7572,
+      "synchronized_p95_ms": 43.9146
+    },
+    {
+      "scene": "snow",
+      "run": 3,
+      "sky_seconds": 30,
+      "route_seconds": 210600,
+      "gpu_median_ms": 6.82035,
+      "gpu_p95_ms": 39.7679,
+      "synchronized_median_ms": 9.62776,
+      "synchronized_p95_ms": 43.0553
+    }
+  ]
+}

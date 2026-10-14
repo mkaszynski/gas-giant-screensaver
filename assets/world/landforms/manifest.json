@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "size": 2048,
+  "spacing_m": 16,
+  "span_m": 32768,
+  "processing": "Measured connected relief; periodic-plus-smooth boundary correction; relative heights",
+  "photographic_input": false,
+  "sources": {
+    "arid": {
+      "tile": "N36W113",
+      "sha256": "610e98d96ec4a1627f25b49f99cc61200527ad0314e0be4221d9b30f3276ac06",
+      "tile_lat": 36,
+      "tile_lon": -113,
+      "latitude": 36.205,
+      "longitude": -112.275,
+      "description": "Connected Colorado Plateau canyon drainage and cliff forms",
+      "height_scale": 0.65,
+      "url": "https://elevation-tiles-prod.s3.amazonaws.com/skadi/N36/N36W113.hgt.gz",
+      "relief_sha256": "772ea95d1d1192fb4695352dd5ac3f9d602ff7dc29fd32ad297b9b86f757e594",
+      "material_sha256": "baaea2eda0c019b051dec277631e658959868dd1815a5d060ae1bd0ac179c020",
+      "range_m": [
+        -641,
+        541
+      ],
+      "rms_m": 261.6057290183308
+    },
+    "coastal": {
+      "tile": "N48W122",
+      "sha256": "1d86041e91c1423b1bc05031b9f67d31a809f2ed742e2409351e7bcb71859ec6",
+      "tile_lat": 48,
+      "tile_lon": -122,
+      "latitude": 48.15,
+      "longitude": -121.73,
+      "description": "Pacific Northwest valley and foothill structure",
+      "height_scale": 0.38,
+      "url": "https://elevation-tiles-prod.s3.amazonaws.com/skadi/N48/N48W122.hgt.gz",
+      "relief_sha256": "487d9e1eeeded6669176afea0986dcacb1549b8d27033a7d39cb3c35405f2736",
+      "material_sha256": "ad3ce86906775db0e3e88fbe68e1d3e4533afe7a7c8c66a0879e4c3fa9aaa73e",
+      "range_m": [
+        -231,
+        548
+      ],
+      "rms_m": 123.43515040776718
+    }
+  },
+  "normal_field": "Full measured height gradient; continental and canopy normals separate"
+}

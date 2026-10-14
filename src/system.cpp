@@ -146,7 +146,8 @@ double ringSunVisibility(Vec3 p, Vec3 sun) {
   return .5 * transmission(r) + .25 * transmission(r - footprint * .7) +
          .25 * transmission(r + footprint * .7);
 }
-Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
+Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled,
+              ObserverLocation location) {
   Scene s{};
   // Giant: 3 Jupiter masses; 1 solar mass star at 1 AU. Observer period ~8.9
   // h. Sidereal rotation is synchronous with mean anomaly. Solar and sidereal
@@ -175,7 +176,10 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
       std::remainder(2 * pi * orbitPhase + orbits[0].phase, 2 * pi);
   // 38 N, 50 degrees from the subplanet meridian: giant stays low, with
   // libration.
-  const double lat = 38 * pi / 180, lon = 50 * pi / 180;
+  const double lat = location.latitude, lon = location.longitude;
+  s.altitudeMeters = location.altitudeMeters;
+  s.latitude = location.latitude;
+  s.longitude = location.longitude;
   const Vec3 toward = orbitToWorld(ry({-1, 0, 0}, rotation), orbits[0]),
              eastAxis = orbitToWorld(ry({0, 0, 1}, rotation), orbits[0]);
   const Vec3 equator = toward * std::cos(lon) + eastAxis * std::sin(lon);
@@ -183,16 +187,17 @@ Scene sceneAt(double seconds, double daySeconds, bool ringsEnabled) {
   s.east = -toward * std::sin(lon) + eastAxis * std::cos(lon);
   s.north = normalized(cross(s.east, s.up));
   s.observer =
-      s.bodies[1].position + s.up * (s.bodies[1].radius + 0.2 / 71492.0);
+      s.bodies[1].position +
+      s.up * (s.bodies[1].radius + location.altitudeMeters / 71492000.);
   s.sun = normalized(ry(
       {0.65, 0.08, 0.76},
       std::remainder(2 * pi * physicalSeconds / stellarYearSeconds, 2 * pi)));
   s.sunLocal = s.local(s.sun);
-  // Fixed azimuth points at the mean giant bearing. 28-degree elevation,
+  // Fixed azimuth points at the mean giant bearing. 26-degree elevation,
   // 58-degree vertical FOV.
   Vec3 meanGiant = normalized(s.local(toward));
   const double az = std::atan2(meanGiant.x, meanGiant.z) + 0.12;
-  const double elevation = 28 * pi / 180;
+  const double elevation = 26 * pi / 180;
   s.forward = {std::sin(az) * std::cos(elevation), std::sin(elevation),
                std::cos(az) * std::cos(elevation)};
   s.right = normalized(cross(Vec3{0, 1, 0}, s.forward));

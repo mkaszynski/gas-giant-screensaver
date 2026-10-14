@@ -3,54 +3,57 @@ precision highp float;
 in vec2 uv;out vec4 color;
 #include "atmosphere.glsl"
 #include "scene.glsl"
-uniform highp sampler2D uScene;
-uniform sampler2D uMountains,uNoise;
+uniform highp sampler2D uScene,uSurface;
+uniform bool uMovingSurface;
+uniform float uSurfaceFraction;
 uniform float uOpacity;
 uniform float uSceneScale;
-uniform vec2 uCloudOffset[5];
+#include "clouds.glsl"
 vec3 sceneColor(vec2 p){return texture(uScene,p).rgb/uSceneScale;}
-float n2(vec2 p){return texture(uNoise,p/256.).r;}
-float clouds(vec2 p){return .55*n2(p+uCloudOffset[0])+.27*n2(p*2.01+uCloudOffset[1])+.12*n2(p*4.03+uCloudOffset[2])+.06*n2(p*8.07+uCloudOffset[3]);}
+// Wrap stationary spatial coordinates before adding small wind offsets.
+// Adding wind to a large grazing ray coordinate discards subframe precision.
 vec3 tonemap(vec3 x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
-void main(){vec3 d=ray();vec3 L=sceneColor(uv);
- // Thin curved cloud sheet, with apparent wind motion and sun-dependent silver edges.
- vec2 roots=sphere(vec3(0,Rg+.2,0),d,Rg+8.);float dist=roots.y;vec3 q=d*dist;
- vec2 p=q.xz*vec2(.85,1.9);
- float density=smoothstep(.55,.79,clouds(p));density*=smoothstep(.02,.15,d.y)*.26;
- density*=smoothstep(.33,.66,n2(p*.045+uCloudOffset[4]+vec2(87.,31.)));
- float sunlit=smoothstep(-.12,.06,uSun.y)*uEclipse;
- vec3 cloudL=sky(d)*1.4+transmission(uTrans,8.,uSun.y)*sunlit*.095+vec3(.00002)*uPlanetLight;
- L=mix(L,cloudL,density);
+#include "terrain.glsl"
+vec4 displayColor(vec3 L){
+ vec3 mapped=pow(tonemap(L*uExposure),vec3(1./2.2));
+ float dither=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;
+ return vec4((mapped+dither)*uOpacity,uOpacity);
+}
+void main(){
+ vec4 surface=vec4(0.);
+ if(uMovingSurface&&uv.y<=uSurfaceFraction){
+  surface=texture(uSurface,vec2(uv.x,uv.y/uSurfaceFraction));
+  // All four lanes must agree before skipping derivative-dependent sky work.
+  // Fetch aligned coverage texels; partial silhouettes keep the full sky pass.
+  ivec2 q=ivec2(floor(gl_FragCoord.xy*.5))*2;
+  ivec2 size=textureSize(uSurface,0);
+  if(q.x+1<size.x&&q.y+1<size.y){
+   float coverage=min(min(texelFetch(uSurface,q,0).a,texelFetch(uSurface,q+ivec2(1,0),0).a),
+                      min(texelFetch(uSurface,q+ivec2(0,1),0).a,texelFetch(uSurface,q+ivec2(1,1),0).a));
+   if(coverage>=1.){color=displayColor(surface.rgb/uSceneScale);return;}
+  }
+ }
+ vec3 d=ray();vec3 L=sceneColor(uv);
+ L=cloudScene(d,L);
  // Compact optical point-spread approximation. No blur pyramid or extra fullscreen passes.
  // Solar visibility includes eclipses; ridge/cloud coverage is evaluated at the light source.
  float solarVisibility=uEclipse*smoothstep(-.006,.008,uSun.y);
  float sunZ=dot(uSun,uForward);
- if(sunZ>0.){
-   vec2 sunScreen=vec2(dot(uSun,uRight)/(sunZ*uTanFov*uResolution.x/uResolution.y),dot(uSun,uUp)/(sunZ*uTanFov))*.5+.5;
-   if(sunScreen.x>=0.&&sunScreen.x<=1.&&sunScreen.y>=0.&&sunScreen.y<.30){
-     float ridgeAlpha=texture(uMountains,vec2(sunScreen.x,1.-sunScreen.y/.30)).a;
-     solarVisibility*=1.-ridgeAlpha;
-   }
- }
- vec3 sunCloudPoint=uSun*sphere(vec3(0,Rg+.2,0),uSun,Rg+8.).y;
- vec2 sunCloudUV=sunCloudPoint.xz*vec2(.85,1.9);
- float sunCloud=smoothstep(.55,.79,clouds(sunCloudUV))*smoothstep(.02,.15,uSun.y)*.26*smoothstep(.33,.66,n2(sunCloudUV*.045+uCloudOffset[4]+vec2(87.,31.)));
- solarVisibility*=1.-sunCloud;
+ if(sunZ>0.)solarVisibility*=1.-terrainSample(uSun).a;
+ vec3 sunCloudPoint=uSun*sphere(vec3(0,Rg+uObserverHeight,0),uSun,Rg+8.).y;
+ solarVisibility*=1.-cloudDensity(sunCloudPoint,uSun.y);
  float sunAngle=acos(clamp(dot(d,uSun),-1.,1.));
  float halo=.42*exp(-.5*pow(sunAngle/.006,2.))+.035*exp(-.5*pow(sunAngle/.024,2.));
- L+=transmission(uTrans,.2,uSun.y)*halo*solarVisibility;
- // The ridge is a shallow foreground strip. Alpha is retained from the original asset.
- vec2 mt=vec2(uv.x,(1.-uv.y/.30));
- if(uv.y<.30){vec4 mountain=texture(uMountains,clamp(mt,0.,1.));vec3 albedo=pow(mountain.rgb/max(mountain.a,1.e-5),vec3(2.2));
- vec3 light=vec3(.000040)/uDarkGain+vec3(.10,.16,.24)*uPlanetLight*.10;
- light+=transmission(uTrans,.2,max(.01,uSun.y))*max(0.,uSun.y)*uEclipse*.20;
- light+=sky(vec3(0,1,0))*.45;
- vec3 terrain=albedo*light;
- // The opaque source mask was premultiplied before mip generation. Its
- // filtered alpha is area coverage, and must not be thresholded again.
+ L+=transmission(uTrans,uObserverHeight,uSun.y)*halo*solarVisibility;
+ // Terrain coverage is premultiplied before mips, with no thresholding.
+ if(uMovingSurface){
+  L=L*(1.-surface.a)+surface.rgb/uSceneScale;
+ }else{
+ vec4 mountain=terrainSample(d);
+ vec3 terrain=terrainSurface(d,mountain);
+ if(mountain.a>0.){
  float ridgeCoverage=mountain.a;
  L=ridgeCoverage>=1.?terrain:mix(L,terrain,ridgeCoverage);}
- vec3 mapped=pow(tonemap(L*uExposure),vec3(1./2.2));
- float dither=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;
- color=vec4((mapped+dither)*uOpacity,uOpacity);
+ }
+ color=displayColor(L);
 }

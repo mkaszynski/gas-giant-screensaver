@@ -1,7 +1,9 @@
 #pragma once
 #include "emissions.hpp"
+#include "surface_renderer.hpp"
 #include "system.hpp"
 #include <GLES3/gl3.h>
+#include <memory>
 #include <string>
 #include <vector>
 namespace observatory {
@@ -11,7 +13,8 @@ struct StarfieldOptions {
 };
 class Renderer {
 public:
-  explicit Renderer(std::string dataDirectory, StarfieldOptions = {});
+  explicit Renderer(std::string dataDirectory, StarfieldOptions = {},
+                    SurfaceOptions = {});
   ~Renderer();
   Renderer(const Renderer &) = delete;
   Renderer &operator=(const Renderer &) = delete;
@@ -23,6 +26,21 @@ public:
                    bool drawBodies = true, bool drawRings = true,
                    EmissionFrame emission = {});
   static std::string defaultDataDirectory();
+  size_t surfaceMeshRevision() const {
+    return surface ? surface->meshRevision() : 0;
+  }
+
+  size_t surfaceShadowRevision() const {
+    return surface ? surface->shadowRevision() : 0;
+  }
+
+  size_t surfaceUploadBytes() const {
+    return surface ? surface->uploadBytes() : 0;
+  }
+
+  size_t surfaceReflectionRevision() const {
+    return surface ? surface->reflectionRevision() : 0;
+  }
 
 private:
   struct Target {
@@ -31,12 +49,17 @@ private:
   };
   std::string root;
   StarfieldOptions starfield;
+  SurfaceOptions surfaceOptions;
+  std::unique_ptr<SurfaceRenderer> surface;
+  TravelLocation surfaceLocation{};
+  double lastAltitude = -1e30;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
          postProgram = 0, ringProgram = 0, giantProgram = 0,
          giantLimbProgram = 0, emissionProgram = 0;
   GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
+         terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0;
   Target trans, multi, sky, scene;
@@ -54,6 +77,7 @@ private:
   void release(Target &);
   void bind(GLuint, int, const char *, GLuint);
   void common(GLuint, const Scene &, int, int);
+  void cloudUniforms(GLuint, const Scene &, double);
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,

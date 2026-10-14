@@ -1,5 +1,169 @@
 # Validation
 
+## Landscape fidelity beta
+
+The refinement on `feat/landscape-fidelity` targets 30 fps at 1080p, with a
+30% complete-renderer cost allowance against frozen Phase 1. It remains a beta;
+operator review and frame-tail acceptance precede merging or changing the NixOS
+source pin. The complete measurement is retained in
+[landscape-phase2-resolution-benchmark.json](landscape-phase2-resolution-benchmark.json).
+
+The visible mesh has 512,800 vertices with 1.5× angular and roughly 2× near-view
+radial resolution versus the earlier beta. Independent triangle-interior checks
+use the cached elevation field, rather than merely counting vertices:
+
+| Height fixture | Earlier beta mean error | Refined mean error |
+|---|---:|---:|
+| Dryland | 5.087 m | 2.259 m |
+| Forest | 2.537 m | 1.134 m |
+| Coast | 0.076 m | 0.044 m |
+
+Full cached relief gradients give small gullies and cliffs consistent lighting
+without duplicating the mesh slope. Coarse warm-water interiors retain every
+fine boundary edge. Ocean/coast day/night comparison images differ by at most
+one display code; land and the horizon band retain fine geometry. Frustum
+culling preserves every pixel in day/sunset/night hardware and Mesa tests.
+
+Three alternating 180-frame runs per scene at 1920×1080 / 30 fps measured the
+following medians of whole-renderer run summaries on AMD Renoir:
+
+| Scene | Phase 1 median | Beta median | Added cost | Beta p95 |
+|---|---:|---:|---:|---:|
+| Ocean | 11.652 ms | 12.155 ms | 4.3% | 26.540 ms |
+| Forest | 11.025 ms | 13.076 ms | 18.6% | 22.066 ms |
+| Snow | 10.859 ms | 11.620 ms | 7.0% | 20.010 ms |
+| Coast | 12.118 ms | 15.102 ms | 24.6% | 36.024 ms |
+
+The median cost allowance passes. The p95 allowance and zero-missed-deadline
+requirement **do not pass** on the shared desktop: the candidate recorded
+26 / 12 / 5 / 25 steady frames over 33.33 ms across the three ocean / forest /
+snow / coast runs, excluding the first ten startup frames in each. One ocean
+run had a 28.57 ms median; it remains in the raw report. These figures do not
+establish an uninterrupted 30 fps guarantee. Do not discard the slow runs or
+replace the frozen baseline. Coastal terrain reflections were over budget and
+are opt-in (`--terrain-reflections`) in the refined profile.
+
+The local gate contains 40 CPU/CLI checks, 38 offline model/cache tests, and 13
+GPU executables exercised on hardware and Mesa. The actual CSV benchmark is
+also tested for bounded uploads and file failures. Existing astronomical,
+opacity, antialiasing, cloud, shadow, debug and route-loop checks remain in the
+gate. The source PR stays draft while performance acceptance is outstanding.
+
+## Three-day airborne biomes (Phase 1)
+
+The default scene is the 72-hour flight documented in [SURFACE.md](SURFACE.md).
+Historical static captures below use `--fixed-view`. Moving latitude/longitude
+changes sky orientation and local eclipse times.
+
+The CPU/CLI gate contains 34 checks. An 8,192-position route sweep at both small
+and Unix-scale sky times checks closure, six climate categories, north/south
+latitude range, shared terrain/celestial altitude, ground clearance and bounded
+vertical speed. The route has no terrain-dependent lateral offset. Camera
+bearing is independent of accelerated orbital libration, and east follows the
+physical moon rotation. The minimum sampled giant center elevation is 16.11
+degrees. An independent 128-position / 128-phase libration sweep keeps its upper
+limb above 35.66 degrees on the mean subplanet bearing.
+
+The offline flight builder checked 2,097,152 positions. Minimum ground clearance
+was **620 m**, maximum climb/descent **3.32672 m/s**, and maximum sampled ridge
+on the preserved bearing **0.38599 degrees** (below its 28-degree safety limit).
+A 128 KiB periodic B-spline cache replaces the old 2.1 MiB lateral-detour cache.
+Runtime performs no route planning or horizon scanning.
+
+The moving GPU suite checks opaque terrain coverage, fractional silhouettes,
+no upper-sky crop rectangle, celestial occlusion, identical-phase loop images,
+actual flight motion, mesh replacement/fresh geometry agreement, ground shadows
+from the visible cloud field and host GL state restoration. The source hardware
+check measured **0 codes** maximum at identical loop phases and **0.00462 codes**
+mean difference between streamed and fresh geometry. It also verifies clouds
+actually appear in ocean reflections. It checks parallax over
+ten seconds at airplane height rather than the old one-second close-ground view.
+
+The 28 offline model checks include preserved broad landforms, relief normals
+and valley occlusion, deterministic canopy fields, packed normal bounds,
+dense overlapping crown coverage and source-bound cache hashes. Conservative crop bounds contain sampled geometry;
+a 1080p forest comparison before/after this CPU optimization was pixel-identical.
+The GPU gate also checks that planetshine visibly illuminates nighttime land. The original
+fixed-landscape and astronomical tests remain in the full gate.
+
+Three alternating 180-frame runs per biome at 1920x1080 / 30 fps on AMD Renoir
+measured the following medians of run summaries (milliseconds):
+
+| Biome | GPU median | GPU p95 | CPU+GPU median | CPU+GPU p95 |
+|---|---:|---:|---:|---:|
+| Ocean | 9.62 | 13.78 | 11.62 | 16.94 |
+| Forest | 8.87 | 12.92 | 10.93 | 15.89 |
+| Snow | 8.92 | 12.53 | 10.86 | 14.80 |
+
+Raw repetitions are in [surface-benchmark.json](surface-benchmark.json); every
+run is retained. The [preceding relief version](surface-pre-landform.json)
+measured GPU medians of 10.22 / 8.50 / 8.21 ms for ocean / forest / snow,
+including high first-round forest/snow outliers. These are
+shared-desktop timings, not watts or universal frame-time guarantees. The
+[earlier shadow/crop measurements](surface-shadow-before.json) recorded roughly
+14–19 ms synchronized medians. Cached block bounds eliminate most repeated CPU
+projection work; removing invisible close trees and adapting shadow cadence
+reduce wasted work. The original smaller-mesh streaming measurements remain
+as historical diagnostics in [surface-streaming-before.json](surface-streaming-before.json).
+
+The final Nix preview and native Hyprlock widget build and pass configuration
+checks. An isolated compositor run verified actual rendering, cyan input and
+unlock without locking the user's desktop. Review images in [SURFACE.md](SURFACE.md)
+come from this package. Biome art remains subject to operator visual review;
+water/hydrology and silhouette limits are documented there.
+
+The preview-only debug slider has a deterministic clock test covering pause,
+seek, range changes, endpoint clamping, deferred drag commits, Unix-scale time
+and coupled flight/weather offsets. A separate GPU suite checks actual slider
+coverage, unmodified upper-sky pixels, 2x display density and GL state
+restoration on hardware and software rendering. An isolated Xvfb run of the
+packaged interactive preview exercised short mouse clicks, pause/resume,
+day/year range switches, drag previews, actual sky/route seeks and reset.
+CLI checks reject combining
+the interactive overlay with hidden capture, recording or benchmark modes.
+
+A separate linear-visibility GPU fixture checks six predicted-shadow rollovers
+at grazing sunlight. The largest change across 0.2 ms around a rollover is
+**1/255** on both AMD and llvmpipe. Disabling temporal interpolation in a
+reference fixture jumps by **120/255 (AMD) / 119/255 (software)**, proving the
+test detects discrete cache updates. Shadows still move substantially over two
+seconds. Tests verify four initial depth draws, zero draws during interpolation,
+one hidden-map draw at each staggered rollover, and identical reconstruction
+after rewinding. The normal direct-light shader is not advanced ahead of time.
+
+## Relightable terrain
+
+The foreground now uses measured 2m Swiss relief with modeled rock, vegetation,
+conifer crowns and an alpine lake, rather than the old flat mountain panorama.
+The fixed-view cache supports directional relighting, eight-angle horizon
+shadows, changing aerial perspective, moving wind waves and reflections of
+terrain, clouds and visible HDR scene radiance. Native sky and body simulation
+remain unchanged; viewing elevation decreases from 28 to 26 degrees.
+
+All 21 CPU/CLI checks, 11 galaxy model tests, eight terrain model tests and eight
+GPU suites pass locally. Dry opaque interiors are compared against extreme
+sky/glare and celestial toggles; lake reflection is intentionally tested
+separately. A software-renderer regression exposed a shoreline threshold that jumped by
+62 display codes at Unix-scale weather time. Coverage blending fixes it;
+strict continuity checks remain bounded to two codes on both AMD and llvmpipe,
+including the true plus/minus-pi phase wrap.
+The new GPU suite verifies directional light response, actual
+visible lake coverage, moving reflected images, phase continuity at wraps and
+Unix timestamps, and absence of the former cache-boundary arc. The galaxy
+regression still detects 401 visible eclipse stars (183/255 peak contrast).
+
+Three alternating 180-frame runs per variant at 1920x1080 measured total GPU
+medians of **5.235 / 5.833 ms** in daylight (+11.4%) and **4.885 / 5.472 ms**
+at night (+12.0%). The median of run p95 values is 7.811 / 6.474 ms in daylight
+and 5.559 / 6.049 ms at night. These include the camera adjustment and are
+shared-desktop measurements, not watt readings or universal driver guarantees.
+Raw repetitions are in [terrain-benchmark.json](terrain-benchmark.json).
+
+The Nix-packaged 1080p daytime capture is pixel-identical to the source capture.
+Actual captures and source/renderer limits are documented in
+[the terrain design](TERRAIN.md).
+
+
 ## Rendered HDR galaxy
 
 The current beta replaces the flattened star map with deterministic stellar-

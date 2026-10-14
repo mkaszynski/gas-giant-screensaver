@@ -43,18 +43,7 @@ struct Fixture {
                           "\n#else\ndiscard;\n#endif\n");
       append("post.frag", "color=vec4(sceneColor(uv),1.);\n");
     } else if (mountains) {
-      std::ifstream input(path / "shaders/post.frag");
-      std::ostringstream buffer;
-      buffer << input.rdbuf();
-      const auto source = buffer.str();
-      const std::string marker = "float ridgeCoverage=";
-      const auto begin = source.find(marker) + marker.size();
-      const auto expression =
-          source.substr(begin, source.find(';', begin) - begin);
-      append("post.frag", "vec4 "
-                          "mountain=texture(uMountains,clamp(vec2(uv.x,1.-uv.y/"
-                          ".30),0.,1.));\ncolor=vec4(vec3(uv.y<.30?(" +
-                              expression + "):0.),1.);\n");
+      append("post.frag", "color=vec4(vec3(terrainSample(ray()).a),1.);\n");
     } else {
       append("background.frag", "color=vec4(0.);\n");
       append("stars.frag", "color=vec4(0.);\n");

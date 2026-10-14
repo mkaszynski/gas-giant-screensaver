@@ -1,11 +1,14 @@
 #define GLFW_INCLUDE_ES3
+#include "debug_overlay.hpp"
 #include "renderer.hpp"
+#include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -37,9 +40,12 @@ int main(int argc, char **argv) {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
     double day = 1800, time = -1, weatherTime = -1, timeout = 0,
            timeStep = 1.0 / 30, lightningBrightness = 5,
-           auroraBrightness = 1000;
-    bool fullscreen = false, drawRings = true, drawEmissions = true;
+           auroraBrightness = 1000, travelTime = -1, travelSpeed = 1;
+    SurfaceOptions surface{true};
+    bool fullscreen = false, drawRings = true, drawEmissions = true,
+         debug = false;
     StarfieldOptions starfield;
+    std::string benchmarkOutput;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
       std::string a = argv[i];
@@ -53,7 +59,9 @@ int main(int argc, char **argv) {
                "(default 30)\n  --width N --height N   Window/capture size\n  "
                "--capture FILE.png     Render a hidden deterministic "
                "screenshot\n  --benchmark N          Measure N synchronized "
-               "render frames\n  --data-dir PATH        Assets and shaders "
+               "render frames\n  --benchmark-output FILE.csv  Save per-frame "
+               "costs and cache events\n  --data-dir PATH        Assets and "
+               "shaders "
                "directory\n  --record DIRECTORY     Write a numbered PNG "
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
@@ -71,9 +79,38 @@ int main(int argc, char **argv) {
                "comparison\n"
                "  --no-emissions         Disable lightning and auroras for "
                "comparison\n"
+               "  --travel-time SECONDS   Start at this point of the airborne "
+               "72-hour "
+               "route\n"
+               "  --travel-speed N        Preview travel rate (default 1)\n"
+               "  --terrain-reflections  Enable optional coastal terrain "
+               "reflections\n"
+               "  --no-terrain-reflections  Disable coastal terrain "
+               "reflections\n"
+               "  --fixed-view            Previous stationary landscape "
+               "comparison\n"
+               "  --debug                 Time slider: day, flight or year; "
+               "release to seek\n"
+               "Space pauses; Home resets the slider; Left/Right step time.\n"
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
+      }
+      if (a == "--terrain-reflections") {
+        surface.reflections = true;
+        continue;
+      }
+      if (a == "--no-terrain-reflections") {
+        surface.reflections = false;
+        continue;
+      }
+      if (a == "--fixed-view") {
+        surface.enabled = false;
+        continue;
+      }
+      if (a == "--debug") {
+        debug = true;
+        continue;
       }
       if (a == "--fullscreen") {
         fullscreen = true;
@@ -106,6 +143,10 @@ int main(int argc, char **argv) {
         timeout = number(v, 0, 86400);
       else if (a == "--time")
         time = number(v, 0, 1e10);
+      else if (a == "--travel-time")
+        travelTime = number(v, 0, 1e10);
+      else if (a == "--travel-speed")
+        travelSpeed = number(v, 0, 10000);
       else if (a == "--weather-time")
         weatherTime = number(v, 0, 1e10);
       else if (a == "--lightning-brightness")
@@ -122,6 +163,8 @@ int main(int argc, char **argv) {
         h = integerArgument(v, 64, 4320);
       else if (a == "--benchmark")
         benchmark = integerArgument(v, 1, 10000);
+      else if (a == "--benchmark-output")
+        benchmarkOutput = v;
       else if (a == "--record")
         record = v;
       else if (a == "--frames")
@@ -135,8 +178,15 @@ int main(int argc, char **argv) {
       else
         throw std::runtime_error("Unknown option: " + a);
     }
+    if (!benchmarkOutput.empty() && !benchmark)
+      throw std::runtime_error("--benchmark-output requires --benchmark");
+    if (benchmark && (!capture.empty() || !record.empty()))
+      throw std::runtime_error(
+          "--benchmark cannot be combined with capture or record");
     if (!capture.empty() && !record.empty())
       throw std::runtime_error("Use either --capture or --record");
+    if (debug && (!capture.empty() || !record.empty() || benchmark))
+      throw std::runtime_error("--debug requires an interactive preview");
     if (!record.empty())
       std::filesystem::create_directories(record);
     std::signal(SIGINT, stop);
@@ -162,11 +212,21 @@ int main(int argc, char **argv) {
         glfwCreateWindow(w, h, "Gas Giant Observatory", monitor, nullptr);
     if (!window)
       throw std::runtime_error("Cannot create GLES 3 window");
+    if (debug) {
+      // Retain short clicks/key presses between capped render frames.
+      glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+      glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
+    }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0);
     std::cerr << "Renderer: " << glGetString(GL_RENDERER) << "\n";
     {
-      Renderer renderer(data, starfield);
+      if (time < 0)
+        time = sceneClockNow();
+      surface.speed = travelSpeed;
+      surface.offset =
+          (travelTime < 0 ? time : travelTime) - time * travelSpeed;
+      Renderer renderer(data, starfield, surface);
       using Clock = std::chrono::steady_clock;
       auto start = Clock::now();
       std::vector<double> durations, gpuDurations;
@@ -184,6 +244,20 @@ int main(int argc, char **argv) {
         time = sceneClockNow();
       if (weatherTime < 0)
         weatherTime = time;
+      std::unique_ptr<DebugOverlay> controls;
+      if (debug)
+        controls = std::make_unique<DebugOverlay>(time, day);
+      // Shader/asset loading is not part of the interactive timeline.
+      start = Clock::now();
+      std::ofstream frameLog;
+      if (!benchmarkOutput.empty()) {
+        frameLog.open(benchmarkOutput);
+        if (!frameLog)
+          throw std::runtime_error("Cannot write benchmark output");
+        frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
+                    "revision,upload_bytes,reflection_revision\n";
+        frameLog << std::setprecision(12);
+      }
       int frames = 0;
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
@@ -192,6 +266,8 @@ int main(int argc, char **argv) {
         if (timeout > 0 && elapsed >= timeout)
           break;
         glfwPollEvents();
+        if (controls)
+          controls->input(window, elapsed);
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
           break;
@@ -205,21 +281,33 @@ int main(int argc, char **argv) {
         auto measure = Clock::now();
         if (query)
           glBeginQuery(0x88BF, query);
-        const double weatherElapsed = !record.empty()
+        const double sceneTime =
+            controls
+                ? controls->time(elapsed)
+                : time + (!record.empty() ? frames * timeStep
+                                          : (capture.empty() ? elapsed : 0));
+        const double weatherElapsed = controls ? sceneTime - time
+                                      : !record.empty()
                                           ? frames * timeStep
                                           : (capture.empty() ? elapsed : 0);
-        renderer.render(
-            w, h,
-            time + (!record.empty() ? frames * timeStep
-                                    : (capture.empty() ? elapsed : 0)),
-            day, 1, true, drawRings,
-            {drawEmissions ? weatherTime + weatherElapsed : -1, 1. / fps, true,
-             true, lightningBrightness, auroraBrightness});
+        renderer.render(w, h, sceneTime, day, 1, true, drawRings,
+                        {drawEmissions ? weatherTime + weatherElapsed : -1,
+                         1. / fps, true, true, lightningBrightness,
+                         auroraBrightness});
+        if (controls) {
+          int ww, wh;
+          glfwGetWindowSize(window, &ww, &wh);
+          controls->draw(w, h, ww, wh, elapsed);
+        }
         if (benchmark) {
           if (query)
             glEndQuery(0x88BF);
           glFinish();
           if (query) {
+            GLint disjoint = 0;
+            glGetIntegerv(GL_GPU_DISJOINT_EXT, &disjoint);
+            if (disjoint)
+              throw std::runtime_error("Disjoint GPU timer; rerun benchmark");
             GLuint ns = 0;
             glGetQueryObjectuiv(query, GL_QUERY_RESULT, &ns);
             gpuDurations.push_back(ns / 1e6);
@@ -227,6 +315,18 @@ int main(int argc, char **argv) {
           durations.push_back(
               std::chrono::duration<double, std::milli>(Clock::now() - measure)
                   .count());
+          if (frameLog.is_open()) {
+            frameLog << frames << "," << sceneTime << "," << durations.back()
+                     << ",";
+            if (query)
+              frameLog << gpuDurations.back();
+            frameLog << "," << renderer.surfaceMeshRevision() << ","
+                     << renderer.surfaceShadowRevision() << ","
+                     << renderer.surfaceUploadBytes() << ","
+                     << renderer.surfaceReflectionRevision() << "\n";
+            if (!frameLog)
+              throw std::runtime_error("Cannot write benchmark frame");
+          }
         }
         GLenum error = glGetError();
         if (error != GL_NO_ERROR)
@@ -251,6 +351,11 @@ int main(int argc, char **argv) {
           std::cout << "Synchronized GPU+CPU render ms: median="
                     << durations[durations.size() / 2]
                     << " p95=" << durations[durations.size() * 95 / 100]
+                    << " p99=" << durations[durations.size() * 99 / 100]
+                    << " max=" << durations.back() << " deadline_misses="
+                    << std::count_if(
+                           durations.begin(), durations.end(),
+                           [fps](double ms) { return ms > 1000. / fps; })
                     << " frames=" << frames << " resolution=" << w << 'x' << h
                     << '\n';
           if (!gpuDurations.empty()) {

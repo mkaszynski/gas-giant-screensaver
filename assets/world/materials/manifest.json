@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "layers": [
+    "rock",
+    "grass",
+    "sand",
+    "tundra",
+    "snow",
+    "soil"
+  ],
+  "size": 512,
+  "span_m": 24,
+  "albedo_space": "linear",
+  "albedo_alpha": "perceptual roughness",
+  "normal_channels": "tangent x,z; cavity AO; vertical normal",
+  "photographic_input": false,
+  "files": {
+    "rock-albedo.png": "247555086a0c1a5cc61ee536f7e7961006d2bf8c4d26ef746d69caf78f8a85a7",
+    "rock-normal.png": "64866c8bd04a4ac66ac5f6b9985c8c647480bbb6f8a879b932f63edcb6c1a93f",
+    "grass-albedo.png": "0d105872786e0636e0f9d28ee9afa41d21a24d604bda38684b57c8d3e44c4c8d",
+    "grass-normal.png": "73f65ce3a83f9893dca3a4034127cc2f81a1713c8da9951e2c1a90f11d3cbec8",
+    "sand-albedo.png": "5308f482397e7265e6eefe5b25d6bbfe66393ffdabbb6f32ec65d1302e3fce5d",
+    "sand-normal.png": "2793a0f703e6e42e008b4b452a12200108db0c3b17ee76093dbec53a94dff461",
+    "tundra-albedo.png": "0afdf9635ca2ed52d289065dfd7fa0882aaae70620840d24936a98b89f23d432",
+    "tundra-normal.png": "5f96c1e484c1686e160b49b2b7eb523feb695c391026e62e60697dd604ea1874",
+    "snow-albedo.png": "bb4319f4ad40d92cb67f818faf99993d9563c4f5d4078b3cb750332f753246c5",
+    "snow-normal.png": "828e329d80e161791f8660e234a11367223b8e37b1d4d123459c2985afafb6f4",
+    "soil-albedo.png": "1a41b9a9ddda050aaacecc4e2e233e46a4bb9dd84d3fd13422f016d231835e86",
+    "soil-normal.png": "2f1fe8f5c03b07f90e9efba275b110bd2cc69ad5552d821b5ba026f3cef0d959"
+  }
+}

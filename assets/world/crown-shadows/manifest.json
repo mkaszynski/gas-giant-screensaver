@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "size": 512,
+  "span_m": 512,
+  "azimuth_sectors": 8,
+  "solar_elevations_degrees": [
+    5,
+    25,
+    55,
+    85
+  ],
+  "filtering": "visibility averaged after geometric occlusion",
+  "files": {
+    "0.png": "6137801917c71439b7258ae1dfa10acfc04b3917ecd222fbaa9a8fdfd97a2247",
+    "1.png": "7e093888a748457637f39a304880b5da5a4eca30162568ba4241c38580822cad",
+    "2.png": "f5e03d8438576df9d14eda4ef3f576d87f4db56a0e3730e361fb2056ce73aa50",
+    "3.png": "559bb04a4d44a16ace1f84988e1756a2e8ac72932ff04ccc028d4fa59aad3a61",
+    "4.png": "917398b0de2f8f8c4b6ad0098e5eb348d4a155f2d7a8c85c13876d5b7cc3b879",
+    "5.png": "11611ebfb45c202b11915416b6e03656600c5d5e4092de7df2da0ad51c8ea430",
+    "6.png": "ad104c45660532dec415ff1e1e1a25e67f935711dcc3978e9faa3276bb8a8eb5",
+    "7.png": "82d0f53cdf66e5fcbf59563250be8c840a0eb257bb9684761def4ea2cab3bd0a"
+  }
+}
