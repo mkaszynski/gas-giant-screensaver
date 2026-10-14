@@ -221,7 +221,7 @@ int main() {
               "longitude seam is continuous");
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
-    require(mesh.vertices.size() <= 600000 && mesh.indices.size() <= 3500000,
+    require(mesh.vertices.size() <= 280000 && mesh.indices.size() <= 1700000,
             "bounded mesh complexity");
     require(mesh.bounds.size() <= 8192,
             "per-frame crop work uses bounded terrain blocks");

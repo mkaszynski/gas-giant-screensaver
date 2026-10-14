@@ -1,12 +1,14 @@
 #define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
 #include "renderer.hpp"
+#include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -43,6 +45,7 @@ int main(int argc, char **argv) {
     bool fullscreen = false, drawRings = true, drawEmissions = true,
          debug = false;
     StarfieldOptions starfield;
+    std::string benchmarkOutput;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
       std::string a = argv[i];
@@ -56,7 +59,9 @@ int main(int argc, char **argv) {
                "(default 30)\n  --width N --height N   Window/capture size\n  "
                "--capture FILE.png     Render a hidden deterministic "
                "screenshot\n  --benchmark N          Measure N synchronized "
-               "render frames\n  --data-dir PATH        Assets and shaders "
+               "render frames\n  --benchmark-output FILE.csv  Save per-frame "
+               "costs and cache events\n  --data-dir PATH        Assets and "
+               "shaders "
                "directory\n  --record DIRECTORY     Write a numbered PNG "
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
@@ -146,6 +151,8 @@ int main(int argc, char **argv) {
         h = integerArgument(v, 64, 4320);
       else if (a == "--benchmark")
         benchmark = integerArgument(v, 1, 10000);
+      else if (a == "--benchmark-output")
+        benchmarkOutput = v;
       else if (a == "--record")
         record = v;
       else if (a == "--frames")
@@ -159,6 +166,11 @@ int main(int argc, char **argv) {
       else
         throw std::runtime_error("Unknown option: " + a);
     }
+    if (!benchmarkOutput.empty() && !benchmark)
+      throw std::runtime_error("--benchmark-output requires --benchmark");
+    if (benchmark && (!capture.empty() || !record.empty()))
+      throw std::runtime_error(
+          "--benchmark cannot be combined with capture or record");
     if (!capture.empty() && !record.empty())
       throw std::runtime_error("Use either --capture or --record");
     if (debug && (!capture.empty() || !record.empty() || benchmark))
@@ -225,6 +237,15 @@ int main(int argc, char **argv) {
         controls = std::make_unique<DebugOverlay>(time, day);
       // Shader/asset loading is not part of the interactive timeline.
       start = Clock::now();
+      std::ofstream frameLog;
+      if (!benchmarkOutput.empty()) {
+        frameLog.open(benchmarkOutput);
+        if (!frameLog)
+          throw std::runtime_error("Cannot write benchmark output");
+        frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
+                    "revision\n";
+        frameLog << std::setprecision(12);
+      }
       int frames = 0;
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
@@ -271,6 +292,10 @@ int main(int argc, char **argv) {
             glEndQuery(0x88BF);
           glFinish();
           if (query) {
+            GLint disjoint = 0;
+            glGetIntegerv(GL_GPU_DISJOINT_EXT, &disjoint);
+            if (disjoint)
+              throw std::runtime_error("Disjoint GPU timer; rerun benchmark");
             GLuint ns = 0;
             glGetQueryObjectuiv(query, GL_QUERY_RESULT, &ns);
             gpuDurations.push_back(ns / 1e6);
@@ -278,6 +303,17 @@ int main(int argc, char **argv) {
           durations.push_back(
               std::chrono::duration<double, std::milli>(Clock::now() - measure)
                   .count());
+          if (frameLog) {
+            frameLog << frames << "," << sceneTime << "," << durations.back()
+                     << ",";
+            if (query)
+              frameLog << gpuDurations.back();
+            frameLog << "," << renderer.surfaceMeshRevision() << ","
+                     << renderer.surfaceShadowRevision() << ","
+                     << renderer.surfaceUploadBytes() << "\n";
+            if (!frameLog)
+              throw std::runtime_error("Cannot write benchmark frame");
+          }
         }
         GLenum error = glGetError();
         if (error != GL_NO_ERROR)
@@ -302,6 +338,11 @@ int main(int argc, char **argv) {
           std::cout << "Synchronized GPU+CPU render ms: median="
                     << durations[durations.size() / 2]
                     << " p95=" << durations[durations.size() * 95 / 100]
+                    << " p99=" << durations[durations.size() * 99 / 100]
+                    << " max=" << durations.back() << " deadline_misses="
+                    << std::count_if(
+                           durations.begin(), durations.end(),
+                           [fps](double ms) { return ms > 1000. / fps; })
                     << " frames=" << frames << " resolution=" << w << 'x' << h
                     << '\n';
           if (!gpuDurations.empty()) {

@@ -286,7 +286,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   // Spend almost all angular samples inside the visible hemisphere. A coarse
   // back sector retains full spherical ground/shadow coverage. More radial
   // samples resolve steep measured relief from the airplane-height view.
-  constexpr int visible = 512, angular = visible + 32, radial = 1024;
+  constexpr int visible = 512, angular = visible + 32, radial = 512;
   constexpr double far = 145000.;
   SurfaceMesh mesh;
   mesh.center = center;
@@ -299,7 +299,10 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   const double azimuth =
       std::atan2(dot(bearing, east), dot(bearing, north)) + .12;
   for (int j = 0; j <= radial; ++j) {
-    double r = j == 0 ? 0. : 2. * std::expm1(std::log1p(far / 2.) * j / radial);
+    // An aircraft cannot see sub-metre rings under its own footprint. A power
+    // distribution retains nearby coverage and resolves distant ridges with
+    // half the vertices of the former exponential mesh.
+    double r = far * std::pow(double(j) / radial, 1.6);
     for (int i = 0; i < angular; ++i) {
       double a = azimuth - pi / 3 +
                  (i < visible ? (2 * pi / 3) * i / visible

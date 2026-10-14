@@ -180,6 +180,8 @@ int main() {
                std::chrono::steady_clock::now() < deadline) {
           std::this_thread::sleep_for(std::chrono::milliseconds(20));
           moving.render(w, h, 520);
+          require(moving.surfaceUploadBytes() <= 2 * 1024 * 1024,
+                  "normal streaming uploads at most 2 MiB per frame");
         }
         require(moving.surfaceMeshRevision() > initialRevision,
                 "background terrain replacement actually finishes and uploads");

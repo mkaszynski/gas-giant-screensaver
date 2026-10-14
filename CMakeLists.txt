@@ -115,3 +115,8 @@ if(OBSERVATORY_BUILD_FLIGHT_BAKER)
   add_executable(flight-baker scripts/bake_flight.cpp src/surface.cpp src/system.cpp)
   target_include_directories(flight-baker PRIVATE src)
 endif()
+
+add_test(NAME cli-benchmark-output-without-benchmark COMMAND gas-giant-screensaver --benchmark-output frames.csv)
+add_test(NAME cli-benchmark-capture COMMAND gas-giant-screensaver --benchmark 1 --capture capture.png)
+add_test(NAME cli-benchmark-record COMMAND gas-giant-screensaver --benchmark 1 --record captures)
+set_tests_properties(cli-benchmark-output-without-benchmark cli-benchmark-capture cli-benchmark-record PROPERTIES WILL_FAIL TRUE)

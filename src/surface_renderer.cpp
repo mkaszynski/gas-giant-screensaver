@@ -81,21 +81,8 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glGenBuffers(1, &indices);
   glBindBuffer(GL_ARRAY_BUFFER, vertices);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
-  for (int i = 0; i < 3; ++i) {
-    glEnableVertexAttribArray(i);
-    glVertexAttribPointer(
-        i, 3, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
-        reinterpret_cast<void *>(size_t(i) * 3 * sizeof(float)));
-  }
-  glEnableVertexAttribArray(3);
-  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
-                        reinterpret_cast<void *>(9 * sizeof(float)));
-  glEnableVertexAttribArray(4);
-  glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
-                        reinterpret_cast<void *>(11 * sizeof(float)));
-  glEnableVertexAttribArray(5);
-  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
-                        reinterpret_cast<void *>(13 * sizeof(float)));
+  glGenBuffers(1, &stagingVertices);
+  vertexAttributes();
   png_image img{};
   img.version = PNG_IMAGE_VERSION;
   if (!png_image_begin_read_from_file(
@@ -190,6 +177,25 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
     check();
   }
 }
+void SurfaceRenderer::vertexAttributes() {
+  glBindVertexArray(vao);
+  glBindBuffer(GL_ARRAY_BUFFER, vertices);
+  for (int i = 0; i < 3; ++i) {
+    glEnableVertexAttribArray(i);
+    glVertexAttribPointer(
+        i, 3, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+        reinterpret_cast<void *>(size_t(i) * 3 * sizeof(float)));
+  }
+  glEnableVertexAttribArray(3);
+  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(9 * sizeof(float)));
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(11 * sizeof(float)));
+  glEnableVertexAttribArray(5);
+  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, sizeof(SurfaceVertex),
+                        reinterpret_cast<void *>(13 * sizeof(float)));
+}
 void SurfaceRenderer::releaseTargets() {
   glDeleteFramebuffers(1, &multisample);
   glDeleteFramebuffers(1, &resolved);
@@ -205,6 +211,7 @@ SurfaceRenderer::~SurfaceRenderer() {
   glDeleteProgram(program);
   glDeleteProgram(shadowProgram);
   glDeleteBuffers(1, &vertices);
+  glDeleteBuffers(1, &stagingVertices);
   glDeleteBuffers(1, &indices);
   glDeleteVertexArrays(1, &vao);
   glDeleteTextures(1, &material);
@@ -247,7 +254,7 @@ void SurfaceRenderer::resize(int w, int h) {
                          texture, 0);
   check();
 }
-void SurfaceRenderer::upload(SurfaceMesh m) {
+void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
   const bool topologyChanged = m.indices != mesh.indices;
   if (!mesh.vertices.empty()) {
     Vec3 oldAxes[] = {geographicEast(mesh.center), geographicUp(mesh.center),
@@ -278,19 +285,49 @@ void SurfaceRenderer::upload(SurfaceMesh m) {
   }
   mesh = std::move(m);
   ++revision;
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vertices);
   const size_t vertexBytes = mesh.vertices.size() * sizeof(SurfaceVertex);
   if (vertexBytes > vertexCapacity) {
     vertexCapacity = vertexBytes;
-    glBufferData(GL_ARRAY_BUFFER, vertexCapacity, nullptr, GL_DYNAMIC_DRAW);
+    for (auto buffer : {vertices, stagingVertices}) {
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      glBufferData(GL_ARRAY_BUFFER, vertexCapacity, nullptr, GL_DYNAMIC_DRAW);
+    }
   }
-  glBufferSubData(GL_ARRAY_BUFFER, 0, vertexBytes, mesh.vertices.data());
+  vertexAttributes();
+  if (!prepared) {
+    glBufferSubData(GL_ARRAY_BUFFER, 0, vertexBytes, mesh.vertices.data());
+    lastUploadBytes += vertexBytes;
+  }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   if (topologyChanged)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  mesh.indices.size() * sizeof(uint32_t), mesh.indices.data(),
                  GL_STATIC_DRAW);
+}
+void SurfaceRenderer::stageUpload() {
+  if (!staged)
+    return;
+  // Populate the inactive buffer in bounded chunks while the complete old mesh
+  // remains visible. Switch geometry, bounds and its physical frame together.
+  constexpr size_t chunk = 2 * 1024 * 1024;
+  const size_t bytes = staged->vertices.size() * sizeof(SurfaceVertex);
+  if (bytes > vertexCapacity)
+    throw std::runtime_error(
+        "Streamed surface topology exceeds reserved capacity");
+  const size_t count = std::min(chunk, bytes - stagedBytes);
+  glBindBuffer(GL_ARRAY_BUFFER, stagingVertices);
+  glBufferSubData(
+      GL_ARRAY_BUFFER, stagedBytes, count,
+      reinterpret_cast<const unsigned char *>(staged->vertices.data()) +
+          stagedBytes);
+  stagedBytes += count;
+  lastUploadBytes += count;
+  if (stagedBytes == bytes) {
+    std::swap(vertices, stagingVertices);
+    upload(std::move(*staged), true);
+    staged.reset();
+    stagedBytes = 0;
+  }
 }
 void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
   Vec3 side = cross(Vec3{0, 1, 0}, sun);
@@ -379,6 +416,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
                                int h, double seconds, double daySeconds,
                                GLuint scene,
                                const std::function<void(GLuint)> &lighting) {
+  lastUploadBytes = 0;
   auto delta = [&](TravelLocation c) {
     Vec3 point = geographicUp(location) * surfaceRadius -
                  geographicUp(c) * surfaceRadius;
@@ -388,17 +426,22 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   if (mesh.vertices.empty())
     upload(buildSurfaceMesh(terrain, location));
   if (pending.valid() &&
-      pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-    upload(pending.get());
+      pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    staged = pending.get();
+    stagedBytes = 0;
+  }
+  stageUpload();
   Vec3 eye = delta(mesh.center);
   if (length(eye) > 2000.) {
+    staged.reset();
+    stagedBytes = 0;
     if (pending.valid())
       pending.wait();
     if (pending.valid())
       pending.get();
     upload(buildSurfaceMesh(terrain, location));
     eye = delta(mesh.center);
-  } else if (length(eye) > 750. && !pending.valid())
+  } else if (length(eye) > 750. && !pending.valid() && !staged)
     pending = std::async(std::launch::async, [this, location] {
       return buildSurfaceMesh(terrain, location);
     });

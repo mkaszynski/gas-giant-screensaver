@@ -30,6 +30,14 @@ public:
     return surface ? surface->meshRevision() : 0;
   }
 
+  size_t surfaceShadowRevision() const {
+    return surface ? surface->shadowRevision() : 0;
+  }
+
+  size_t surfaceUploadBytes() const {
+    return surface ? surface->uploadBytes() : 0;
+  }
+
 private:
   struct Target {
     GLuint texture = 0, framebuffer = 0, depth = 0;

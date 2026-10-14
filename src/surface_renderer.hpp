@@ -3,6 +3,7 @@
 #include <GLES3/gl3.h>
 #include <functional>
 #include <future>
+#include <optional>
 namespace observatory {
 class SurfaceRenderer {
 public:
@@ -13,6 +14,7 @@ public:
   double coverageFraction() const { return fraction; }
   size_t meshRevision() const { return revision; }
   size_t shadowRevision() const { return shadowDraws; }
+  size_t uploadBytes() const { return lastUploadBytes; }
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
 
@@ -20,6 +22,9 @@ private:
   SurfaceWorld terrain;
   SurfaceMesh mesh;
   std::future<SurfaceMesh> pending;
+  std::optional<SurfaceMesh> staged;
+  size_t stagedBytes = 0, lastUploadBytes = 0;
+  GLuint stagingVertices = 0;
   GLuint vao = 0, vertices = 0, indices = 0, program = 0, shadowProgram = 0,
          material = 0, canopy = 0, reliefMaterial = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, resolved = 0,
@@ -34,7 +39,9 @@ private:
   size_t shadowDraws = 0;
   bool shadowsValid = false;
   double fraction = 1;
-  void upload(SurfaceMesh);
+  void upload(SurfaceMesh, bool prepared = false);
+  void stageUpload();
+  void vertexAttributes();
   void resize(int, int);
   void releaseTargets();
   void shadows(const Scene &, Vec3, double, double);

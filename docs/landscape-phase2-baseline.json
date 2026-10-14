@@ -1,0 +1,107 @@
+{
+  "feature": "landscape-phase2-frozen-baseline",
+  "resolution": [
+    1920,
+    1080
+  ],
+  "frames_per_run": 180,
+  "fps_cap": 30,
+  "renderer": "AMD Radeon Graphics (radeonsi, renoir)",
+  "environment": "shared desktop; timing only, not watts",
+  "binary_sha256": "776dde86a09f15a10a9e02a64f1b08d5e14e7592c97d6aafb9eec655e5a02865",
+  "flight_sha256": "fa829d6d37235b3d3b63f5cd8464ff95413cf53998bebd9bd9d3a00e59e69b93",
+  "relief_sha256": "5e9d52b21a50b6316dbdc55e9468e13936a1b0924f8612a6c9f848580a140008",
+  "relief_material_sha256": "ff7226b4b0e44c6f6948e565072899224cea397bfecc0362ff79d5fb6de9d0f9",
+  "runs": [
+    {
+      "biome": "ocean",
+      "repeat": 1,
+      "sky_time": 1740,
+      "route_time": 0,
+      "cpu_gpu_median_ms": 11.2372,
+      "cpu_gpu_p95_ms": 16.886,
+      "gpu_median_ms": 9.18166,
+      "gpu_p95_ms": 14.3627
+    },
+    {
+      "biome": "forest",
+      "repeat": 1,
+      "sky_time": 510,
+      "route_time": 162000,
+      "cpu_gpu_median_ms": 10.5171,
+      "cpu_gpu_p95_ms": 14.8803,
+      "gpu_median_ms": 8.43124,
+      "gpu_p95_ms": 12.389
+    },
+    {
+      "biome": "snow",
+      "repeat": 1,
+      "sky_time": 360,
+      "route_time": 210600,
+      "cpu_gpu_median_ms": 10.6454,
+      "cpu_gpu_p95_ms": 15.113,
+      "gpu_median_ms": 8.51168,
+      "gpu_p95_ms": 12.8344
+    },
+    {
+      "biome": "ocean",
+      "repeat": 2,
+      "sky_time": 1740,
+      "route_time": 0,
+      "cpu_gpu_median_ms": 11.2967,
+      "cpu_gpu_p95_ms": 15.242,
+      "gpu_median_ms": 9.19236,
+      "gpu_p95_ms": 13.6113
+    },
+    {
+      "biome": "forest",
+      "repeat": 2,
+      "sky_time": 510,
+      "route_time": 162000,
+      "cpu_gpu_median_ms": 10.6908,
+      "cpu_gpu_p95_ms": 16.4522,
+      "gpu_median_ms": 8.60632,
+      "gpu_p95_ms": 14.2232
+    },
+    {
+      "biome": "snow",
+      "repeat": 2,
+      "sky_time": 360,
+      "route_time": 210600,
+      "cpu_gpu_median_ms": 10.6203,
+      "cpu_gpu_p95_ms": 15.1557,
+      "gpu_median_ms": 8.5037,
+      "gpu_p95_ms": 13.3609
+    },
+    {
+      "biome": "ocean",
+      "repeat": 3,
+      "sky_time": 1740,
+      "route_time": 0,
+      "cpu_gpu_median_ms": 11.6139,
+      "cpu_gpu_p95_ms": 16.1015,
+      "gpu_median_ms": 9.55924,
+      "gpu_p95_ms": 14.4955
+    },
+    {
+      "biome": "forest",
+      "repeat": 3,
+      "sky_time": 510,
+      "route_time": 162000,
+      "cpu_gpu_median_ms": 10.7539,
+      "cpu_gpu_p95_ms": 15.5238,
+      "gpu_median_ms": 8.75867,
+      "gpu_p95_ms": 13.7739
+    },
+    {
+      "biome": "snow",
+      "repeat": 3,
+      "sky_time": 360,
+      "route_time": 210600,
+      "cpu_gpu_median_ms": 11.4399,
+      "cpu_gpu_p95_ms": 15.4284,
+      "gpu_median_ms": 9.03784,
+      "gpu_p95_ms": 13.2186
+    }
+  ]
+}
