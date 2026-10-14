@@ -120,3 +120,10 @@ add_test(NAME cli-benchmark-output-without-benchmark COMMAND gas-giant-screensav
 add_test(NAME cli-benchmark-capture COMMAND gas-giant-screensaver --benchmark 1 --capture capture.png)
 add_test(NAME cli-benchmark-record COMMAND gas-giant-screensaver --benchmark 1 --record captures)
 set_tests_properties(cli-benchmark-output-without-benchmark cli-benchmark-capture cli-benchmark-record PROPERTIES WILL_FAIL TRUE)
+
+add_executable(frame-pacing-tests tests/frame_pacing_tests.cpp)
+target_include_directories(frame-pacing-tests PRIVATE src)
+add_test(NAME native-frame-pacing COMMAND frame-pacing-tests)
+
+add_executable(fidelity-render-tests tests/fidelity_render_tests.cpp)
+target_link_libraries(fidelity-render-tests PRIVATE observatory PkgConfig::GLFW)

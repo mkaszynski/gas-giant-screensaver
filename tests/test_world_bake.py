@@ -8,7 +8,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from bake_world import build, noise3, material, periodic_terrain, relief_material
-from bake_canopy import build_canopy
+from bake_canopy import build_canopy, crown_visibility
 
 
 class WorldBakeTests(unittest.TestCase):
@@ -74,7 +74,31 @@ class WorldBakeTests(unittest.TestCase):
         self.assertGreater(a[:, :, 2].std(), 15)
         normals = a[:, :, :2] / 255.0 * 2 - 1
         self.assertLessEqual((normals**2).sum(axis=-1).max(), 1.03)
-        self.assertGreaterEqual(a[:, :, 3].min(), 140)
+        self.assertGreaterEqual(a[:, :, 3].min(), 102)
+        self.assertGreater(a[:, :, 3].std(), 12)
+
+    def test_directional_crown_shadows_preserve_filtered_visibility(self):
+        flat = np.zeros((128, 128))
+        np.testing.assert_array_equal(
+            crown_visibility(flat, 0, 128), np.full((128, 128, 4), 255, dtype="u1")
+        )
+        wall = flat.copy()
+        wall[:, 64:] = 15
+        towards = crown_visibility(wall, 0, 128)
+        sideways = crown_visibility(wall, np.pi / 2, 128)
+        self.assertEqual(int(towards[64, 40, 0]), 0)
+        self.assertEqual(int(towards[64, 40, 3]), 255)
+        self.assertEqual(int(sideways[64, 40, 0]), 255)
+        self.assertTrue((np.diff(towards.astype(int), axis=-1) >= 0).all())
+        self.assertLess(towards[:, :, 0].mean(), 255)
+        root = Path(__file__).resolve().parents[1] / "assets/world/crown-shadows"
+        manifest = json.loads((root / "manifest.json").read_text())
+        self.assertEqual(manifest["solar_elevations_degrees"], [5, 25, 55, 85])
+        self.assertEqual(len(manifest["files"]), 8)
+        for file, digest in manifest["files"].items():
+            self.assertEqual(
+                hashlib.sha256((root / file).read_bytes()).hexdigest(), digest
+            )
 
     def test_committed_asset_checksums(self):
         root = Path(__file__).resolve().parents[1] / "assets/world"
@@ -88,6 +112,12 @@ class WorldBakeTests(unittest.TestCase):
             m["measured_relief"]["file_sha256"],
         )
         self.assertEqual(m["route_period_real_seconds"], 259200)
+        self.assertEqual(
+            hashlib.sha256(
+                (root / "crown-shadows/manifest.json").read_bytes()
+            ).hexdigest(),
+            m["crown_shadows_manifest_sha256"],
+        )
         self.assertEqual(
             hashlib.sha256((root / "relief-material.png").read_bytes()).hexdigest(),
             m["measured_relief"]["material_sha256"],

@@ -7,6 +7,7 @@ out vec4 color;
 #include "clouds.glsl"
 uniform highp sampler2D uScene;
 uniform sampler2D uMaterial,uCanopy,uReliefMaterial;
+uniform highp sampler2DArray uPhysicalAlbedo,uPhysicalNormal,uCrownShadows;
 uniform highp sampler2DShadow uShadowNear,uShadowFar,uShadowNearNext,uShadowFarNext;
 uniform mat4 uShadowMatrix[4];
 uniform ivec4 uShadowSlots;
@@ -69,6 +70,32 @@ float surfaceShadow(vec3 N,vec3 dx,vec3 dy){
  if(coarseWeight>0.)coarse=temporalShadow(uShadowFar,uShadowFarNext,uShadowSlots.z,uShadowSlots.w,uShadowBlend.y,.000035+.00007*slope,dx,dy);
  return mix(fine,coarse,coarseWeight);
 }
+// Dielectric GGX, energy-conserving Fresnel and correlated Smith visibility.
+// Roughness includes normal variation so distant highlights do not shimmer.
+float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0){
+ vec3 H=normalize(V+L);float NoV=max(.001,dot(N,V)),NoL=max(.001,dot(N,L));
+ float NoH=max(0.,dot(N,H)),VoH=max(0.,dot(V,H));
+ float alpha=roughness*roughness,a2=alpha*alpha;
+ float denominator=NoH*NoH*(a2-1.)+1.;
+ float D=a2/(PI*denominator*denominator);
+ float visibility=.5/(NoL*sqrt(NoV*NoV*(1.-a2)+a2)+NoV*sqrt(NoL*NoL*(1.-a2)+a2));
+ return D*visibility*(f0+(1.-f0)*pow(1.-VoH,5.));
+}
+void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,float snow,
+                      out vec3 albedo,out vec3 normal,out float roughness,out float cavity){
+ float weights[5];weights[0]=rock*(1.-snow);
+ weights[1]=(1.-rock)*(1.-snow)*(1.-dry)*(1.-cold);
+ weights[2]=(1.-rock)*(1.-snow)*dry*(1.-cold);
+ weights[3]=(1.-rock)*(1.-snow)*cold;weights[4]=snow;
+ albedo=vec3(0.);normal=vec3(0.);roughness=0.;cavity=0.;
+ for(int layer=0;layer<5;++layer){
+  float w=weights[layer];if(w<=.0001)continue;
+  vec4 a=textureGrad(uPhysicalAlbedo,vec3(uv,float(layer)),dx,dy);
+  vec4 n=textureGrad(uPhysicalNormal,vec3(uv,float(layer)),dx,dy);
+  albedo+=w*a.rgb;normal+=w*vec3(n.x*2.-1.,n.a,n.y*2.-1.);
+  roughness+=w*a.a;cavity+=w*n.b;
+ }
+}
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
@@ -93,42 +120,61 @@ void main(){
  vec2 residual=landform.rg*2.-1.;
  float vertical=sqrt(max(.03,1.-dot(residual,residual)));
  N=normalize(N/max(.05,N.y)+uMeshFrame*vec3(residual.x*uReliefLongitudeScale,0,residual.y)*reliefStrength/vertical);
- vec2 world=vMaterial+uMaterialOffset;
- vec4 detail=textureGrad(uMaterial,material,mdx,mdy);
+
+
  vec4 broad=textureGrad(uMaterial,broadUV,bdx,bdy);
  // Meter-scale stochastic variation is spatially anchored and mip-filtered.
  float slope=1.-N.y,moisture=vProperties.y,temp=vProperties.z;
  float rock=smoothstep(.18,.48,slope);
- vec3 stone=mix(vec3(.15,.145,.13),vec3(.24,.23,.215),broad.b)*mix(.80,1.14,detail.g);
- vec3 meadow=mix(vec3(.075,.10,.028),vec3(.016,.039,.012),moisture)*mix(.77,1.18,detail.r);
- // Valleys retain moisture and sediment; exposed crests are drier. These
- // signals derive from actual relief, not a photograph or per-pixel noise.
- meadow*=mix(vec3(.76,.91,.75),vec3(1.16,1.06,.91),landform.b);
- vec3 sand=mix(vec3(.27,.205,.125),vec3(.34,.29,.21),detail.b)*mix(.85,1.05,broad.r);
- float dry=1.-smoothstep(.30,.52,moisture);
+ float dry=(1.-smoothstep(.30,.52,moisture))*smoothstep(5.,17.,temp);
  float cold=1.-smoothstep(-9.,3.,temp);
- vec3 tundra=mix(vec3(.10,.085,.055),vec3(.08,.115,.062),detail.g);
- vec3 albedo=mix(meadow,sand,dry*smoothstep(5.,17.,temp));
+ float snow=(1.-smoothstep(-7.,1.,temp))*smoothstep(.3,.8,N.y);
+ vec3 albedo,materialNormal;float roughness,cavity;
+ physicalMaterial(material,mdx,mdy,dry,cold,rock,snow,albedo,materialNormal,roughness,cavity);
+ albedo*=mix(.84,1.12,broad.r);
+ albedo*=mix(vec3(.82,.94,.81),vec3(1.10,1.05,.96),landform.b)*(1.-snow)+vec3(snow);
  float forest=smoothstep(.35,.63,moisture)*smoothstep(-5.,8.,temp)*(1.-smoothstep(1800.,2600.,vProperties.x));
  forest*=1.-smoothstep(.18,.40,slope);
  vec4 crown=textureGrad(uCanopy,canopyUV,cdx,cdy);
- vec3 woodland=mix(vec3(.020,.052,.013),vec3(.040,.082,.023),broad.g)*mix(.8,1.07,crown.b);
+ vec3 woodland=mix(vec3(.015,.039,.010),vec3(.033,.072,.020),broad.g)*mix(.72,1.13,crown.b);
+ forest*=1.-snow;
  albedo=mix(albedo,woodland,forest);
- albedo=mix(albedo,tundra,cold*(1.-rock));albedo=mix(albedo,stone,rock);
- float snow=(1.-smoothstep(-7.,1.,temp))*smoothstep(.3,.8,N.y);
- albedo=mix(albedo,vec3(.72,.76,.80)*mix(.89,1.01,detail.g),snow);
- // Fine relief perturbs lighting without displacement/noise at distant scales.
- vec2 grain=(detail.rg-.5)*.065*(1.-snow*.6);
+ // Tangent fields follow the same geographic frame as their anchored UVs.
+ vec3 detailSlope=uMeshFrame*vec3(materialNormal.x*uReliefLongitudeScale,0.,materialNormal.z)/max(.10,materialNormal.y);
  vec2 crownSlope=crown.rg*2.-1.;
- vec3 crownNormal=normalize(vec3(crownSlope.x,sqrt(max(.03,1.-dot(crownSlope,crownSlope))),crownSlope.y));
- N=normalize(N+vec3(grain.x,0.,grain.y)+forest*(crownNormal-vec3(0,1,0))*.65);
- vec3 direct=transmission(uTrans,uObserverHeight,uSun.y)*max(dot(N,uSun),0.)*surfaceShadow(N,meshDx,meshDy)*cloudTransmission(vPosition/1000.)*uEclipse*.24;
- vec3 ambient=(sky(vec3(0,1,0))*.40+sky(normalize(N+vec3(0,.4,0)))*.60)*2.2;
- // Planet light uses the same irradiance-to-radiance scale as sunlight.
- // Its extended, nearly white disk gently lights the canopy at night.
- vec3 planet=vec3(.97,.98,1.)*uPlanetLight*.24*max(.05,dot(N,uPlanetDirection));
- ambient*=mix(1.,crown.a,forest)*mix(1.,landform.a,min(1.,reliefStrength));
- vec3 land=albedo*.72*(direct+ambient+planet+vec3(.00004)/uDarkGain);
+ vec3 crownNormal=vec3(crownSlope.x,sqrt(max(.03,1.-dot(crownSlope,crownSlope))),crownSlope.y);
+ N=normalize(N+detailSlope*(1.-forest)+uMeshFrame*vec3(crownNormal.x*uReliefLongitudeScale,0.,crownNormal.z)/max(.10,crownNormal.y)*forest);
+ // Directional crown visibility is baked before filtering, retaining small
+ // tree shadows when individual crowns become smaller than a screen pixel.
+ vec3 meshSun=transpose(uMeshFrame)*uSun;
+ float canopyShade=1.;
+ if(forest>.001&&uSun.y>0.){
+ vec3 crownRay=vec3(meshSun.x*uReliefLongitudeScale,meshSun.y,meshSun.z);
+ float sector=mod(atan(crownRay.z,crownRay.x)/(2.*PI)*8.+8.,8.);
+ vec4 before=textureGrad(uCrownShadows,vec3(canopyUV,floor(sector)),cdx,cdy);
+ vec4 after=textureGrad(uCrownShadows,vec3(canopyUV,mod(floor(sector)+1.,8.)),cdx,cdy);
+ vec4 visibilityLevels=mix(before,after,fract(sector));
+ float solarElevation=atan(max(0.,dot(uSun,normalize(vNormal))),max(.001,length(crownRay.xz)))*180./PI;
+ canopyShade=solarElevation<25.?mix(visibilityLevels.r,visibilityLevels.g,clamp((solarElevation-5.)/20.,0.,1.)):
+                   solarElevation<55.?mix(visibilityLevels.g,visibilityLevels.b,(solarElevation-25.)/30.):
+                   mix(visibilityLevels.b,visibilityLevels.a,clamp((solarElevation-55.)/30.,0.,1.));
+ }
+ float visibility=surfaceShadow(N,meshDx,meshDy)*cloudTransmission(vPosition/1000.)*uEclipse;
+ visibility*=mix(1.,canopyShade,forest);
+ vec3 irradiance=transmission(uTrans,uObserverHeight,uSun.y)*visibility;
+ float NoL=max(dot(N,uSun),0.);
+ vec3 ambient=sky(vec3(0,1,0))*.35+sky(normalize(N+vec3(0,.4,0)))*.65;
+ ambient*=mix(cavity,crown.a,forest)*mix(1.,landform.a,min(1.,reliefStrength));
+ vec3 planet=vec3(.97,.98,1.)*uPlanetLight/PI*max(.05,dot(N,uPlanetDirection));
+ vec3 land=albedo*.96*(irradiance*NoL/PI+ambient+planet+vec3(.00004)/uDarkGain);
+ // Thin leaf transmission is strongest towards the sun, and cannot emit light
+ // at night or through an eclipse. It avoids flat uniformly dark canopies.
+ float leafBack=pow(max(dot(d,uSun),0.),6.)*max(0.,meshSun.y)*forest;
+ land+=albedo*irradiance*leafBack*.12;
+ float variance=min(.25,dot(dFdx(N),dFdx(N))+dot(dFdy(N),dFdy(N)));
+ roughness=sqrt(min(1.,roughness*roughness+variance));
+ float spec=dielectricSpecular(N,-d,uSun,max(.40,roughness),.04);
+ land+=irradiance*NoL*spec*mix(1.,.35,forest);
  if(water>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude.x,amplitude.y),water);
  vec3 T=aerialTransmission(distance);
  land=land*T+sky(d)*(1.-T);

@@ -23,6 +23,7 @@ jobs:
           /tmp/sky-model-tests/bin/python tests/test_galaxy_model.py
           /tmp/sky-model-tests/bin/python tests/test_terrain_bake.py
           /tmp/sky-model-tests/bin/python tests/test_world_bake.py
+          /tmp/sky-model-tests/bin/python tests/test_surface_materials.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
@@ -36,6 +37,8 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/debug-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-shadow-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py
       - name: Render daylight and twilight
         run: |
           mkdir -p captures

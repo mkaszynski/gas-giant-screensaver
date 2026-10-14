@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
         if (!frameLog)
           throw std::runtime_error("Cannot write benchmark output");
         frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
-                    "revision\n";
+                    "revision,upload_bytes\n";
         frameLog << std::setprecision(12);
       }
       int frames = 0;
@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
           durations.push_back(
               std::chrono::duration<double, std::milli>(Clock::now() - measure)
                   .count());
-          if (frameLog) {
+          if (frameLog.is_open()) {
             frameLog << frames << "," << sceneTime << "," << durations.back()
                      << ",";
             if (query)

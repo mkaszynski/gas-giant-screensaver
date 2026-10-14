@@ -172,9 +172,9 @@ def main():
     data = build()
     (a.output / "moon.ggworld").write_bytes(data)
     Image.fromarray(material()).save(a.output / "material.png")
-    from bake_canopy import build_canopy
+    from bake_canopy import write_canopy_assets
 
-    Image.fromarray(build_canopy()).save(a.output / "canopy.png")
+    write_canopy_assets(a.output / "canopy.png")
     manifest = {
         "format": "GGWORLD1",
         "radius_m": 6371000,
@@ -184,6 +184,9 @@ def main():
         "photographic_input": False,
         "canopy_sha256": hashlib.sha256(
             (a.output / "canopy.png").read_bytes()
+        ).hexdigest(),
+        "crown_shadows_manifest_sha256": hashlib.sha256(
+            (a.output / "crown-shadows/manifest.json").read_bytes()
         ).hexdigest(),
         "elevation_sha256": hashlib.sha256(data).hexdigest(),
     }

@@ -5,7 +5,7 @@
   "seed": 734,
   "geometry": "Seamless spherical continental elevation and climate; stable meter-scale runtime detail",
   "photographic_input": false,
-  "canopy_sha256": "6ba887ba0d42f8c90c341bd1793cf8042d657f6a9ee36e47b8fea7299c821f6c",
+  "canopy_sha256": "a00300067652dead5a074a42dd4694a65f93dcf7bcc2626b4476e987124cb60f",
   "elevation_sha256": "2c0a1e7d710e7d2caa57048fbe0260c4076e0b3c7132b965756bb476fb0aa394",
   "measured_relief": {
     "source": "Federal Office of Topography swisstopo / Mapzen Skadi",
@@ -29,5 +29,7 @@
     "minimum_ground_clearance_m": 600,
     "maximum_climb_m_per_second": 3.5,
     "validation_samples": 2097152
-  }
+  },
+  "canopy_model": "Touching broadleaf lobes and tapered conifers; height-derived normals and cavity occlusion",
+  "crown_shadows_manifest_sha256": "b1f28d2b4ffab7d5c26f4e9e3096aad038c175f95bc5a12c80f28d68700f825a"
 }

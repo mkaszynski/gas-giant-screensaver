@@ -36,6 +36,7 @@
         cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture,surface,surface_renderer}.{cpp,hpp} src/observatory/
         mkdir -p src/observatory/third_party
         cp ${./src}/third_party/bcdec.h src/observatory/third_party/
+        cp ${./src}/frame_pacing.hpp src/observatory/
         cp ${./hyprlock}/Observatory.{cpp,hpp} src/renderer/widgets/
         cat >> CMakeLists.txt <<'CMAKE'
         find_package(PNG REQUIRED)

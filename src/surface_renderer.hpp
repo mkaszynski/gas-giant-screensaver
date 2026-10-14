@@ -26,7 +26,9 @@ private:
   size_t stagedBytes = 0, lastUploadBytes = 0;
   GLuint stagingVertices = 0;
   GLuint vao = 0, vertices = 0, indices = 0, program = 0, shadowProgram = 0,
-         material = 0, canopy = 0, reliefMaterial = 0;
+         material = 0, canopy = 0, reliefMaterial = 0, physicalAlbedo = 0,
+         physicalNormal = 0;
+  GLuint crownShadows = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, resolved = 0,
          texture = 0;
   GLuint shadowFbo[4]{}, shadowTex[4]{};

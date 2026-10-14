@@ -36,4 +36,28 @@ Operator review precedes merging or changing the NixOS source pin. Preserve the
 
 - Baseline frozen: three alternating 180-frame runs each for ocean, forest and
   snow at the existing 30 fps cap, using immutable packaged assets.
-- Work in progress; final visual and performance acceptance are outstanding.
+- Geometry checkpoint `5c92b4e`: 279,072 vertices, 1,671,168 indices; terrain
+  replacements upload at most 2 MiB per normal frame into an inactive buffer,
+  switching mesh/bounds/shadow frames together only when complete.
+- Reference materials: two six-layer 512² arrays (~16 MiB with mips), linear
+  albedo/perceptual roughness and numerical normal/cavity fields. GGX dielectric
+  sunlight and normal-variance roughness filtering replace matte-only lighting.
+  Skylight uses a two-direction approximation, not full irradiance convolution.
+- Forests: overlapping lobed broadleaf and tapered conifer height/normal fields,
+  height-derived occlusion and bounded leaf lighting. An eight-direction crown
+  visibility cache at four solar elevations (~10.7 MiB with mips) filters shadows
+  after occlusion so they survive airplane-distance mips. Comparison renders
+  measure a 25-code sunset difference; it costs two forest-only filtered lookups.
+- Clouds: shared angle-dependent thin-sheet opacity, coarse self attenuation,
+  forward brightening and atmospheric twilight color; solar halo, shadows and
+  reflected clouds use the same coverage field.
+- Native timer accounts for CPU render work instead of delaying a full interval
+  after it. Actual native presentation cadence remains to be measured.
+- Focused checks pass: 38 CPU/CLI tests, 10 world bake checks, 5 physical material
+  checks, hardware surface and predicted-shadow tests, and real benchmark CSV
+  output. Full hardware/software gate and packaged native verification pending.
+- Initial combined forest probe: 10.61 ms median / 16.05 ms p95; one 48.54 ms
+  GPU stall after startup means the 30 fps acceptance is not yet established.
+  These development probes are not the final paired performance comparison.
+- Work in progress: broader landforms, shores/water detail and final visual,
+  performance, memory, native and CI acceptance are outstanding.

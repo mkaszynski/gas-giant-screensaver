@@ -3,6 +3,7 @@
 #include "../../core/hyprlock.hpp"
 #include "../../helpers/Color.hpp"
 #include "../../helpers/Log.hpp"
+#include "../../observatory/frame_pacing.hpp"
 #include "../Renderer.hpp"
 #include <algorithm>
 #include <hyprlang.hpp>
@@ -27,11 +28,13 @@ void CObservatory::configure(
   last = std::chrono::steady_clock::now();
 }
 bool CObservatory::draw(const SRenderData &data) {
+  const auto frameStart = std::chrono::steady_clock::now();
   if (!failed) {
     try {
       if (!renderer)
         renderer = std::make_unique<observatory::Renderer>(
-            observatory::Renderer::defaultDataDirectory(), observatory::StarfieldOptions{}, observatory::SurfaceOptions{true});
+            observatory::Renderer::defaultDataDirectory(),
+            observatory::StarfieldOptions{}, observatory::SurfaceOptions{true});
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
       last = now;
@@ -58,7 +61,8 @@ bool CObservatory::draw(const SRenderData &data) {
   // when an output is off, it cannot perpetually schedule new render work.
   if (!failed && !timer)
     timer = g_pHyprlock->addTimer(
-        std::chrono::milliseconds(1000 / fps),
+        observatory::frameDelay(frameStart, std::chrono::steady_clock::now(),
+                                fps),
         [ref = weakSelf](auto, auto) {
           if (auto self = ref.lock()) {
             self->timer.reset();

@@ -66,6 +66,54 @@ void bind(GLuint p, int unit, const char *n, GLuint t) {
   glBindTexture(GL_TEXTURE_2D, t);
   glUniform1i(glGetUniformLocation(p, n), unit);
 }
+GLuint materialArray(const std::string &root, const char *suffix,
+                     bool crowns = false) {
+  constexpr const char *names[] = {"rock",   "grass", "sand",
+                                   "tundra", "snow",  "soil"};
+  GLuint texture = 0;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+  // Bounded layers with a complete ten-level mip chain. PNGs contain
+  // linear numerical reflectance/normal fields, so RGBA8 is intentional.
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY, 10, GL_RGBA8, 512, 512, crowns ? 8 : 6);
+  try {
+    for (int i = 0; i < (crowns ? 8 : 6); ++i) {
+      png_image image{};
+      image.version = PNG_IMAGE_VERSION;
+      const auto file = crowns ? root + "/assets/world/crown-shadows/" +
+                                     std::to_string(i) + ".png"
+                               : root + "/assets/world/materials/" + names[i] +
+                                     "-" + suffix + ".png";
+      if (!png_image_begin_read_from_file(&image, file.c_str()))
+        throw std::runtime_error("Missing physical surface material: " + file);
+      if (image.width != 512 || image.height != 512) {
+        png_image_free(&image);
+        throw std::runtime_error("Invalid physical material dimensions: " +
+                                 file);
+      }
+      image.format = PNG_FORMAT_RGBA;
+      std::vector<unsigned char> data(PNG_IMAGE_SIZE(image));
+      if (!png_image_finish_read(&image, nullptr, data.data(), 0, nullptr)) {
+        const std::string error = image.message;
+        png_image_free(&image);
+        throw std::runtime_error(error);
+      }
+      glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 512, 512, 1, GL_RGBA,
+                      GL_UNSIGNED_BYTE, data.data());
+      png_image_free(&image);
+    }
+  } catch (...) {
+    glDeleteTextures(1, &texture);
+    throw;
+  }
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  return texture;
+}
 void check() {
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     throw std::runtime_error("Surface framebuffer unavailable");
@@ -145,6 +193,9 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  physicalAlbedo = materialArray(root, "albedo");
+  physicalNormal = materialArray(root, "normal");
+  crownShadows = materialArray(root, "", true);
   GLint counts = 0;
   glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_NUM_SAMPLE_COUNTS, 1,
                         &counts);
@@ -217,6 +268,9 @@ SurfaceRenderer::~SurfaceRenderer() {
   glDeleteTextures(1, &material);
   glDeleteTextures(1, &canopy);
   glDeleteTextures(1, &reliefMaterial);
+  glDeleteTextures(1, &physicalAlbedo);
+  glDeleteTextures(1, &physicalNormal);
+  glDeleteTextures(1, &crownShadows);
   glDeleteTextures(4, shadowTex);
   glDeleteFramebuffers(4, shadowFbo);
 }
@@ -573,6 +627,15 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
               shadowNext[0], shadowCurrent[1], shadowNext[1]);
   bind(program, 7, "uCanopy", canopy);
   bind(program, 6, "uReliefMaterial", reliefMaterial);
+  glActiveTexture(GL_TEXTURE11);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, physicalAlbedo);
+  glUniform1i(glGetUniformLocation(program, "uPhysicalAlbedo"), 11);
+  glActiveTexture(GL_TEXTURE12);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, physicalNormal);
+  glUniform1i(glGetUniformLocation(program, "uPhysicalNormal"), 12);
+  glActiveTexture(GL_TEXTURE13);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, crownShadows);
+  glUniform1i(glGetUniformLocation(program, "uCrownShadows"), 13);
   glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, multisample);
