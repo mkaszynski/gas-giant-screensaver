@@ -10,7 +10,20 @@
 #include <random>
 #include <sstream>
 #include <stdexcept>
+#ifdef OBSERVATORY_WEATHER_PROFILE
+#include "weather_profile.hpp"
+#endif
 namespace observatory {
+#ifdef OBSERVATORY_WEATHER_PROFILE
+static void weatherProfileStage(int index) {
+  if (index)
+    glEndQuery(GL_TIME_ELAPSED_EXT);
+  glBeginQuery(GL_TIME_ELAPSED_EXT, weatherProfileQueries[index]);
+}
+#define WEATHER_PROFILE_STAGE(index) weatherProfileStage(index)
+#else
+#define WEATHER_PROFILE_STAGE(index) ((void)0)
+#endif
 #ifdef OBSERVATORY_SKY_PROFILE
 extern GLuint skyProfileQueries[2];
 #endif
@@ -729,6 +742,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                              surfaceLocation, clock, emission.exposure);
   }
   const GLState state;
+  WEATHER_PROFILE_STAGE(0);
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_SCISSOR_TEST);
@@ -752,6 +766,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     lastSun = s.sunLocal;
     lastRings = drawRings;
   }
+  WEATHER_PROFILE_STAGE(1);
   target(scene, w, h, true);
   glBindFramebuffer(GL_FRAMEBUFFER, scene.framebuffer);
   glViewport(0, 0, w, h);
@@ -901,12 +916,14 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   if (drawBodies && emission.seconds >= 0)
     emissions(s, w, h, emission, drawRings, day);
   GLuint surfaceTexture = 0;
+  WEATHER_PROFILE_STAGE(2);
   if (surface)
     surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds, day,
                                      scene.texture, [&](GLuint p) {
                                        common(p, s, w, h);
                                        cloudUniforms(p, s, seconds);
                                      });
+  WEATHER_PROFILE_STAGE(3);
   if (weatherProgram) {
     // Cache broad solar attenuation in a small geographic volume. Fine view
     // extinction stays at display resolution; repeated up-sun probes do not.
@@ -922,6 +939,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherLightProgram);
       }
     }
+    WEATHER_PROFILE_STAGE(4);
     if (surfaceOptions.weatherCache)
       target(skyWeatherCache, (w + 1) / 2, (h + 1) / 2);
     // Ground and partial MSAA pixels retain exact, display-resolution paths.
@@ -950,10 +968,12 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       bind(weatherProgram, 13, "uWeatherSkyCache", skyWeatherCache.texture);
     }
     integer(weatherProgram, "uWeatherSkyPass", false);
+    WEATHER_PROFILE_STAGE(5);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     quad(weatherProgram);
   }
+  WEATHER_PROFILE_STAGE(6);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);
@@ -978,6 +998,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
               std::remainder(seconds * .157, 2 * pi));
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
+#ifdef OBSERVATORY_WEATHER_PROFILE
+  glEndQuery(GL_TIME_ELAPSED_EXT);
+#endif
 }
 void Renderer::emissions(const Scene &s, int w, int h, EmissionFrame frame,
                          bool ringsEnabled, double daySeconds) {

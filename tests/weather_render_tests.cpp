@@ -396,6 +396,34 @@ int main() {
         }
       }
       {
+        Fixture twoTaps;
+        twoTaps.replace("weather.frag",
+                        "stepLength*2.3*weatherDensity(p+uSun*(stepLength*(2."
+                        "55/2.3)),uObserverHeight,lod+1.)",
+                        "stepLength*(.9*weatherDensity(p+uSun*(stepLength*.5),"
+                        "uObserverHeight,lod+1.)+"
+                        "1.4*weatherDensity(p+uSun*(stepLength*1.5),"
+                        "uObserverHeight,lod+1.))");
+        SurfaceOptions precise{true, 0, 162000};
+        precise.weatherCache = false;
+        Renderer centroid(Renderer::defaultDataDirectory(), {}, precise);
+        Renderer reference(twoTaps.root.string(), {}, precise);
+        for (double elapsed : {0., 4., 10.}) {
+          auto view = travelScene(world, 1740 + elapsed, 5600.390625 + elapsed);
+          auto a =
+              capture(centroid, view, 1790900000. + elapsed, 1740 + elapsed);
+          auto b =
+              capture(reference, view, 1790900000. + elapsed, 1740 + elapsed);
+          auto delta = difference(a, b);
+          std::cout << "Far solar centroid elapsed=" << elapsed
+                    << ": mean=" << delta.mean << " peak=" << delta.peak
+                    << '\n';
+          require(delta.mean < .1 && delta.peak <= 16,
+                  "far sunlight approximation must preserve coastal cloud "
+                  "lighting");
+        }
+      }
+      {
         Fixture reference;
         reference.replace("weather.frag", "span/clamp(span/.15,12.,48.)",
                           "span/48.");
