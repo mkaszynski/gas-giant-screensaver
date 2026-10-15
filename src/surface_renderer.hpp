@@ -18,6 +18,11 @@ public:
   size_t shadowRevision() const { return shadowDraws; }
   size_t reflectionRevision() const { return reflectionDraws; }
   size_t uploadBytes() const { return lastUploadBytes; }
+  size_t buildsStarted() const { return buildStarts; }
+  bool buildPending() const {
+    return pending.valid() && pending.wait_for(std::chrono::seconds(0)) !=
+                                  std::future_status::ready;
+  }
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
 
@@ -47,6 +52,7 @@ private:
   int width = 0, height = 0, samples = 1;
   size_t vertexCapacity = 0;
   size_t revision = 0;
+  size_t buildStarts = 0;
   double shadowBegin[2]{}, shadowEnd[2]{}, shadowDay = 0;
   int shadowCurrent[2] = {0, 2}, shadowNext[2] = {1, 3};
   size_t shadowDraws = 0;

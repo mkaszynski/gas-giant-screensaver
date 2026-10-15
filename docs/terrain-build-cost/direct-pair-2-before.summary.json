@@ -1,0 +1,431 @@
+{
+  "steady_frames": 710,
+  "deadline_misses": 0,
+  "render_ms": {
+    "median": 13.3614535,
+    "p95": 18.501015,
+    "maximum": 23.370034
+  },
+  "gpu_ms": {
+    "median": 11.08908,
+    "p95": 15.12384,
+    "maximum": 20.7732
+  },
+  "submit_ms": {
+    "median": 1.2210465,
+    "p95": 1.492451,
+    "maximum": 9.991342
+  },
+  "wait_ms": {
+    "median": 12.1507205,
+    "p95": 16.146776,
+    "maximum": 22.051579
+  },
+  "worst_frames": [
+    {
+      "frame": {
+        "frame": "498",
+        "scene_seconds": "527.110193215",
+        "render_ms": "23.370034",
+        "gpu_ms": "20.7732",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.318455",
+        "wait_ms": "22.051579",
+        "monotonic_seconds": "110812.832158",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "495",
+        "scene_seconds": "527.009893692",
+        "render_ms": "22.945787",
+        "gpu_ms": "20.212",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.381954",
+        "wait_ms": "21.563833",
+        "monotonic_seconds": "110812.731811",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "332",
+        "scene_seconds": "521.53286365",
+        "render_ms": "22.188206",
+        "gpu_ms": "20.25118",
+        "mesh_revision": "2",
+        "shadow_revision": "21",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.184924",
+        "wait_ms": "21.003282",
+        "monotonic_seconds": "110807.254765",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "329",
+        "scene_seconds": "521.432594112",
+        "render_ms": "21.668671",
+        "gpu_ms": "19.65765",
+        "mesh_revision": "2",
+        "shadow_revision": "20",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.141242",
+        "wait_ms": "20.527429",
+        "monotonic_seconds": "110807.154496",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "183",
+        "scene_seconds": "516.528497178",
+        "render_ms": "21.650836",
+        "gpu_ms": "10.67706",
+        "mesh_revision": "2",
+        "shadow_revision": "13",
+        "upload_bytes": "1361920",
+        "reflection_revision": "0",
+        "submit_ms": "9.991342",
+        "wait_ms": "11.659494",
+        "monotonic_seconds": "110802.250341",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "351",
+        "scene_seconds": "522.171757038",
+        "render_ms": "21.569444",
+        "gpu_ms": "11.1788",
+        "mesh_revision": "3",
+        "shadow_revision": "22",
+        "upload_bytes": "1361920",
+        "reflection_revision": "0",
+        "submit_ms": "9.010642",
+        "wait_ms": "12.558802",
+        "monotonic_seconds": "110807.893605",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "501",
+        "scene_seconds": "527.210478853",
+        "render_ms": "21.266305",
+        "gpu_ms": "18.97787",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.208538",
+        "wait_ms": "20.057767",
+        "monotonic_seconds": "110812.932393",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "503",
+        "scene_seconds": "527.277333654",
+        "render_ms": "21.058585",
+        "gpu_ms": "18.46726",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.221021",
+        "wait_ms": "19.837564",
+        "monotonic_seconds": "110812.99925",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "671",
+        "scene_seconds": "532.920062991",
+        "render_ms": "21.04543",
+        "gpu_ms": "19.06517",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.926239",
+        "wait_ms": "20.119191",
+        "monotonic_seconds": "110818.642019",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "335",
+        "scene_seconds": "521.633138417",
+        "render_ms": "20.573815",
+        "gpu_ms": "18.63251",
+        "mesh_revision": "2",
+        "shadow_revision": "21",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.038329",
+        "wait_ms": "19.535486",
+        "monotonic_seconds": "110807.35507",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "497",
+        "scene_seconds": "527.076763951",
+        "render_ms": "20.323105",
+        "gpu_ms": "18.80714",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.621246",
+        "wait_ms": "19.701859",
+        "monotonic_seconds": "110812.798576",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "500",
+        "scene_seconds": "527.177051733",
+        "render_ms": "20.291145",
+        "gpu_ms": "17.96584",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.973568",
+        "wait_ms": "19.317577",
+        "monotonic_seconds": "110812.898813",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "499",
+        "scene_seconds": "527.143621457",
+        "render_ms": "20.133479",
+        "gpu_ms": "17.90996",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.241069",
+        "wait_ms": "18.89241",
+        "monotonic_seconds": "110812.865543",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "502",
+        "scene_seconds": "527.243905923",
+        "render_ms": "20.115445",
+        "gpu_ms": "17.72419",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.24677",
+        "wait_ms": "18.868675",
+        "monotonic_seconds": "110812.96572",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "161",
+        "scene_seconds": "515.79034078",
+        "render_ms": "20.113221",
+        "gpu_ms": "18.0095",
+        "mesh_revision": "1",
+        "shadow_revision": "12",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.223677",
+        "wait_ms": "18.889544",
+        "monotonic_seconds": "110801.512256",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "331",
+        "scene_seconds": "521.499438744",
+        "render_ms": "20.095427",
+        "gpu_ms": "18.18855",
+        "mesh_revision": "2",
+        "shadow_revision": "20",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.047837",
+        "wait_ms": "19.04759",
+        "monotonic_seconds": "110807.221312",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "330",
+        "scene_seconds": "521.466016243",
+        "render_ms": "19.958039",
+        "gpu_ms": "18.07038",
+        "mesh_revision": "2",
+        "shadow_revision": "20",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.016217",
+        "wait_ms": "18.941822",
+        "monotonic_seconds": "110807.187888",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "665",
+        "scene_seconds": "532.719288024",
+        "render_ms": "19.753786",
+        "gpu_ms": "17.65473",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.195483",
+        "wait_ms": "18.558303",
+        "monotonic_seconds": "110818.441213",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "670",
+        "scene_seconds": "532.886635481",
+        "render_ms": "19.695687",
+        "gpu_ms": "17.27604",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.244636",
+        "wait_ms": "18.451051",
+        "monotonic_seconds": "110818.608407",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    },
+    {
+      "frame": {
+        "frame": "163",
+        "scene_seconds": "515.857197184",
+        "render_ms": "19.597793",
+        "gpu_ms": "17.30731",
+        "mesh_revision": "1",
+        "shadow_revision": "12",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.328032",
+        "wait_ms": "18.269761",
+        "monotonic_seconds": "110801.57899",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": null,
+      "following_sample": null,
+      "inside_samples": []
+    }
+  ],
+  "telemetry_enabled": false,
+  "presentation_measured": false,
+  "binary_sha256": "006bcbccc65b2576a7ad12db550aef145398d11765410418a659e03c58e20af6",
+  "pair": 2,
+  "version": "before"
+}

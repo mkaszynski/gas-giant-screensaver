@@ -594,8 +594,10 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
     return Vec3{dot(point, geographicEast(c)), dot(point, geographicUp(c)),
                 dot(point, geographicNorth(c))};
   };
-  if (mesh.vertices.empty())
+  if (mesh.vertices.empty()) {
+    ++buildStarts;
     upload(buildSurfaceMesh(terrain, location));
+  }
   if (pending.valid() &&
       pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
     staged = pending.get();
@@ -610,12 +612,15 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
       pending.wait();
     if (pending.valid())
       pending.get();
+    ++buildStarts;
     upload(buildSurfaceMesh(terrain, location));
     eye = delta(mesh.center);
-  } else if (length(eye) > 750. && !pending.valid() && !staged)
+  } else if (length(eye) > 750. && !pending.valid() && !staged) {
+    ++buildStarts;
     pending = std::async(std::launch::async, [this, location] {
       return buildSurfaceMesh(terrain, location);
     });
+  }
   double altitude = s.altitudeMeters;
   Vec3 bodyEye = geographicUp(location) * (surfaceRadius + altitude) -
                  geographicUp(mesh.center) * surfaceRadius;

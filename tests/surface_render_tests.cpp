@@ -182,6 +182,9 @@ int main() {
                         {true, 1, 162000 - 510, false, true, true, false});
         moving.render(w, h, 510);
         auto first = pixels(w, h);
+        require(moving.surfaceBuildsStarted() == 1 &&
+                    !moving.surfaceBuildPending(),
+                "initial synchronous mesh has one completed build");
         size_t initialRevision = moving.surfaceMeshRevision();
         // Ten seconds gives measurable parallax at airplane height.
         moving.render(w, h, 520);
@@ -197,6 +200,9 @@ int main() {
         }
         require(moving.surfaceMeshRevision() > initialRevision,
                 "background terrain replacement actually finishes and uploads");
+        require(moving.surfaceBuildsStarted() == 2 &&
+                    !moving.surfaceBuildPending(),
+                "background build telemetry records the completed replacement");
         auto travelled = pixels(w, h);
         long pop = 0;
         for (int i = 0; i < w * h / 4; ++i)

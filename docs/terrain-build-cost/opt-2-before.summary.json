@@ -1,0 +1,1259 @@
+{
+  "steady_frames": 710,
+  "deadline_misses": 0,
+  "render_ms": {
+    "median": 13.3106835,
+    "p95": 18.182186,
+    "maximum": 21.513278
+  },
+  "gpu_ms": {
+    "median": 11.08562,
+    "p95": 15.61968,
+    "maximum": 19.46652
+  },
+  "submit_ms": {
+    "median": 1.1656825,
+    "p95": 1.4974,
+    "maximum": 9.75543
+  },
+  "wait_ms": {
+    "median": 12.157668999999999,
+    "p95": 16.462088,
+    "maximum": 20.405239
+  },
+  "worst_frames": [
+    {
+      "frame": {
+        "frame": "351",
+        "scene_seconds": "522.144666392",
+        "render_ms": "21.513278",
+        "gpu_ms": "10.84604",
+        "mesh_revision": "3",
+        "shadow_revision": "22",
+        "upload_bytes": "1361920",
+        "reflection_revision": "0",
+        "submit_ms": "9.75543",
+        "wait_ms": "11.757848",
+        "monotonic_seconds": "110382.239587",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 2000000,
+        "process_cpu_ticks": 288,
+        "main_thread_cpu_ticks": 157,
+        "monotonic_seconds": 110382.2371484605,
+        "sample_duration_ms": 1.2182670034235343
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 2000000,
+        "process_cpu_ticks": 289,
+        "main_thread_cpu_ticks": 158,
+        "monotonic_seconds": 110382.267712241,
+        "sample_duration_ms": 1.075448002666235
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 58000,
+          "device_power_microwatts": 4000000,
+          "process_cpu_ticks": 289,
+          "main_thread_cpu_ticks": 158,
+          "monotonic_seconds": 110382.247480583,
+          "sample_duration_ms": 1.595493988133967
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1800000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 24000000,
+          "process_cpu_ticks": 289,
+          "main_thread_cpu_ticks": 158,
+          "monotonic_seconds": 110382.2574824505,
+          "sample_duration_ms": 1.306622987613082
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "167",
+        "scene_seconds": "515.972131756",
+        "render_ms": "21.501015",
+        "gpu_ms": "19.46652",
+        "mesh_revision": "1",
+        "shadow_revision": "12",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.095776",
+        "wait_ms": "20.405239",
+        "monotonic_seconds": "110376.067081",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 217,
+        "main_thread_cpu_ticks": 130,
+        "monotonic_seconds": 110376.066962703,
+        "sample_duration_ms": 0.7691840000916272
+      },
+      "following_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 3000000,
+        "process_cpu_ticks": 219,
+        "main_thread_cpu_ticks": 130,
+        "monotonic_seconds": 110376.097642807,
+        "sample_duration_ms": 1.1806559923570603
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1712000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 14000000,
+          "process_cpu_ticks": 217,
+          "main_thread_cpu_ticks": 130,
+          "monotonic_seconds": 110376.077308251,
+          "sample_duration_ms": 1.1771499994210899
+        },
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1037000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 22000000,
+          "process_cpu_ticks": 218,
+          "main_thread_cpu_ticks": 130,
+          "monotonic_seconds": 110376.0873884455,
+          "sample_duration_ms": 1.025515011860989
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "332",
+        "scene_seconds": "521.50791561",
+        "render_ms": "20.851075",
+        "gpu_ms": "18.88172",
+        "mesh_revision": "2",
+        "shadow_revision": "21",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.147293",
+        "wait_ms": "19.703782",
+        "monotonic_seconds": "110381.60284",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 273,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.6025326155,
+        "sample_duration_ms": 0.8498150127707049
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 13000000,
+        "process_cpu_ticks": 276,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.633107753,
+        "sample_duration_ms": 1.3023840001551434
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1237000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 19000000,
+          "process_cpu_ticks": 274,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.61259375,
+          "sample_duration_ms": 0.7124380063032731
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 600000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 31000000,
+          "process_cpu_ticks": 275,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.62270280399,
+          "sample_duration_ms": 0.7118159992387518
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "166",
+        "scene_seconds": "515.938702902",
+        "render_ms": "20.822382",
+        "gpu_ms": "18.15644",
+        "mesh_revision": "1",
+        "shadow_revision": "12",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.336939",
+        "wait_ms": "19.485443",
+        "monotonic_seconds": "110376.033607",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 10000000,
+        "process_cpu_ticks": 212,
+        "main_thread_cpu_ticks": 130,
+        "monotonic_seconds": 110376.0262585645,
+        "sample_duration_ms": 0.9923830075422302
+      },
+      "following_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 215,
+        "main_thread_cpu_ticks": 130,
+        "monotonic_seconds": 110376.05666068199,
+        "sample_duration_ms": 1.0441299964440987
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1800000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 11000000,
+          "process_cpu_ticks": 213,
+          "main_thread_cpu_ticks": 130,
+          "monotonic_seconds": 110376.0364785915,
+          "sample_duration_ms": 1.1843529937323183
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1125000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 17000000,
+          "process_cpu_ticks": 214,
+          "main_thread_cpu_ticks": 130,
+          "monotonic_seconds": 110376.04650858749,
+          "sample_duration_ms": 0.9757609950611368
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "664",
+        "scene_seconds": "532.649288716",
+        "render_ms": "20.643476",
+        "gpu_ms": "18.72575",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.1934",
+        "wait_ms": "19.450076",
+        "monotonic_seconds": "110392.744222",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 34,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 392,
+        "main_thread_cpu_ticks": 200,
+        "monotonic_seconds": 110392.7410266035,
+        "sample_duration_ms": 0.7783109904266894
+      },
+      "following_sample": {
+        "gpu_busy_percent": 35,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 395,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.771535461,
+        "sample_duration_ms": 1.0988819994963706
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 34,
+          "gpu_clock_hz": 1400000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 18000000,
+          "process_cpu_ticks": 393,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.75130857201,
+          "sample_duration_ms": 1.0870300029637292
+        },
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 600000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 31000000,
+          "process_cpu_ticks": 394,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.761321831,
+          "sample_duration_ms": 0.893296004505828
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "667",
+        "scene_seconds": "532.74956662",
+        "render_ms": "20.541745",
+        "gpu_ms": "18.63227",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.138827",
+        "wait_ms": "19.402918",
+        "monotonic_seconds": "110392.844557",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 402,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.8421371095,
+        "sample_duration_ms": 0.7145309937186539
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 10000000,
+        "process_cpu_ticks": 405,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.87268892801,
+        "sample_duration_ms": 1.0399120073998347
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 600000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 27000000,
+          "process_cpu_ticks": 403,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.852502139,
+          "sample_duration_ms": 1.190594004583545
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 600000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 27000000,
+          "process_cpu_ticks": 404,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.8624921045,
+          "sample_duration_ms": 0.9223209926858544
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "501",
+        "scene_seconds": "527.178754594",
+        "render_ms": "20.39517",
+        "gpu_ms": "18.17169",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.154717",
+        "wait_ms": "19.240453",
+        "monotonic_seconds": "110387.2738",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 342,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.2684872425,
+        "sample_duration_ms": 0.6973290001042187
+      },
+      "following_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 345,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.29917636301,
+        "sample_duration_ms": 1.4001079980516806
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 13000000,
+          "process_cpu_ticks": 343,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.278807152,
+          "sample_duration_ms": 1.0982020030496642
+        },
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1150000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 344,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.288829318,
+          "sample_duration_ms": 0.9228019916918129
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "496",
+        "scene_seconds": "527.011491655",
+        "render_ms": "20.316733",
+        "gpu_ms": "18.0693",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.394888",
+        "wait_ms": "18.921845",
+        "monotonic_seconds": "110387.106411",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 35,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 12000000,
+        "process_cpu_ticks": 324,
+        "main_thread_cpu_ticks": 177,
+        "monotonic_seconds": 110387.096437243,
+        "sample_duration_ms": 0.9349239990115166
+      },
+      "following_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 1150000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 22000000,
+        "process_cpu_ticks": 328,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.1270465995,
+        "sample_duration_ms": 0.9966910001821816
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 12000000,
+          "process_cpu_ticks": 326,
+          "main_thread_cpu_ticks": 177,
+          "monotonic_seconds": 110387.10696446651,
+          "sample_duration_ms": 1.2888189958175644
+        },
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 850000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 26000000,
+          "process_cpu_ticks": 327,
+          "main_thread_cpu_ticks": 177,
+          "monotonic_seconds": 110387.116943161,
+          "sample_duration_ms": 1.011587999528274
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "665",
+        "scene_seconds": "532.682716297",
+        "render_ms": "20.104585",
+        "gpu_ms": "18.39013",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.98005",
+        "wait_ms": "19.124535",
+        "monotonic_seconds": "110392.777636",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 35,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 395,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.771535461,
+        "sample_duration_ms": 1.0988819994963706
+      },
+      "following_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 398,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.8018157345,
+        "sample_duration_ms": 0.977495001279749
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 12000000,
+          "process_cpu_ticks": 396,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.781684595,
+          "sample_duration_ms": 1.1754159932024777
+        },
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 1187000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 21000000,
+          "process_cpu_ticks": 397,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.791656091,
+          "sample_duration_ms": 0.8962720021372661
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "502",
+        "scene_seconds": "527.212182125",
+        "render_ms": "20.058919",
+        "gpu_ms": "18.35459",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.922652",
+        "wait_ms": "19.136267",
+        "monotonic_seconds": "110387.30724",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 345,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.29917636301,
+        "sample_duration_ms": 1.4001079980516806
+      },
+      "following_sample": {
+        "gpu_busy_percent": 39,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 62000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 349,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.32927204549,
+        "sample_duration_ms": 0.9937150025507435
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1800000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 12000000,
+          "process_cpu_ticks": 346,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.30901338201,
+          "sample_duration_ms": 0.9172920108539984
+        },
+        {
+          "gpu_busy_percent": 39,
+          "gpu_clock_hz": 1250000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 18000000,
+          "process_cpu_ticks": 347,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.3192848755,
+          "sample_duration_ms": 1.2398069957271218
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "335",
+        "scene_seconds": "521.608227668",
+        "render_ms": "19.952078",
+        "gpu_ms": "17.80497",
+        "mesh_revision": "2",
+        "shadow_revision": "21",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.993945",
+        "wait_ms": "18.958133",
+        "monotonic_seconds": "110381.703103",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 282,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.6936396265,
+        "sample_duration_ms": 1.0193130001425743
+      },
+      "following_sample": {
+        "gpu_busy_percent": 39,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 5000000,
+        "process_cpu_ticks": 285,
+        "main_thread_cpu_ticks": 155,
+        "monotonic_seconds": 110381.72428451,
+        "sample_duration_ms": 0.9589499968569726
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 8000000,
+          "process_cpu_ticks": 284,
+          "main_thread_cpu_ticks": 155,
+          "monotonic_seconds": 110381.7042339415,
+          "sample_duration_ms": 1.320739000220783
+        },
+        {
+          "gpu_busy_percent": 39,
+          "gpu_clock_hz": 969000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 285,
+          "main_thread_cpu_ticks": 155,
+          "monotonic_seconds": 110381.714284616,
+          "sample_duration_ms": 1.2019360001431778
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "666",
+        "scene_seconds": "532.7161503",
+        "render_ms": "19.937932",
+        "gpu_ms": "18.02435",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.117678",
+        "wait_ms": "18.820254",
+        "monotonic_seconds": "110392.811362",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 398,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.8018157345,
+        "sample_duration_ms": 0.977495001279749
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 910000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 26000000,
+        "process_cpu_ticks": 401,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.83203988301,
+        "sample_duration_ms": 0.7405899959849194
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 9000000,
+          "process_cpu_ticks": 399,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.8119108075,
+          "sample_duration_ms": 0.9436609980184585
+        },
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 1062000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 21000000,
+          "process_cpu_ticks": 400,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.8219405025,
+          "sample_duration_ms": 0.7659469993086532
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "498",
+        "scene_seconds": "527.078498481",
+        "render_ms": "19.897336",
+        "gpu_ms": "17.77857",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.275605",
+        "wait_ms": "18.621731",
+        "monotonic_seconds": "110387.173439",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 10000000,
+        "process_cpu_ticks": 332,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.167362634,
+        "sample_duration_ms": 0.6808480102336034
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 335,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.19791741349,
+        "sample_duration_ms": 1.1054850037908182
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 200000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 14000000,
+          "process_cpu_ticks": 333,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.17761317399,
+          "sample_duration_ms": 0.9419380075996742
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1175000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 21000000,
+          "process_cpu_ticks": 334,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.1878407755,
+          "sample_duration_ms": 1.1779110063798726
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "671",
+        "scene_seconds": "532.883267456",
+        "render_ms": "19.808028",
+        "gpu_ms": "17.9768",
+        "mesh_revision": "4",
+        "shadow_revision": "37",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.862459",
+        "wait_ms": "18.945569",
+        "monotonic_seconds": "110392.978297",
+        "mesh_builds_started": "5",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 416,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110392.97391461549,
+        "sample_duration_ms": 1.1333169968565926
+      },
+      "following_sample": {
+        "gpu_busy_percent": 39,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 61000,
+        "device_power_microwatts": 2000000,
+        "process_cpu_ticks": 418,
+        "main_thread_cpu_ticks": 201,
+        "monotonic_seconds": 110393.004346499,
+        "sample_duration_ms": 1.190153998322785
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1362000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 12000000,
+          "process_cpu_ticks": 417,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.9841582875,
+          "sample_duration_ms": 1.3690889900317416
+        },
+        {
+          "gpu_busy_percent": 39,
+          "gpu_clock_hz": 1325000000,
+          "gpu_temperature_millicelsius": 62000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 418,
+          "main_thread_cpu_ticks": 201,
+          "monotonic_seconds": 110392.994195231,
+          "sample_duration_ms": 1.2199000047985464
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "183",
+        "scene_seconds": "516.509343851",
+        "render_ms": "19.712048",
+        "gpu_ms": "10.72865",
+        "mesh_revision": "2",
+        "shadow_revision": "13",
+        "upload_bytes": "1361920",
+        "reflection_revision": "0",
+        "submit_ms": "7.955612",
+        "wait_ms": "11.756436",
+        "monotonic_seconds": "110376.60442",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "0"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 2000000,
+        "process_cpu_ticks": 222,
+        "main_thread_cpu_ticks": 133,
+        "monotonic_seconds": 110376.5999432415,
+        "sample_duration_ms": 0.8987970068119466
+      },
+      "following_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 3000000,
+        "process_cpu_ticks": 223,
+        "main_thread_cpu_ticks": 134,
+        "monotonic_seconds": 110376.630635087,
+        "sample_duration_ms": 0.988685991615057
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 400000000,
+          "gpu_temperature_millicelsius": 58000,
+          "device_power_microwatts": 5000000,
+          "process_cpu_ticks": 223,
+          "main_thread_cpu_ticks": 134,
+          "monotonic_seconds": 110376.61007022849,
+          "sample_duration_ms": 0.8806029945844784
+        },
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1800000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 24000000,
+          "process_cpu_ticks": 223,
+          "main_thread_cpu_ticks": 134,
+          "monotonic_seconds": 110376.6204915785,
+          "sample_duration_ms": 1.4015009946888313
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "500",
+        "scene_seconds": "527.145327764",
+        "render_ms": "19.679688",
+        "gpu_ms": "18.38986",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.481895",
+        "wait_ms": "19.197793",
+        "monotonic_seconds": "110387.24021",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 339,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.23815166,
+        "sample_duration_ms": 0.7053739973343909
+      },
+      "following_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 342,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.2684872425,
+        "sample_duration_ms": 0.6973290001042187
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1537000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 19000000,
+          "process_cpu_ticks": 340,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.24837619049,
+          "sample_duration_ms": 0.9138850000454113
+        },
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 980000000,
+          "gpu_temperature_millicelsius": 62000,
+          "device_power_microwatts": 24000000,
+          "process_cpu_ticks": 341,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.258384385,
+          "sample_duration_ms": 0.7107440032996237
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "329",
+        "scene_seconds": "521.407649849",
+        "render_ms": "19.645553",
+        "gpu_ms": "17.95701",
+        "mesh_revision": "2",
+        "shadow_revision": "20",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.76705",
+        "wait_ms": "18.878503",
+        "monotonic_seconds": "110381.502515",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 35,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 262,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.50129477051,
+        "sample_duration_ms": 0.7383049960481003
+      },
+      "following_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 266,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.531893492,
+        "sample_duration_ms": 1.2773779890267178
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 1525000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 18000000,
+          "process_cpu_ticks": 264,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.51138273999,
+          "sample_duration_ms": 0.6936520076123998
+        },
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 1175000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 265,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.52149652751,
+          "sample_duration_ms": 0.7023190119070932
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "503",
+        "scene_seconds": "527.245595659",
+        "render_ms": "19.626217",
+        "gpu_ms": "18.3156",
+        "mesh_revision": "3",
+        "shadow_revision": "29",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "0.484229",
+        "wait_ms": "19.141988",
+        "monotonic_seconds": "110387.34048",
+        "mesh_builds_started": "4",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 39,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 350,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.339281397,
+        "sample_duration_ms": 0.7926480029709637
+      },
+      "following_sample": {
+        "gpu_busy_percent": 39,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 2000000,
+        "process_cpu_ticks": 353,
+        "main_thread_cpu_ticks": 178,
+        "monotonic_seconds": 110387.36973027751,
+        "sample_duration_ms": 0.8657449943711981
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 39,
+          "gpu_clock_hz": 1312000000,
+          "gpu_temperature_millicelsius": 60000,
+          "device_power_microwatts": 15000000,
+          "process_cpu_ticks": 351,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.349417427,
+          "sample_duration_ms": 0.791956001194194
+        },
+        {
+          "gpu_busy_percent": 40,
+          "gpu_clock_hz": 1237000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 352,
+          "main_thread_cpu_ticks": 178,
+          "monotonic_seconds": 110387.35948071501,
+          "sample_duration_ms": 0.6948539958102629
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "162",
+        "scene_seconds": "515.804988401",
+        "render_ms": "19.598295",
+        "gpu_ms": "17.19776",
+        "mesh_revision": "1",
+        "shadow_revision": "12",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.04961",
+        "wait_ms": "18.548685",
+        "monotonic_seconds": "110375.899883",
+        "mesh_builds_started": "2",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 35,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 8000000,
+        "process_cpu_ticks": 198,
+        "main_thread_cpu_ticks": 129,
+        "monotonic_seconds": 110375.8946491845,
+        "sample_duration_ms": 0.6954850105103105
+      },
+      "following_sample": {
+        "gpu_busy_percent": 36,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 59000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 201,
+        "main_thread_cpu_ticks": 129,
+        "monotonic_seconds": 110375.925160732,
+        "sample_duration_ms": 1.049869999405928
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 35,
+          "gpu_clock_hz": 1050000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 14000000,
+          "process_cpu_ticks": 199,
+          "main_thread_cpu_ticks": 129,
+          "monotonic_seconds": 110375.90517730999,
+          "sample_duration_ms": 1.5333480114350095
+        },
+        {
+          "gpu_busy_percent": 36,
+          "gpu_clock_hz": 1062000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 22000000,
+          "process_cpu_ticks": 200,
+          "main_thread_cpu_ticks": 129,
+          "monotonic_seconds": 110375.91516852751,
+          "sample_duration_ms": 1.296413000090979
+        }
+      ]
+    },
+    {
+      "frame": {
+        "frame": "333",
+        "scene_seconds": "521.541338753",
+        "render_ms": "19.3883",
+        "gpu_ms": "17.51",
+        "mesh_revision": "2",
+        "shadow_revision": "21",
+        "upload_bytes": "0",
+        "reflection_revision": "0",
+        "submit_ms": "1.009124",
+        "wait_ms": "18.379176",
+        "monotonic_seconds": "110381.636343",
+        "mesh_builds_started": "3",
+        "mesh_build_pending": "1"
+      },
+      "preceding_sample": {
+        "gpu_busy_percent": 37,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 13000000,
+        "process_cpu_ticks": 276,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.633107753,
+        "sample_duration_ms": 1.3023840001551434
+      },
+      "following_sample": {
+        "gpu_busy_percent": 38,
+        "gpu_clock_hz": 400000000,
+        "gpu_temperature_millicelsius": 60000,
+        "device_power_microwatts": 9000000,
+        "process_cpu_ticks": 280,
+        "main_thread_cpu_ticks": 154,
+        "monotonic_seconds": 110381.6632936695,
+        "sample_duration_ms": 1.0172290058108047
+      },
+      "inside_samples": [
+        {
+          "gpu_busy_percent": 37,
+          "gpu_clock_hz": 1387000000,
+          "gpu_temperature_millicelsius": 59000,
+          "device_power_microwatts": 18000000,
+          "process_cpu_ticks": 278,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.643196569,
+          "sample_duration_ms": 1.2613080034498125
+        },
+        {
+          "gpu_busy_percent": 38,
+          "gpu_clock_hz": 1412000000,
+          "gpu_temperature_millicelsius": 61000,
+          "device_power_microwatts": 20000000,
+          "process_cpu_ticks": 279,
+          "main_thread_cpu_ticks": 154,
+          "monotonic_seconds": 110381.653225908,
+          "sample_duration_ms": 1.1006760032614693
+        }
+      ]
+    }
+  ],
+  "schema": "observatory-frame-profile-v1",
+  "binary_sha256": "006bcbccc65b2576a7ad12db550aef145398d11765410418a659e03c58e20af6",
+  "command": [
+    "/tmp/surface-review/frame-before-source/build/gas-giant-screensaver",
+    "--benchmark",
+    "720",
+    "--benchmark-output",
+    "/tmp/surface-review/profile-opt-2-before.frames.csv",
+    "--width",
+    "1920",
+    "--height",
+    "1080",
+    "--fps",
+    "30",
+    "--time",
+    "510",
+    "--travel-time",
+    "162000",
+    "--travel-speed",
+    "1",
+    "--data-dir",
+    "/nix/store/7k58s3lic08mpnqwhviridxdw4ssfz0a-gas-giant-screensaver-0.1.0/share/gas-giant-screensaver"
+  ],
+  "sample_interval_ms": 10,
+  "telemetry_enabled": true,
+  "sensors": {
+    "gpu_busy_percent": "/sys/class/drm/card1/device/gpu_busy_percent",
+    "gpu_clock_hz": "/sys/class/drm/card1/device/hwmon/hwmon7/freq1_input",
+    "gpu_temperature_millicelsius": "/sys/class/drm/card1/device/hwmon/hwmon7/temp1_input",
+    "device_power_microwatts": "/sys/class/drm/card1/device/hwmon/hwmon7/power1_input"
+  },
+  "cpu_ticks_per_second": 100,
+  "sampler_cpu_seconds": 2.955587216,
+  "sample_read_ms": {
+    "median": 1.0910679993685335,
+    "p95": 1.4451919996645302,
+    "maximum": 2.2440519969677553
+  },
+  "presentation_measured": false,
+  "parent_output_state": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.026,
+      "dpmsStatus": false
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.0,
+      "dpmsStatus": false
+    }
+  ]
+}

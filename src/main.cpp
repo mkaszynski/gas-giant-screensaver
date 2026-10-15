@@ -258,8 +258,10 @@ int main(int argc, char **argv) {
         frameLog.open(benchmarkOutput);
         if (!frameLog)
           throw std::runtime_error("Cannot write benchmark output");
-        frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
-                    "revision,upload_bytes,reflection_revision\n";
+        frameLog
+            << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
+               "revision,upload_bytes,reflection_revision,submit_ms,wait_ms,"
+               "monotonic_seconds,mesh_builds_started,mesh_build_pending\n";
         frameLog << std::setprecision(12);
       }
       int frames = 0;
@@ -305,6 +307,7 @@ int main(int argc, char **argv) {
           controls->draw(w, h, ww, wh, elapsed);
         }
         if (benchmark) {
+          const auto submitted = Clock::now();
           if (query)
             glEndQuery(0x88BF);
           glFinish();
@@ -317,8 +320,9 @@ int main(int argc, char **argv) {
             glGetQueryObjectuiv(query, GL_QUERY_RESULT, &ns);
             gpuDurations.push_back(ns / 1e6);
           }
+          const auto finished = Clock::now();
           durations.push_back(
-              std::chrono::duration<double, std::milli>(Clock::now() - measure)
+              std::chrono::duration<double, std::milli>(finished - measure)
                   .count());
           if (frameLog.is_open()) {
             frameLog << frames << "," << sceneTime << "," << durations.back()
@@ -328,7 +332,20 @@ int main(int argc, char **argv) {
             frameLog << "," << renderer.surfaceMeshRevision() << ","
                      << renderer.surfaceShadowRevision() << ","
                      << renderer.surfaceUploadBytes() << ","
-                     << renderer.surfaceReflectionRevision() << "\n";
+                     << renderer.surfaceReflectionRevision() << ","
+                     << std::chrono::duration<double, std::milli>(submitted -
+                                                                  measure)
+                            .count()
+                     << ","
+                     << std::chrono::duration<double, std::milli>(finished -
+                                                                  submitted)
+                            .count()
+                     << ","
+                     << std::chrono::duration<double>(
+                            measure.time_since_epoch())
+                            .count()
+                     << "," << renderer.surfaceBuildsStarted() << ","
+                     << renderer.surfaceBuildPending() << "\n";
             if (!frameLog)
               throw std::runtime_error("Cannot write benchmark frame");
           }
