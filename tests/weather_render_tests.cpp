@@ -238,6 +238,52 @@ int main() {
         require(difference(cached, traced).peak <= 1,
                 "time and viewpoint changes retain exact current cloud state");
       }
+      {
+        // Alternate very different cloud emission/transmission pairs whose
+        // final color is identical over the matching background. This checks
+        // actual reuse, rather than merely comparing the decision formula.
+        Fixture balanced;
+        balanced.replace("weather_sky_cache.glsl", "bool cachedSkyWeather(",
+                         "bool cacheUsed=false;\nbool cachedSkyWeather(");
+        balanced.replace("weather_sky_cache.glsl", " return true;",
+                         " cacheUsed=true;return true;");
+        const std::string background =
+            "vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),"
+            "0).rgb*(uExposure/uSceneScale);";
+        balanced.replace("weather_sky_cache.glsl", background,
+                         "vec3 background=vec3(.1)*uExposure;");
+        balanced.append("weather.frag", R"(
+ if(uWeatherSkyPass){
+  float t=.1+.8*mod(floor(gl_FragCoord.x),2.);
+  color=vec4(vec3(.1)*(1.-t)*uSceneScale,t);
+ }else color=vec4(vec3(cacheUsed?1.:0.),1.);
+)");
+        balanced.replace("post.frag", "if(coverage>=1.)", "if(false)");
+        balanced.append("post.frag", R"(
+ color=vec4(texelFetch(uWeather,ivec2(gl_FragCoord.xy),0).rgb,1.);
+)");
+        Fixture contrasting;
+        contrasting.copyShaders(balanced);
+        contrasting.replace("weather_sky_cache.glsl",
+                            "vec3 background=vec3(.1)*uExposure;",
+                            "vec3 background=vec3(.03,.1,.3)*uExposure;");
+        Renderer cancellation(balanced.root.string(), {}, {true, 0, 162000});
+        Renderer contrast(contrasting.root.string(), {}, {true, 0, 162000});
+        auto view = travelScene(world, 1740, 5600.390625);
+        auto matching = capture(cancellation, view, 1790900000., 1740);
+        auto different = capture(contrast, view, 1790900000., 1740);
+        int reusedMatching = 0, reusedDifferent = 0;
+        for (size_t i = 0; i < matching.size(); i += 4) {
+          reusedMatching += matching[i] > 127;
+          reusedDifferent += different[i] > 127;
+        }
+        std::cout << "Projected cloud cache: matching=" << reusedMatching
+                  << " contrasting=" << reusedDifferent << '\n';
+        require(reusedMatching > width * height * .7 &&
+                    reusedDifferent < reusedMatching / 2,
+                "cache must reuse cancelling optical columns and reject "
+                "visible background-dependent contrast");
+      }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
       std::cout << "Clear/storm: " << changed.changed

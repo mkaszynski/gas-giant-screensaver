@@ -10,14 +10,34 @@ constant and linear columns have the same estimate. Nearby cached sunlight and
 local extinction are unchanged. A rendered-reference regression checks nonlinear
 coastal lighting at three flight times against the original two-probe formula.
 
-The sky optical cache now checks the combined cloud emission and transmitted
-background range. A resolved bright planet no longer automatically forces a
-full ray march through otherwise smooth clouds. Very bright sources and a
-5.7-degree region around the Sun retain direct extinction, including its halo.
-The relative radiance criterion is a reconstruction heuristic, not a universal
-error proof; moving reference comparisons continue to enforce image fidelity.
-Ground and partially covered terrain retain direct integration. No ray-march
-intervals or terrain detail are removed; there is no temporal cloud history.
+The sky optical cache checks each corner's combined cloud emission and
+transmitted background. Emission and transmission are projected together, so
+opposing changes that cancel in the final color do not invent a contrast edge.
+A regression uses alternating optical columns to verify reuse over a matching
+background and rejection when the background makes those columns visibly differ.
+Very bright unresolved sources and a 5.7-degree region around the Sun retain
+direct extinction, including its halo.
+
+The reconstruction contrast threshold remains 2% for grazing rays, rising smoothly
+to 24% between elevations of approximately 1.1 and 3.4 degrees. This is the range
+across the coarse corners in exposed linear radiance, not a permitted display-pixel
+error. The stricter horizon band protects long paths and fine silhouettes. Moving
+cached/direct comparisons retain their original peak 16/255 and mean .15/255
+channel limits. The criterion is a reconstruction heuristic, not a universal error
+proof. Ground and partially covered terrain retain direct integration. No
+ray-march intervals or terrain detail are removed; there is no temporal cloud
+history.
+
+## Installation acceptance
+
+At 1920×1080 with a 30 fps cap, the per-view 95th-percentile complete CPU/GPU
+rendering time must be at most 33.33 ms across three alternating pairs of all six
+reference views. Ten startup frames per run are excluded from that steady figure;
+raw startup costs, every missed deadline and maxima remain reported. A separate
+900-frame coastal flight must also meet the p95 budget, followed by native
+Hyprlock verification. This criterion does not assert zero long frames or measure
+physical presentation. The NixOS installation pin is prepared only after these
+measurements pass.
 
 ## Development profiling
 
