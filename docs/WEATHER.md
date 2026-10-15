@@ -16,12 +16,15 @@ advances weather along with the selected scene time; pausing freezes both.
 ## Rendering
 
 * A periodic 64³ RGBA noise volume combines smooth value noise and cellular
-  structure. Its floating-point GPU mip chain occupies approximately 2.3 MiB. It is built once per
-  renderer, uploaded once, and sampled during animation; the noise field is
+  structure. A startup GPU filtering probe selects a compact RGBA8 mip chain (about 1.14 MiB)
+  when interpolation is sufficiently smooth, or RGBA16F (about 2.3 MiB) on
+  implementations with quantized UNORM filtering. Both paths use the same data.
+  It is built once per renderer, uploaded once, and sampled during animation; the noise field is
   never regenerated during animation. Double-precision CPU offsets keep
   animation smooth at Unix-scale times.
 * The cloud volume is integrated at display resolution (1920×1080 at 1080p),
-  using at most 48 deterministic samples. Fine sampling is retained in transparent
+  using 12–48 deterministic samples according to the distance through the layer
+  (a 150 m target interval, bounded by that range). Fine sampling is retained in transparent
   skins and silhouettes; steps grow smoothly inside opaque bodies. The distant
   high cloud layer takes two filtered noise lookups. There is no frame-random
   noise or temporal history to trail across the moons.

@@ -32,6 +32,7 @@ public:
   std::array<int, 2> weatherResolution() const {
     return {weather.width, weather.height};
   }
+  bool floatingWeatherNoise() const { return floatingNoise; }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
   }
@@ -60,6 +61,7 @@ private:
   TravelLocation surfaceLocation{};
   double lastAltitude = -1e30;
   WeatherState weatherState;
+  bool floatingNoise = false;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
@@ -88,6 +90,7 @@ private:
   void common(GLuint, const Scene &, int, int);
   void cloudUniforms(GLuint, const Scene &, double);
   void weatherUniforms(GLuint, const Scene &);
+  bool needsFloatingWeatherNoise();
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,

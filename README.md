@@ -20,19 +20,19 @@ the giant visible; occasional tall storms can obscure it. The cloud field also
 supplies ground shadows and water reflections. This feature is awaiting review.
 See [weather behavior, rendering and review commands](docs/WEATHER.md).
 
-## Landscape fidelity beta
+## Reviewed landscape fidelity
 
-`feat/landscape-fidelity` adds coherent alpine/canyon/coastal terrain, cached
+The merged landscape fidelity work adds coherent alpine/canyon/coastal terrain, cached
 physical materials, dense crown shading, filtered water glints, wet shores and
 optional coarse coastal terrain reflections. Thin clouds have shared lighting, shadows
 and reflected coverage. Geometry streams in bounded uploads without replacing
 a partially drawn mesh. See [landscape design](docs/SURFACE.md) and
 [Phase 2 scope and validation](docs/LANDSCAPE_PHASE2.md).
 
-From this feature checkout:
+To preview the reviewed landscape without weather:
 
 ```sh
-nix build .#gas-giant-screensaver -o result-landscape-phase2
+nix build github:mkaszynski/gas-giant-screensaver/d5fc3d572f91f83e1c46dcab26cdffa8db16c491#gas-giant-screensaver -o result-landscape-phase2
 ./result-landscape-phase2/bin/gas-giant-screensaver --data-dir ./result-landscape-phase2/share/gas-giant-screensaver --fullscreen --debug --fps 30 --time 900 --travel-time 162000
 ```
 
@@ -62,7 +62,7 @@ populations and distant dust are approximations, described in the design notes.
 Preview the merged galaxy version without changing the installed screensaver:
 
 ```sh
-nix run github:mkaszynski/gas-giant-screensaver/feat/galaxy -- \
+nix run github:mkaszynski/gas-giant-screensaver -- \
   --fullscreen --time 437625
 ```
 
@@ -75,7 +75,6 @@ nix run . -- --capture galaxy.png --fixed-view --time 437625 --width 1920 --heig
 
 Compare with `--no-galaxy`, `--no-stars`, or both. See
 [sky sources, calibration, efficiency and limitations](docs/GALAXY.md).
-The airborne biome feature remains on `feat/airborne-biomes` until operator review.
 
 [Eclipse sky capture](docs/images/galaxy-eclipse.png) ·
 [Sky beside the sunlit giant](docs/images/galaxy-night.png)

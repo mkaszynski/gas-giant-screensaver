@@ -45,8 +45,10 @@ jobs:
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 510 --travel-time 162000 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 510 --travel-time 162000 --weather-time 1790900000 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --travel-time 0 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-storm.png --time 510 --travel-time 162000 --weather-time 1260 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-lightning.png --time 1200 --travel-time 162000 --weather-time 1512.8 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --fixed-view --time 437625 --width 1920 --height 1080
       - uses: actions/upload-artifact@v4
         with:

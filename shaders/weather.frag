@@ -41,7 +41,9 @@ vec4 integrateWeather(vec3 d,float end){
  // Below the layer looking up: start on the far inner intersection.
  if(uObserverHeight<uWeatherLayer.x)start=max(start,inner.y);
  vec3 L=vec3(0.);float T=1.;
- float span=max(0.,finish-start),baseStep=span/48.;
+ // A short path does not need 48 intervals through the same smooth noise cells.
+ // Bound the interval count to retain cloud edges and grazing-ray detail.
+ float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,48.);
  if(span>0.){
   float position=start;
   for(int i=0;i<48;++i){

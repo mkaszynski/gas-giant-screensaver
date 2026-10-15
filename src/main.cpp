@@ -373,6 +373,8 @@ int main(int argc, char **argv) {
           auto cloudSize = renderer.weatherResolution();
           if (cloudSize[0] > 0)
             std::cout << "Cloud buffer: " << cloudSize[0] << 'x' << cloudSize[1]
+                      << "; noise "
+                      << (renderer.floatingWeatherNoise() ? "RGBA16F" : "RGBA8")
                       << '\n';
           break;
         }

@@ -160,6 +160,17 @@ int main() {
                 << " mean=" << continuity.mean << '\n';
       require(continuity.peak <= 5 && continuity.mean < .02,
               "weather advances smoothly at epoch times");
+      {
+        Fixture fallback;
+        fallback.append("weather-filter-probe.frag", "color=vec4(1.);\n");
+        Renderer floating(fallback.root.string(), {}, {true, 0, 162000});
+        require(floating.floatingWeatherNoise(),
+                "imprecise filtering must select the floating-point cache");
+        auto fallbackImage = capture(floating, forest, 1790900000.);
+        auto delta = difference(a, fallbackImage);
+        require(delta.mean < .1 && delta.peak <= 6,
+                "compact and floating caches must preserve cloud appearance");
+      }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
       std::cout << "Clear/storm: " << changed.changed
@@ -281,20 +292,31 @@ int main() {
       }
       {
         Fixture reference;
+        reference.replace("weather.frag", "span/clamp(span/.15,12.,48.)",
+                          "span/48.");
         reference.replace("weather.frag",
                           "baseStep*(1.+2.*(1.-smoothstep(.02,.2,T)))",
                           "baseStep");
         Renderer fixed(reference.root.string(), {}, {true, 0, 162000});
-        for (auto [sky, clock] :
-             {std::pair<double, double>{510., 0.}, {900., 0.}, {510., 1260.}}) {
-          auto view = travelScene(world, sky, 162000);
+        for (auto [sky, clock, route] :
+             {std::array<double, 3>{510., 0., 162000.},
+              {900., 0., 162000.},
+              {510., 1260., 162000.},
+              {510., 1790900000., 162000.},
+              {900., 1790900000., 162000.},
+              {1740., 1790900000., 5600.390625},
+              {1740., 0., 0.},
+              {360., 1790900000., 210600.}}) {
+          auto view = travelScene(world, sky, route);
           auto adaptive = capture(weather, view, clock, sky),
                exact = capture(fixed, view, clock, sky);
           auto delta = difference(adaptive, exact);
-          std::cout << "Opaque-interior quadrature sky=" << sky
-                    << " weather=" << clock << ": mean=" << delta.mean
-                    << " peak=" << delta.peak << '\n';
-          require(delta.mean < .1 && delta.peak <= 5,
+          std::cout << "Adaptive quadrature sky=" << sky << " weather=" << clock
+                    << ": mean=" << delta.mean << " peak=" << delta.peak
+                    << '\n';
+          // Keep average error below half a display code, with bounded local
+          // differences where quadrature samples a thin cloud boundary.
+          require(delta.mean < .5 && delta.peak <= 16,
                   "adaptive integration must preserve cloud skins and visible "
                   "radiance");
         }

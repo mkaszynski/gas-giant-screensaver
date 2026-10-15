@@ -339,6 +339,52 @@ void Renderer::quad(GLuint p) {
   glBindVertexArray(vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 }
+bool Renderer::needsFloatingWeatherNoise() {
+  GLuint input = 0, output = 0, fbo = 0;
+  const unsigned char ramp[] = {64, 64, 64, 255, 96, 96, 96, 255};
+  glGenTextures(1, &input);
+  glActiveTexture(GL_TEXTURE15);
+  glBindTexture(GL_TEXTURE_3D, input);
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 2, 1, 1, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, ramp);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  for (auto axis : {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+    glTexParameteri(GL_TEXTURE_3D, axis, GL_CLAMP_TO_EDGE);
+  glGenTextures(1, &output);
+  glBindTexture(GL_TEXTURE_2D, output);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 64, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         output, 0);
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    throw std::runtime_error("Weather filter probe framebuffer unavailable");
+  glDisable(GL_BLEND);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_SCISSOR_TEST);
+  glViewport(0, 0, 64, 1);
+  GLuint probe = program("weather-filter-probe.frag");
+  glUseProgram(probe);
+  integer(probe, "uProbe", 15);
+  quad(probe);
+  std::array<unsigned char, 64 * 4> pixels{};
+  GLint packed = 0;
+  glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &packed);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  glReadPixels(0, 0, 64, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, packed);
+  int error = 0;
+  for (size_t i = 0; i < pixels.size(); i += 4)
+    error = std::max(error, int(pixels[i]));
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &input);
+  glDeleteTextures(1, &output);
+  return error > 40;
+}
 Renderer::Renderer(std::string dir, StarfieldOptions options,
                    SurfaceOptions travel)
     : root(std::move(dir)), starfield(options), surfaceOptions(travel) {
@@ -390,19 +436,25 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
                                 weatherLightTexture, 0, 0);
       if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         throw std::runtime_error("Cloud light cache framebuffer unavailable");
+      floatingNoise = needsFloatingWeatherNoise();
       auto volume = weatherNoise();
       glGenTextures(1, &weatherNoiseTexture);
       textures.push_back(weatherNoiseTexture);
       glBindTexture(GL_TEXTURE_3D, weatherNoiseTexture);
-      // UNORM8 filtering is quantized on some software GLES implementations.
-      // A floating cache retains smooth subframe interpolation of the same
-      // data.
-      std::vector<float> filtered(volume.size());
-      std::transform(volume.begin(), volume.end(), filtered.begin(),
-                     [](uint8_t value) { return value / 255.f; });
-      glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, weatherNoiseSize,
-                   weatherNoiseSize, weatherNoiseSize, 0, GL_RGBA, GL_FLOAT,
-                   filtered.data());
+      // Keep the compact cache when measured interpolation is sufficiently
+      // precise. Quantized software filtering needs a floating-point cache.
+      if (floatingNoise) {
+        std::vector<float> filtered(volume.size());
+        std::transform(volume.begin(), volume.end(), filtered.begin(),
+                       [](uint8_t value) { return value / 255.f; });
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, weatherNoiseSize,
+                     weatherNoiseSize, weatherNoiseSize, 0, GL_RGBA, GL_FLOAT,
+                     filtered.data());
+      } else {
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, weatherNoiseSize,
+                     weatherNoiseSize, weatherNoiseSize, 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, volume.data());
+      }
       glGenerateMipmap(GL_TEXTURE_3D);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER,
                       GL_LINEAR_MIPMAP_LINEAR);
