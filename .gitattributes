@@ -3,3 +3,6 @@
 assets/sky/LICENSE-CC-BY-SA-4.0.txt whitespace=-blank-at-eof
 assets/sky/LICENSE-CC-BY-4.0.txt whitespace=-blank-at-eof
 src/third_party/bcdec.h -whitespace
+# Keep recorded measurements available while focusing review on code and analysis.
+docs/terrain-build-cost/*.json linguist-generated=true
+docs/terrain-build-cost/*.jsonl linguist-generated=true
