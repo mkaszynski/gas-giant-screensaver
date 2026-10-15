@@ -3,9 +3,9 @@
 #include <chrono>
 #include <stdexcept>
 namespace observatory {
-// Native draw callbacks begin on a compositor frame. Account for CPU work
-// before scheduling the next callback, and round down so a millisecond timer
-// does not miss the desired vblank. Keep one pending timer, including on DPMS.
+// Keep native timers on steady-clock deadlines across compositor callbacks.
+// Account for CPU work and timer delivery delays without accumulating drift.
+// The widget retains one pending timer per output, including on DPMS.
 class FramePacer {
 public:
   using Clock = std::chrono::steady_clock;
