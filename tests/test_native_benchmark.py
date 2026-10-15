@@ -28,6 +28,16 @@ class NativeCadenceTests(unittest.TestCase):
         log = "\n".join(f"[{t}] -> wl_surface@9.commit()" for t in [0, 33, 66])
         self.assertEqual(native.submission_report(log)["submissions"], 3)
 
+    def test_accepts_wayland_padded_timestamps(self):
+        log = "\n".join(
+            f"[{t:11.3f}] {{mesa egl surface queue}} -> wl_surface#21.commit()"
+            for t in [749400.077, 749433.41, 749466.743]
+        )
+        self.assertEqual(native.submission_report(log)["submissions"], 3)
+        self.assertAlmostEqual(
+            native.submission_report(log)["submission_fps"], 30, places=3
+        )
+
     def test_retains_stalls(self):
         log = "\n".join(f"[{t}] -> wl_surface#9.commit()" for t in [0, 33, 66, 130])
         result = native.submission_report(log)

@@ -17,7 +17,7 @@ import time
 def submission_report(log):
     surfaces = collections.defaultdict(list)
     for stamp, surface in re.findall(
-        r"\[([\d.]+)\].*-> wl_surface[#@](\d+)\.commit\(\)", log
+        r"\[\s*([\d.]+)\].*-> wl_surface[#@](\d+)\.commit\(\)", log
     ):
         surfaces[surface].append(float(stamp))
     if not surfaces:
@@ -214,6 +214,16 @@ def main():
                 lock.send_signal(signal.SIGUSR1)
                 if lock.wait(timeout=10) != 0:
                     raise RuntimeError("Owned lock did not exit cleanly")
+            except Exception:
+                # Keep evidence from failed native runs; the private runtime
+                # and its logs otherwise disappear during cleanup.
+                for name in ("client", "compositor"):
+                    source = tmp / (name + ".log")
+                    destination = args.output.with_suffix("." + name + ".log")
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(source.read_bytes())
+                    print("Failure log: " + str(destination), flush=True)
+                raise
             finally:
                 if lock and lock.poll() is None:
                     lock.kill()
@@ -231,6 +241,12 @@ def main():
                     except subprocess.TimeoutExpired:
                         os.killpg(compositor.pid, signal.SIGKILL)
                         compositor.wait()
+                    # Hyprland's fatal-error helper can outlive its parent.
+                    # The session was created here and contains only our run.
+                    try:
+                        os.killpg(compositor.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
 
 
 if __name__ == "__main__":
