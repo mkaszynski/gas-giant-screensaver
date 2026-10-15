@@ -1,0 +1,122 @@
+{
+  "forest-cloudbanks": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 21.301559,
+      "p95_ms": 24.795273,
+      "p99_ms": 26.824141,
+      "max_ms": 28.702647,
+      "deadline_misses": 0,
+      "gpu_median_ms": 18.499285
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 21.9118605,
+      "p95_ms": 34.550564,
+      "p99_ms": 38.392115,
+      "max_ms": 40.91468,
+      "deadline_misses": 28,
+      "gpu_median_ms": 19.0764
+    }
+  },
+  "forest-cumulus": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 21.296229,
+      "p95_ms": 27.349787,
+      "p99_ms": 42.326359,
+      "max_ms": 66.240077,
+      "deadline_misses": 10,
+      "gpu_median_ms": 18.54249
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 18.083288500000002,
+      "p95_ms": 33.50972,
+      "p99_ms": 38.465192,
+      "max_ms": 44.894189,
+      "deadline_misses": 28,
+      "gpu_median_ms": 15.290005
+    }
+  },
+  "forest-storm": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 16.85098,
+      "p95_ms": 24.896713,
+      "p99_ms": 34.450165,
+      "max_ms": 69.554738,
+      "deadline_misses": 7,
+      "gpu_median_ms": 14.15597
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 15.767264,
+      "p95_ms": 22.826738,
+      "p99_ms": 36.177294,
+      "max_ms": 41.780896,
+      "deadline_misses": 11,
+      "gpu_median_ms": 13.111985
+    }
+  },
+  "ocean": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 25.334859,
+      "p95_ms": 32.251299,
+      "p99_ms": 35.831469,
+      "max_ms": 66.517449,
+      "deadline_misses": 17,
+      "gpu_median_ms": 22.5858
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 21.9145765,
+      "p95_ms": 24.481855,
+      "p99_ms": 26.29587,
+      "max_ms": 27.300916,
+      "deadline_misses": 0,
+      "gpu_median_ms": 19.1577
+    }
+  },
+  "snow": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 18.981799000000002,
+      "p95_ms": 36.24819,
+      "p99_ms": 39.012579,
+      "max_ms": 44.114847,
+      "deadline_misses": 67,
+      "gpu_median_ms": 16.22115
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 19.815565499999998,
+      "p95_ms": 28.131315,
+      "p99_ms": 41.989778,
+      "max_ms": 64.607552,
+      "deadline_misses": 16,
+      "gpu_median_ms": 17.02734
+    }
+  },
+  "coast": {
+    "baseline": {
+      "frames": 510,
+      "median_ms": 39.777559499999995,
+      "p95_ms": 52.379129,
+      "p99_ms": 56.406909,
+      "max_ms": 74.460227,
+      "deadline_misses": 510,
+      "gpu_median_ms": 36.87242
+    },
+    "candidate": {
+      "frames": 510,
+      "median_ms": 40.875851999999995,
+      "p95_ms": 50.791609,
+      "p99_ms": 52.968346,
+      "max_ms": 56.588181,
+      "deadline_misses": 510,
+      "gpu_median_ms": 37.84281
+    }
+  }
+}

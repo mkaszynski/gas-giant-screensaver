@@ -18,8 +18,11 @@ distant precipitation and local intracloud lightning. Weather evolves independen
 of the solar day and responds to regional climate. Fair weather usually leaves
 the giant visible; occasional tall storms can obscure it. The cloud field also
 supplies ground shadows and water reflections. The integration branch includes
-the native timer and terrain CPU optimizations; it is awaiting combined validation
-and operator review before merging or changing the NixOS source pin.
+the native timer, terrain CPU optimizations, cooperative background mesh building
+and a same-frame optical cache for smooth sky clouds. See the
+[integration review and validation](docs/WEATHER_INTEGRATION.md). Operator review
+is required before merging or changing the NixOS source pin. The cloud-heavy
+coast remains above the 30 fps budget; intermittent stalls remain elsewhere.
 See [weather behavior, rendering and review commands](docs/WEATHER.md).
 
 ## Reviewed landscape fidelity

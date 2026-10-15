@@ -1,5 +1,9 @@
 # Biome weather beta
 
+For the combined branch and its latest measurements, see the
+[weather integration review](WEATHER_INTEGRATION.md). The landscape comparison
+below records the earlier weather beta.
+
 Weather follows the airborne observer's regional moisture, temperature, elevation
 and ocean fraction. Five nearby world samples avoid switching weather at a single
 ridge or shoreline. Warm humid regions favor cumulus and thunderstorms; cool wet

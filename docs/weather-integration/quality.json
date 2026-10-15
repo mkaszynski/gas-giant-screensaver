@@ -1,0 +1,38 @@
+{
+  "forest": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "mean_8bit_channel_difference": 3.022119341563786e-05,
+    "peak_8bit_channel_difference": 7,
+    "channels_differing_by_more_than_one": 39
+  },
+  "coast": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "mean_8bit_channel_difference": 0.012268197016460905,
+    "peak_8bit_channel_difference": 14,
+    "channels_differing_by_more_than_one": 2616
+  },
+  "storm": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "mean_8bit_channel_difference": 0.0073014724794238685,
+    "peak_8bit_channel_difference": 1,
+    "channels_differing_by_more_than_one": 0
+  },
+  "flash": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "mean_8bit_channel_difference": 0.020964184670781892,
+    "peak_8bit_channel_difference": 1,
+    "channels_differing_by_more_than_one": 0
+  }
+}
