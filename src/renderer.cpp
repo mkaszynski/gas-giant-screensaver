@@ -940,8 +940,10 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       }
     }
     WEATHER_PROFILE_STAGE(4);
+    // Preserve vertical sampling of long grazing columns. Wider horizontal
+    // cells remove redundant smooth-sky rays without coarsening the horizon.
     if (surfaceOptions.weatherCache)
-      target(skyWeatherCache, (w + 1) / 2, (h + 1) / 2);
+      target(skyWeatherCache, (w + 2) / 3, (h + 1) / 2);
     // Ground and partial MSAA pixels retain exact, display-resolution paths.
     target(weather, w, h, false, true);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);

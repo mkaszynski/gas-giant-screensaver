@@ -204,7 +204,7 @@ int main() {
             auto cached = capture(cachedSky, view, 1790900000. + elapsed, sky);
             auto traced = capture(exact, view, 1790900000. + elapsed, sky);
             require(cachedSky.weatherSkyCacheResolution() ==
-                            std::array<int, 2>{width / 2, height / 2} &&
+                            std::array<int, 2>{(width + 2) / 3, (height + 1) / 2} &&
                         exact.weatherSkyCacheResolution() ==
                             std::array<int, 2>{0, 0},
                     "cache allocation follows the selected rendering path");

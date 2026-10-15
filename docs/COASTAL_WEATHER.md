@@ -18,6 +18,12 @@ background and rejection when the background makes those columns visibly differ.
 Very bright unresolved sources and a 5.7-degree region around the Sun retain
 direct extinction, including its halo.
 
+The cache uses one third of display width and half its height (640×540 at
+1080p, about 2.64 MiB). Keeping vertical sampling is deliberate: a uniformly
+smaller 640×360 cache failed the existing moving-reference error limit. The
+final weather output, noise footprints, terrain coverage, fog and thin high
+clouds remain at display resolution.
+
 The reconstruction contrast threshold remains 2% for grazing rays, rising smoothly
 to 24% between elevations of approximately 1.1 and 3.4 degrees. This is the range
 across the coarse corners in exposed linear radiance, not a permitted display-pixel
@@ -36,8 +42,8 @@ reference views. Ten startup frames per run are excluded from that steady figure
 raw startup costs, every missed deadline and maxima remain reported. A separate
 900-frame coastal flight must also meet the p95 budget, followed by native
 Hyprlock verification. This criterion does not assert zero long frames or measure
-physical presentation. The NixOS installation pin is prepared only after these
-measurements pass.
+physical presentation. The NixOS installation update stays in draft until these
+measurements pass. No system switch is performed during validation.
 
 ## Development profiling
 
@@ -60,8 +66,15 @@ total synchronized CPU/GPU time. Results exclude physical presentation. Addition
 queries can affect scheduling; uninstrumented packaged runs remain the acceptance
 measurements.
 
-The local matched 360-frame development probe improved from 25.73 ms median to
-24.35 ms. This is diagnostic evidence, not the installation acceptance result.
-Seven initial 640×360 captures differed from the old renderer by at most 14/255
-in a channel, with average channel differences below .04/255. Full local gates,
-packaged repeated comparisons and installation preparation are still in progress.
+The initial matched 360-frame development probe (`74c686a`) improved from
+25.73 ms median to 24.35 ms. That instrumented result was not sufficient for
+installation acceptance: its packaged coastal p95 was 37.16 ms. Correlated cache
+reuse subsequently brought the coast to 29.25 ms median, but its 34.96 ms p95
+also failed the criterion. Both failed datasets remain available with the final
+local validation artifacts; results are not discarded or selected by best run.
+
+Current measured results, source revisions, full-gate status and review commands
+are recorded in [screensaver PR 19](https://github.com/mkaszynski/gas-giant-screensaver/pull/19).
+The exact public source pin and lock-file update are in
+[NixOS PR 18](https://github.com/mkaszynski/nixos-config/pull/18). Main and the
+installed system remain unchanged pending operator review.
