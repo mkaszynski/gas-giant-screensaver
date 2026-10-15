@@ -299,6 +299,30 @@ int main() {
                 "quantization jumps");
       }
       {
+        Fixture original;
+        original.replace("weather.frag",
+                         "vec3 lighting=solar*(lightingTerms.forward*shadow.x+"
+                         ".032*(.35+.65*shadow.y))+lightingTerms.ambient;",
+                         "vec3 lighting=weatherLightTrans(d,weatherHeight(p,"
+                         "uObserverHeight),shadow);");
+        Renderer scalar(original.root.string(), {}, {true, 0, 162000});
+        for (auto [sky, clock, route] :
+             {std::array<double, 3>{510., 1790900000., 162000.},
+              {900., 1790900000., 162000.},
+              {1200., 1512.8, 162000.},
+              {510., 1260., 162000.},
+              {1740., 1790900000., 5600.390625}}) {
+          auto view = travelScene(world, sky, route);
+          auto fast = capture(weather, view, clock, sky),
+               precise = capture(scalar, view, clock, sky);
+          auto delta = difference(fast, precise);
+          std::cout << "Prepared/original lighting: peak=" << delta.peak
+                    << " mean=" << delta.mean << '\n';
+          require(delta.peak <= 1 && delta.mean < .002,
+                  "cached ray lighting may change only sub-code rounding");
+        }
+      }
+      {
         Fixture reference;
         reference.replace("weather.frag",
                           "vec2 shadow=cloudSunTransmission(p,density,lod);",

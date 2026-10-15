@@ -47,6 +47,7 @@ vec4 integrateWeather(vec3 d,float end){
  float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,48.);
  if(span>0.){
   WeatherLighting lightingTerms=weatherLighting(d);
+  lightingTerms.ambient+=lightingTerms.planet;
   float position=start;
   for(int i=0;i<48;++i){
    if(position>=finish)break;
@@ -64,7 +65,11 @@ vec4 integrateWeather(vec3 d,float end){
     float extinction=1.-segmentT;
     // Two up-sun probes capture illuminated rims and dark storm cores.
     vec2 shadow=cloudSunTransmission(p,density,lod);
-    vec3 lighting=weatherLightPrepared(lightingTerms,weatherHeight(p,uObserverHeight),shadow);
+    // Combine scalar solar weights before the vector multiplication. The
+    // surface path retains its original evaluation order; volume roundoff is
+    // bounded by the rendered-reference regression test.
+    vec3 solar=transmission(uTrans,weatherHeight(p,uObserverHeight),uSun.y)*lightingTerms.sunlit;
+    vec3 lighting=solar*(lightingTerms.forward*shadow.x+.032*(.35+.65*shadow.y))+lightingTerms.ambient;
     if(uWeatherFlash.w>0.){
      vec3 delta=p-vec3(uWeatherFlash.x,uWeatherFlash.y-uObserverHeight,uWeatherFlash.z);
      lighting+=vec3(.90,.94,1.)*uWeatherFlash.w*exp(-dot(delta,delta)/18.);
