@@ -7,7 +7,7 @@ vec3 weatherRay(vec2 p){
 float weatherDepth(vec2 p,vec3 d,float coverage){
  float distance=220.;
  if(p.y<uSurfaceFraction&&coverage>0.){
-  float weighted=texelFetch(uSurfaceDistance,ivec2(gl_FragCoord.xy),0).r;
+  float weighted=texelFetch(uSurfaceDistance,ivec2(p*uResolution),0).r;
   distance=min(distance,weighted/coverage);
  }
  // Clip the inscribed ocean mesh against the exact sea sphere as well. This

@@ -32,6 +32,9 @@ public:
   std::array<int, 2> weatherResolution() const {
     return {weather.width, weather.height};
   }
+  std::array<int, 2> weatherSkyCacheResolution() const {
+    return {skyWeatherCache.width, skyWeatherCache.height};
+  }
   bool floatingWeatherNoise() const { return floatingNoise; }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
@@ -81,7 +84,7 @@ private:
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
          weatherLightFbo = 0;
-  Target trans, multi, sky, scene, weather;
+  Target trans, multi, sky, scene, weather, skyWeatherCache;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;
   Vec3 lastSun;

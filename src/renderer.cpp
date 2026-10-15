@@ -589,6 +589,7 @@ Renderer::~Renderer() {
   release(sky);
   release(scene);
   release(weather);
+  release(skyWeatherCache);
   glDeleteFramebuffers(1, &weatherLightFbo);
   for (auto p : programs)
     glDeleteProgram(p);
@@ -921,7 +922,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherLightProgram);
       }
     }
-    // Match cloud and terrain pixels; mixed MSAA pixels retain a sky path too.
+    if (surfaceOptions.weatherCache)
+      target(skyWeatherCache, (w + 1) / 2, (h + 1) / 2);
+    // Ground and partial MSAA pixels retain exact, display-resolution paths.
     target(weather, w, h, false, true);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
@@ -935,6 +938,20 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     scalar(weatherProgram, "uSurfaceFraction", surface->coverageFraction());
     bind(weatherProgram, 11, "uSurfaceDistance", surface->distanceTexture());
     bind(weatherProgram, 9, "uSurface", surfaceTexture);
+    bind(weatherProgram, 14, "uWeatherScene", scene.texture);
+    bind(weatherProgram, 13, "uWeatherSkyCache", mountains);
+    integer(weatherProgram, "uWeatherCacheEnabled",
+            surfaceOptions.weatherCache);
+    if (surfaceOptions.weatherCache) {
+      integer(weatherProgram, "uWeatherSkyPass", true);
+      glBindFramebuffer(GL_FRAMEBUFFER, skyWeatherCache.framebuffer);
+      glViewport(0, 0, skyWeatherCache.width, skyWeatherCache.height);
+      quad(weatherProgram);
+      bind(weatherProgram, 13, "uWeatherSkyCache", skyWeatherCache.texture);
+    }
+    integer(weatherProgram, "uWeatherSkyPass", false);
+    glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
+    glViewport(0, 0, weather.width, weather.height);
     quad(weatherProgram);
   }
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);

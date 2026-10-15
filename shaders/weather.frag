@@ -10,7 +10,9 @@ uniform highp sampler2D uSurface;
 #include "weather_depth.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
+uniform bool uWeatherSkyPass,uWeatherCacheEnabled;
 uniform highp sampler3D uWeatherLightCache;
+#include "weather_sky_cache.glsl"
 vec2 cloudSunTransmission(vec3 p,float density,float lod){
  if(uSun.y<=-.08||uEclipse<=0.)return vec2(1.);
  float stepLength=clamp(uWeatherLayer.y*.25,.06,1.);
@@ -32,7 +34,7 @@ vec2 cloudSunTransmission(vec3 p,float density,float lod){
 
 // No per-frame dither or stochastic reprojection: bounded, stable quadrature
 // produces clean screenshots and avoids temporal trails on moons and ridges.
-vec4 integrateWeather(vec3 d,float end){
+vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  vec2 outer=weatherShell(vec3(0.),d,uWeatherLayer.x+uWeatherLayer.y,uObserverHeight);
  vec2 inner=weatherShell(vec3(0.),d,uWeatherLayer.x,uObserverHeight);
  float start=max(0.,outer.x),finish=min(end,outer.y);
@@ -41,11 +43,18 @@ vec4 integrateWeather(vec3 d,float end){
  // Below the layer looking up: start on the far inner intersection.
  if(uObserverHeight<uWeatherLayer.x)start=max(start,inner.y);
  vec3 L=vec3(0.);float T=1.;
- vec3 viewSky=sky(d);
  // A short path does not need 48 intervals through the same smooth noise cells.
  // Bound the interval count to retain cloud edges and grazing-ray detail.
  float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,48.);
- if(span>0.){
+ if(uWeatherSkyPass&&span<=0.)return vec4(0.,0.,0.,1.);
+ vec3 viewSky=sky(d);
+ bool reused=false;
+ if(span>0.&&allowSkyCache){
+  vec4 cached;
+  reused=cachedSkyWeather(cached);
+  if(reused){L=cached.rgb/uSceneScale;T=cached.a;}
+ }
+ if(span>0.&&!reused){
   WeatherLighting lightingTerms=weatherLighting(d);
   lightingTerms.ambient+=lightingTerms.planet;
   float position=start;
@@ -82,6 +91,7 @@ vec4 integrateWeather(vec3 d,float end){
    }
   }
  }
+ if(uWeatherSkyPass)return vec4(min(vec3(60000.),L*uSceneScale),T);
  // High thin ice clouds are a distinct layer, kept optically thin in fair
  // weather. The giant is usually visible between lower cloud banks.
  vec2 high=weatherShell(vec3(0.),d,9.5,uObserverHeight);
@@ -121,12 +131,14 @@ vec4 integrateWeather(vec3 d,float end){
 void main(){
  vec3 d=weatherRay(uv);
  float coverage=0.;
- if(uv.y<uSurfaceFraction)coverage=texelFetch(uSurface,ivec2(gl_FragCoord.xy),0).a;
+ if(uv.y<uSurfaceFraction)coverage=texelFetch(uSurface,ivec2(uv*uResolution),0).a;
  bool edge=coverage>0.&&coverage<1.;
  float distance=weatherDepth(uv,d,coverage);
- color=integrateWeather(d,min(100.,distance));
+ bool reused=false;
+ if(uWeatherSkyPass&&coverage>0.){color=vec4(0.,0.,0.,-1.);reused=true;}
+ if(!reused)color=integrateWeather(d,min(100.,distance),!uWeatherSkyPass&&uWeatherCacheEnabled&&coverage==0.);
  // Only partially covered pixels need both paths. The post pass combines their
  // original MSAA coverage, so opaque land cannot erase the cloudy sky beside it.
  skyWeather=vec4(0.,0.,0.,1.);
- if(edge)skyWeather=integrateWeather(d,100.);
+ if(edge&&!uWeatherSkyPass)skyWeather=integrateWeather(d,100.,false);
 }

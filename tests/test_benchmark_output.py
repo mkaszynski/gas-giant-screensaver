@@ -75,6 +75,7 @@ with tempfile.TemporaryDirectory(prefix="observatory-benchmark-") as directory:
             assert int(row["upload_bytes"]) <= 2 * 1024 * 1024
     assert "p99=" in run.stdout and "deadline_misses=" in run.stdout, run.stdout
     assert "Cloud buffer: 128x72" in run.stdout, run.stdout
+    assert "Cloud sky cache: 64x36" in run.stdout, run.stdout
     ordinary = subprocess.run(
         [
             binary,
@@ -83,7 +84,8 @@ with tempfile.TemporaryDirectory(prefix="observatory-benchmark-") as directory:
             "--width",
             "128",
             "--height",
-            "72",
+            "73",
+            "--no-weather-cache",
             "--time",
             "510",
             "--travel-time",
@@ -94,6 +96,8 @@ with tempfile.TemporaryDirectory(prefix="observatory-benchmark-") as directory:
         check=True,
     )
     assert "deadline_misses=" in ordinary.stdout, ordinary.stdout
+    assert "Cloud buffer: 128x73" in ordinary.stdout, ordinary.stdout
+    assert "Cloud sky cache: 0x0" in ordinary.stdout, ordinary.stdout
     bad = subprocess.run(
         [binary, "--benchmark", "1", "--benchmark-output", str(output / "missing")],
         text=True,

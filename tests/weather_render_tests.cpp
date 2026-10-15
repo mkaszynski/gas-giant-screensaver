@@ -188,6 +188,56 @@ int main() {
         }
         std::cout << "30fps cloud motion: peak=" << peak << '\n';
       }
+      {
+        SurfaceOptions fullOptions{true, 0, 162000};
+        fullOptions.weatherCache = false;
+        Renderer exact(Renderer::defaultDataDirectory(), {}, fullOptions);
+        Renderer cachedSky(Renderer::defaultDataDirectory(), {},
+                           {true, 0, 162000});
+        for (double route : {162000., 5600.390625}) {
+          double worstMean = 0;
+          int worstPeak = 0;
+          for (int frame = 0; frame < 48; ++frame) {
+            double elapsed = frame / 30.;
+            double sky = (route == 162000. ? 510. : 1740.) + elapsed;
+            auto view = travelScene(world, sky, route + elapsed);
+            auto cached = capture(cachedSky, view, 1790900000. + elapsed, sky);
+            auto traced = capture(exact, view, 1790900000. + elapsed, sky);
+            require(cachedSky.weatherSkyCacheResolution() ==
+                            std::array<int, 2>{width / 2, height / 2} &&
+                        exact.weatherSkyCacheResolution() ==
+                            std::array<int, 2>{0, 0},
+                    "cache allocation follows the selected rendering path");
+            auto error = difference(cached, traced);
+            worstMean = std::max(worstMean, error.mean);
+            worstPeak = std::max(worstPeak, error.peak);
+            if (error.mean >= .15 || error.peak > 16)
+              std::cout << "Sky cache mismatch frame=" << frame
+                        << " route=" << route << " mean=" << error.mean
+                        << " peak=" << error.peak << '\n';
+            require(error.mean < .15 && error.peak <= 16,
+                    "moving cached sky clouds must agree with current full "
+                    "tracing");
+          }
+          std::cout << "Sky cache route=" << route << ": mean=" << worstMean
+                    << " peak=" << worstPeak << '\n';
+        }
+        auto night = travelScene(world, 1200, 162000);
+        for (int frame = 0; frame < 24; ++frame) {
+          double clock = 1512.4 + frame / 30.;
+          auto cached = capture(cachedSky, night, clock, 1200);
+          auto traced = capture(exact, night, clock, 1200);
+          auto error = difference(cached, traced);
+          require(error.mean < .15 && error.peak <= 16,
+                  "sky reuse must preserve lightning flashes");
+        }
+        auto jumped = travelScene(world, 900, 0);
+        auto cached = capture(cachedSky, jumped, 1790901000., 900);
+        Renderer fresh(Renderer::defaultDataDirectory(), {}, {true, 0, 162000});
+        auto traced = capture(fresh, jumped, 1790901000., 900);
+        require(difference(cached, traced).peak <= 1,
+                "time and viewpoint changes retain exact current cloud state");
+      }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
       std::cout << "Clear/storm: " << changed.changed

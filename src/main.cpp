@@ -87,6 +87,8 @@ int main(int argc, char **argv) {
                "reflections\n"
                "  --no-terrain-reflections  Disable coastal terrain "
                "reflections\n"
+               "  --no-weather-cache      Trace every cloud ray for "
+               "comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
                "  --debug                 Time slider: day, flight or year; "
@@ -106,6 +108,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-weather") {
         surface.weather = false;
+        continue;
+      }
+      if (a == "--no-weather-cache") {
+        surface.weatherCache = false;
         continue;
       }
       if (a == "--fixed-view") {
@@ -388,11 +394,15 @@ int main(int argc, char **argv) {
                       << '\n';
           }
           auto cloudSize = renderer.weatherResolution();
+          auto cacheSize = renderer.weatherSkyCacheResolution();
           if (cloudSize[0] > 0)
             std::cout << "Cloud buffer: " << cloudSize[0] << 'x' << cloudSize[1]
                       << "; noise "
                       << (renderer.floatingWeatherNoise() ? "RGBA16F" : "RGBA8")
                       << '\n';
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud sky cache: " << cacheSize[0] << 'x'
+                      << cacheSize[1] << '\n';
           break;
         }
         std::this_thread::sleep_until(frameStart +
