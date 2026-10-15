@@ -24,7 +24,12 @@ advances weather along with the selected scene time; pausing freezes both.
   animation smooth at Unix-scale times.
 * The cloud volume is integrated at display resolution (1920×1080 at 1080p),
   using 12–48 deterministic samples according to the distance through the layer
-  (a 150 m target interval, bounded by that range). Fine sampling is retained in transparent
+  (a 150 m target interval, bounded by that range). Detail lookups are skipped
+  only where the density upper bound proves both the body and anvil are empty.
+  Skylight and direction-dependent lighting terms are prepared once per ray;
+  only solar transmission and local extinction vary along it. This retains the
+  same density and lighting without repeated sky lookups and phase calculations.
+  Fine sampling is retained in transparent
   skins and silhouettes; steps grow smoothly inside opaque bodies. The distant
   high cloud layer takes two filtered noise lookups. There is no frame-random
   noise or temporal history to trail across the moons.

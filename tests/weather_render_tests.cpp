@@ -168,8 +168,25 @@ int main() {
                 "imprecise filtering must select the floating-point cache");
         auto fallbackImage = capture(floating, forest, 1790900000.);
         auto delta = difference(a, fallbackImage);
-        require(delta.mean < .1 && delta.peak <= 6,
-                "compact and floating caches must preserve cloud appearance");
+        std::cout << "Compact/floating mip interpolation: mean=" << delta.mean
+                  << " peak=" << delta.peak << '\n';
+        require(
+            delta.mean < .1 && delta.peak <= 6,
+            "compact and floating mip caches must preserve cloud appearance");
+      }
+      {
+        auto previous = capture(weather, forest, 1790900000.);
+        int peak = 0;
+        for (int frame = 1; frame <= 16; ++frame) {
+          auto next = capture(weather, forest, 1790900000. + frame / 30.);
+          auto delta = difference(previous, next);
+          peak = std::max(peak, delta.peak);
+          require(
+              delta.peak <= 12 && delta.mean < .05,
+              "weather must advance without visible frame-to-frame flicker");
+          previous = std::move(next);
+        }
+        std::cout << "30fps cloud motion: peak=" << peak << '\n';
       }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
@@ -187,7 +204,7 @@ int main() {
  vec3 high=point+vec3(0.,9.5-h,0.);
  vec3 field=vec3(weatherDensity(point,uObserverHeight,0.)/14.,
                  weatherDensity(point+vec3(0.,.1,0.),uObserverHeight,0.)/14.,
-                 weatherCirrus(high)/.055);
+                 weatherCirrus(high)/.11+.5*weatherDensity(point+vec3(0.,uWeatherLayer.y*.48,0.),uObserverHeight,0.)/14.);
  color=vec4(field*uSceneScale,1.);
 )");
         anchored.append("post.frag", "color=vec4(texelFetch(uWeather,ivec2(gl_"
@@ -199,6 +216,20 @@ int main() {
         view.altitudeMeters = 5000;
         auto high = capture(field, view, 0);
         auto delta = difference(low, high);
+        Fixture unpruned;
+        unpruned.copyShaders(anchored);
+        unpruned.replace("weather_common.glsl",
+                         "if(shape<=threshold&&(uWeatherKind.y<=0.||z<=.72||"
+                         "n.r<=threshold-.12))return 0.;",
+                         "");
+        Renderer exhaustive(unpruned.root.string(), {}, {true, 0, 162000});
+        for (double clock : {0., 1260., 1790900000.}) {
+          auto pruned = capture(field, view, clock),
+               original = capture(exhaustive, view, clock);
+          auto error = difference(pruned, original);
+          require(error.peak <= 1 && error.mean < .001,
+                  "empty-space pruning must retain body and anvil density");
+        }
         int minimum = 255, maximum = 0;
         for (size_t i = 0; i < low.size(); i += 4) {
           minimum = std::min(minimum, int(low[i]));
@@ -314,8 +345,6 @@ int main() {
           std::cout << "Adaptive quadrature sky=" << sky << " weather=" << clock
                     << ": mean=" << delta.mean << " peak=" << delta.peak
                     << '\n';
-          // Keep average error below half a display code, with bounded local
-          // differences where quadrature samples a thin cloud boundary.
           require(delta.mean < .5 && delta.peak <= 16,
                   "adaptive integration must preserve cloud skins and visible "
                   "radiance");

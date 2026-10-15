@@ -38,16 +38,20 @@ float weatherDensity(vec3 p,float observerHeight,float lod){
  vec4 n=textureLod(uWeatherNoise,q,lod);
  // Eroded cellular detail sculpts sub-kilometre billows in the cloud skin.
  // Integer domain frequency retains seamless wind wrapping in the cache.
- vec4 detail=textureLod(uWeatherNoise,q*4.,min(5.,lod+2.));
- float shape=dot(n,vec4(.55,.27,.12,.06))-(1.-detail.g)*.075;
+ float shape=dot(n,vec4(.55,.27,.12,.06));
  float regional=weatherRegional(p,observerHeight);
  float cover=clamp(uWeatherKind.x+(regional-.5)*.6,0.,1.);
+ float threshold=mix(.79,.26,cover);
+ // Erosion only removes density. Skip its lookup when neither the body nor
+ // a storm anvil can contribute, preserving exactly the same density field.
+ if(shape<=threshold&&(uWeatherKind.y<=0.||z<=.72||n.r<=threshold-.12))return 0.;
+ vec4 detail=textureLod(uWeatherNoise,q*4.,min(5.,lod+2.));
+ shape-=(1.-detail.g)*.075;
  // Flat condensation base and rounded, eroded tops. Only active convection
  // grows towers/anvils high enough to cover the gas giant for extended periods.
  float top=mix(.25+.75*smoothstep(.25,.72,n.r)+.32*(detail.g-.5),.94,uWeatherKind.z);
  top+=uWeatherKind.y*.35*smoothstep(.42,.72,n.r);
  float profile=smoothstep(0.,.12,z)*(1.-smoothstep(top-.30,top,z));
- float threshold=mix(.79,.26,cover);
  float body=smoothstep(threshold,threshold+.085,shape)*profile;
  // A thin spreading anvil near the storm top, attached to the same cells.
  float anvil=smoothstep(.72,.87,z)*(1.-smoothstep(.92,1.,z))*
@@ -72,21 +76,29 @@ float weatherShadowAt(vec3 p,float observerHeight){
  float optical=density*uWeatherLayer.y*.70/max(.16,uSun.y)*(1.-smoothstep(90.,150.,distance));
  return exp(-min(6.,optical));
 }
-vec3 weatherLightTrans(vec3 direction,float height,vec2 attenuation){
- float sunlit=smoothstep(-.08,.025,uSun.y)*uEclipse;
+struct WeatherLighting {
+ vec3 ambient;
+ float forward,sunlit;
+};
+WeatherLighting weatherLighting(vec3 direction){
+ WeatherLighting terms;
+ terms.sunlit=smoothstep(-.08,.025,uSun.y)*uEclipse;
  float cosine=clamp(dot(direction,uSun),-1.,1.);
- // Two-lobe droplet phase plus multiple-scattered diffuse light. The diffuse
- // floor prevents black undersides; wavelength colors come from the sky LUT.
- float forward=.075+.17*pow(max(0.,cosine),12.);
- vec3 direct=transmission(uTrans,height,uSun.y)*sunlit*forward*attenuation.x;
+ terms.forward=.075+.17*pow(max(0.,cosine),12.);
  vec3 zenith=sky(vec3(0.,1.,0.));
- vec3 ambient=mix(zenith,vec3(dot(zenith,vec3(.2126,.7152,.0722))),.45)*.95;
- // Higher-order scattering survives beyond a cloud's directly sunlit skin.
- // It is fed by transmitted sunlight, so thick clouds stay grey in daylight
- // and take the actual reddened solar spectrum at sunset.
- ambient+=transmission(uTrans,height,uSun.y)*sunlit*.032*(.35+.65*attenuation.y);
+ terms.ambient=mix(zenith,vec3(dot(zenith,vec3(.2126,.7152,.0722))),.45)*.95;
  float giantPhase=.12+.10*pow(max(0.,dot(direction,uWeatherPlanetDirection)),4.);
- return direct+ambient+vec3(.97,.98,1.)*uPlanetLight*giantPhase;
+ terms.ambient+=vec3(.97,.98,1.)*uPlanetLight*giantPhase;
+ return terms;
+}
+vec3 weatherLightPrepared(WeatherLighting terms,float height,vec2 attenuation){
+ // Evaluate the height-dependent solar transmission once; the sky and phase
+ // terms are invariant along a view ray and prepared outside the volume loop.
+ vec3 solar=transmission(uTrans,height,uSun.y)*terms.sunlit;
+ return solar*(terms.forward*attenuation.x+.032*(.35+.65*attenuation.y))+terms.ambient;
+}
+vec3 weatherLightTrans(vec3 direction,float height,vec2 attenuation){
+ return weatherLightPrepared(weatherLighting(direction),height,attenuation);
 }
 vec3 weatherLight(vec3 direction,float height,float optical){
  return weatherLightTrans(direction,height,exp(-optical*vec2(1.,.2)));

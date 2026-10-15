@@ -41,10 +41,12 @@ vec4 integrateWeather(vec3 d,float end){
  // Below the layer looking up: start on the far inner intersection.
  if(uObserverHeight<uWeatherLayer.x)start=max(start,inner.y);
  vec3 L=vec3(0.);float T=1.;
+ vec3 viewSky=sky(d);
  // A short path does not need 48 intervals through the same smooth noise cells.
  // Bound the interval count to retain cloud edges and grazing-ray detail.
  float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,48.);
  if(span>0.){
+  WeatherLighting lightingTerms=weatherLighting(d);
   float position=start;
   for(int i=0;i<48;++i){
    if(position>=finish)break;
@@ -62,14 +64,14 @@ vec4 integrateWeather(vec3 d,float end){
     float extinction=1.-segmentT;
     // Two up-sun probes capture illuminated rims and dark storm cores.
     vec2 shadow=cloudSunTransmission(p,density,lod);
-    vec3 lighting=weatherLightTrans(d,weatherHeight(p,uObserverHeight),shadow);
+    vec3 lighting=weatherLightPrepared(lightingTerms,weatherHeight(p,uObserverHeight),shadow);
     if(uWeatherFlash.w>0.){
      vec3 delta=p-vec3(uWeatherFlash.x,uWeatherFlash.y-uObserverHeight,uWeatherFlash.z);
      lighting+=vec3(.90,.94,1.)*uWeatherFlash.w*exp(-dot(delta,delta)/18.);
     }
     float meanHeight=max(0.,.5*(uObserverHeight+weatherHeight(p,uObserverHeight)));
     vec3 air=exp(-distance*(betaR*exp(-meanHeight/8.)+betaM*1.11*exp(-meanHeight/1.2)));
-    lighting=lighting*air+sky(d)*(1.-air);
+    lighting=lighting*air+viewSky*(1.-air);
     L+=T*extinction*lighting;T*=segmentT;
     if(T<.0001)break;
    }
@@ -103,7 +105,7 @@ vec4 integrateWeather(vec3 d,float end){
  }
  float fogOptical=min(5.,end*.25*(fogColumn*uWeatherLayer.z+rainColumn*uWeatherRain*.025));
  float fogT=exp(-fogOptical);
- vec3 fogLight=sky(d)+transmission(uTrans,uWeatherLayer.w,uSun.y)*
+ vec3 fogLight=viewSky+transmission(uTrans,uWeatherLayer.w,uSun.y)*
                 max(0.,uSun.y)*uEclipse*.03+vec3(.97,.98,1.)*uPlanetLight*.15;
  // Foreground haze attenuates both the sky and clouds; no duplicate dry-air
  // scattering, which the terrain and atmosphere passes already integrate.
