@@ -231,6 +231,10 @@ nix run . -- --capture twilight.png --time 1180 --width 1920 --height 1080
 nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 ```
 
+The separate [native cadence tool](docs/FRAME_PACING.md) measures packaged
+Hyprlock surface submissions on an owned headless output. It does not measure
+physical presentation.
+
 `--time` sets the starting scene time in seconds; `--capture` freezes it.
 Normal launches use continuous Unix seconds (since 1970-01-01 UTC), then advance
 with a monotonic clock. Restarting resumes the same celestial timeline. There
