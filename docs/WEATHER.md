@@ -93,6 +93,23 @@ also disables weather-driven ground wetness and wave changes. `--no-emissions`
 disables the giant's emissions, leaving local weather unchanged. `--fixed-view`
 retains the original stationary landscape/cloud path for astronomy comparisons.
 
+## Review gallery
+
+These are actual 1920×1080 GPU captures. Flight and weather times are independently
+controlled; the storm and flash frames deliberately place the observer inside a
+mature cloud. The low-bank scenes leave the giant visible above the weather.
+
+| View | Capture | Sky seconds | Flight seconds | Weather seconds |
+| --- | --- | ---: | ---: | ---: |
+| Forest cloud banks | [Daylight](weather/forest-cloudbanks.png) | 510 | 162000 | 1790900000 |
+| Warm low sun | [Sunset](weather/forest-sunset.png) | 900 | 162000 | 1790900000 |
+| Ocean and reflected rings | [Ocean](weather/ocean.png) | 1740 | 0 | 0 |
+| Cold mountains and thin high cloud | [Snow](weather/snow.png) | 360 | 210600 | 1790900000 |
+| Mature storm | [Storm](weather/storm.png) | 510 | 162000 | 1260 |
+| Before a nearby flash | [Night](weather/night-before.png) | 1200 | 162000 | 1512.3 |
+| Intracloud illumination | [Flash](weather/night-flash.png) | 1200 | 162000 | 1512.8 |
+| Cloudy coastal view | [Coast](weather/coast.png) | 1740 | 5600.390625 | 1790900000 |
+
 ## Validation
 
 `weather-tests` checks climate distributions, warm/cold convection, independent
@@ -106,11 +123,57 @@ compares the antialiased result with both analytical coverage and the old broken
 composite. The existing terrain/sky tests
 continue to exercise antialiasing, opacity, shadows, reflections and streaming.
 
-The performance target remains 30 fps at 1920×1080. Paired measurements against
-the reviewed landscape build must include clear, cloudy, cold and storm cases,
-plus p95/max and missed deadlines; a median below 33.3 ms alone is insufficient.
-Previous terrain frame stalls are tracked separately in
-[issue 13](https://github.com/mkaszynski/gas-giant-screensaver/issues/13).
+Terrain-only culling remains pixel-identical. With weather composition, the test
+permits one 8-bit level in at most 16 channels of the 640×360 image: equivalent
+lighting math and half-float distance resolves can straddle a rounding boundary.
+A separate comparison against the original volume-lighting calculation bounds
+its error to one level and less than .002 average across daylight, sunset, night,
+storm and coast. The terrain MSAA fixture retains its analytical coverage check.
+
+The performance target remains 30 fps at 1920×1080; the measurements below
+include timing tails and deadline misses rather than treating a good median
+as a complete performance pass.
+
+## Measured beta performance
+
+Measured source: [`62177b0`](https://github.com/mkaszynski/gas-giant-screensaver/commit/62177b02d75c2754c0463f3fc7f84314429d2701).
+The reference is the reviewed landscape package from `c7adb00` (the merged
+landscape tree). All measurements use one hidden 1920×1080 rendering target,
+30 fps pacing and automatic GPU clocks on this machine's AMD integrated GPU.
+They synchronize CPU/GPU rendering and exclude compositor presentation.
+Both desktop outputs were asleep; combined multi-monitor presentation cost is
+not measured. Three alternating pairs of 180 frames cover each scene. The first
+10 frames of each run are excluded from the steady figures; later stalls remain.
+
+| View | Landscape median (ms) | Weather median (ms) | Weather p95 (ms) | Missed 33.3 ms deadlines |
+| --- | ---: | ---: | ---: | ---: |
+| Forest banks | 13.19 | 19.09 | 33.58 | 27/510 |
+| Forest overcast | 13.21 | 18.75 | 28.88 | 24/510 |
+| Forest storm | 13.24 | 15.80 | 18.75 | 17/510 |
+| Ocean | 12.24 | 23.69 | 35.75 | 29/510 |
+| Snow | 11.78 | 17.30 | 21.62 | 18/510 |
+| Cloudy coast | 15.16 | 36.58 | 42.33 | 510/510 |
+
+The 30 fps budget is **not fully met**: the cloudy coast remains above 33.3 ms,
+and other scenes have intermittent long frames. The single-run improvements do
+not establish a locked 30 fps result. Terrain-stall investigation continues in
+[issue 13](https://github.com/mkaszynski/gas-giant-screensaver/issues/13); these
+measurements do not attribute every miss to terrain streaming.
+
+The 720-frame forest run measured 20.81 ms steady median, with 124/710
+steady frames over budget and 59.20 ms maximum. Peak process RSS was 372.4 MiB;
+RSS excludes some GPU residency. Normal streamed uploads remained bounded at
+2 MiB per frame. Weather textures/caches have fixed dimensions and no history
+that grows with animation time.
+
+[Complete paired report](weather/benchmark.json),
+[raw frame records](weather/frames), and [memory-run summary](weather/memory.json)
+retain the measured tails, startup cost, binary/shader/source hashes and display
+power state. Reproduce the paired run with:
+
+```sh
+python3 scripts/benchmark_weather.py --baseline result-landscape-phase2 --output /tmp/weather-benchmark.json --frames-dir /tmp/weather-frames
+```
 
 ## Physical references
 

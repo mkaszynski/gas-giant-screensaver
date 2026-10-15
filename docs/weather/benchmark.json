@@ -1,0 +1,1034 @@
+{
+  "schema": "observatory-weather-benchmark-v1",
+  "completed": true,
+  "checkout_source_sha256": {
+    "src/debug_overlay.cpp": "cde58d3dae2f88cb3649263f923d8d36c08b5a212e404b45e3579c54cb7640d6",
+    "src/debug_overlay.hpp": "68046e59abe2dac67576a446e96fbbc12b27115128778be949e0c20ffab6ee2e",
+    "src/debug_timeline.hpp": "0a763587042f297828795ff30e0d445a6d2d9f32ee93f0a20d0212bbe4c74e17",
+    "src/emissions.cpp": "299aef419f0a7757ad670644e943aa627b65641c37c1dfc8d84b6b41c1f8d489",
+    "src/emissions.hpp": "22451902f53a98eefd1f2e7ab2f9fc2641b5751daf63a385cb8bd36f4d5f5dcc",
+    "src/frame_pacing.hpp": "6b9116eadd00ae3d6ffb27dfa5abc3825c1d76671d36d7896c5f6673f189a58a",
+    "src/main.cpp": "2dc5bc5feaa5b070730888dca2c84fa2558160b358f0884a17e9cfb6975c966d",
+    "src/renderer.cpp": "5a9578eb6b1c57c6676aa047cfa0884432f9d8f0d04434b53e8b2d3dc2d7c977",
+    "src/renderer.hpp": "b462b9376a5f22b7ca2518ce927d50919d162bf4897c589e45ae1403938ff29e",
+    "src/sky_catalog.cpp": "6367a8c8298740bf4df870819797bb7765648e45188eeb9e8d9b3b4d8b213b98",
+    "src/sky_catalog.hpp": "6a056c52669e57c7639afa9c34593bda645eb1641f8365bcc7a63a0a6deff45f",
+    "src/sky_texture.cpp": "8f70929788a90394dacbe8cf9c7072fdcba45ef19c4f2e6afc9d0fee8b590767",
+    "src/sky_texture.hpp": "d01701b5fa72dc3bd62edf038b1790e08934dca77f3aaa6189940d121e8cb296",
+    "src/surface.cpp": "aa96db7280fe177bbf6ef2b5cfbcba11d2f8c1181f17821e24b29e1fbcf41b09",
+    "src/surface.hpp": "6d0d28d68a104a027a65198034c810aef75fc97d096954d0add204ff56bef818",
+    "src/surface_renderer.cpp": "eecde743dc211541c0d406409db385495cf52fdc52386a04e6594f5d5a9691ed",
+    "src/surface_renderer.hpp": "be7c0dbee045be7c261c4ee499ff06d7fbf8da0e907396210f1105fd4823eef2",
+    "src/system.cpp": "e36949cebe55210df8d9151b6b52ab3ca0d193a8da4909a02163da63d997bbc8",
+    "src/system.hpp": "09daf6724e2d641f11951368cc0e49984ad0600097bf92b86c1254c6d4a339ff",
+    "src/weather.hpp": "d0aabea040c3ef441022bb9a949e8b9f489c128a431d2f4efd6c50a51b590f73"
+  },
+  "resolution": [
+    1920,
+    1080
+  ],
+  "target_fps": 30,
+  "frames_per_run": 180,
+  "startup_frames_excluded_from_steady": 10,
+  "timings_exclude_presentation": true,
+  "display_state_before": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.026,
+      "dpmsStatus": false
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.0,
+      "dpmsStatus": false
+    }
+  ],
+  "baseline_binary_sha256": "7281fc311d309964b17a59c515a7fb6c677873f837fd42b5cc0d6d88fb1e36d9",
+  "candidate_binary_sha256": "245ff37bf31ef80fd6ba179d92861ab8b7455c91592b82c8cf5f01264a0e1117",
+  "candidate_shader_sha256": {
+    "atmosphere.glsl": "276861659b47ccfea4acd22ad08f527c14eaa59473b7b7b19bfa5dcd67ec3abc",
+    "background.frag": "7fbd879b78d4c5f1f898b3ccedfc2b4559e56375389891b8d46182584df3de9c",
+    "body.frag": "b228b8fbec1a1bd852d5bbe2c212a40a779ba36588d27206502ad6ed3024c1e8",
+    "clouds.glsl": "398e456b56a52cf84bab9d9b22c312d3bd1c6b27f33f0423fc42b8e970d9b873",
+    "emission.frag": "45e35fee757d0b623c73c46f53d6cef99d254700903af3ecfa3881a085474d48",
+    "emission.vert": "1e31d6e444bbc9a1ddd10ac5067410655bfbf2d7f8df10b267e5c26e12860040",
+    "fullscreen.vert": "2945ca9d242def3d04f29cffabd1ead2628f7e060eaf5e688d2129a0e5c64658",
+    "giant_atmosphere.glsl": "d7730b730b837f41e70ccd2340b01bc7e891e7f702258f3f5a66738017f3b349",
+    "giant_filter.glsl": "2061f832d6df9849c2654fbaa953dfb1c2cdfbd7a00fa7a6432db12f32f72cb1",
+    "multiple.frag": "60749303cc472e7c7bba03d0af8232b855a8f1f1ed4ecaa70e36fd4a3b3cb0c2",
+    "post.frag": "7b05ed6f4f9ded6d79c81d3b288e9f1ca522f44feec7965f9ff88c58eca3ba82",
+    "ring_layer.glsl": "6465ffa6a3915e548ae9aefaaa1ceb7380143f6ba25e353450a74c37cf104070",
+    "ring_profile.glsl": "e17b72d437455134e86cc95041a1eed896de6e5319628749be00186c9dba0e78",
+    "rings.frag": "aa36aa621c318d4f4030efa8e200216b1e5839ac58dd1ef0da27b86728c11a31",
+    "scene.glsl": "60b5184ea1563520b09844adb7c81e6d9d4934ea9ef8bfbc31c89274480db710",
+    "sky_lut.frag": "02d25067c3999dfd2129704a39b49800d72b7c5fb84e04824aa71ca8338423a1",
+    "sphere_shadow.glsl": "1eaf660e13a6dc60d814315dc6ae77acd33946c96294360b432310027e17bcc2",
+    "stars.frag": "5c0d51fef657ed0846d6d16e87a52e22c4f15242a449da6bca806f7c7d3ec10b",
+    "stars.vert": "0fec9b2824fd5b518c0597fc3b7e7f06f176942f35b45da9713d60fd17419c67",
+    "surface.frag": "fcc645718e40cfdb910fac5fb4dc767d3323dee60be1601d2274f2e36b780a30",
+    "surface.vert": "94cc5c6fe4ff30cd5c801a20e45b205ad41621a6101427f50829d7a60cdeaf13",
+    "surface_shadow.frag": "5d0df7d61af04f1d841d1313ef44c4a8cd942622d7bbc5d34d9e66797c03f8b7",
+    "surface_shadow.vert": "e403af00c5aff3e24674759646b5142f519cc45f1033bde9b3582a8f369010f3",
+    "terrain.glsl": "0537a034755b49e80bf6eac0ccf664069e8a47dceca397e37cc236dedaac37c0",
+    "transmittance.frag": "d4771015cfa5ff28e2b41e80fa208ebcda7f8677d73b5e3c2f7cac6a8b4bbd4c",
+    "weather-filter-probe.frag": "d3b820623e0a9bf2730fe17b2cd8b37190398b89cc7e4467ee42a7a272613f74",
+    "weather-light.frag": "036c1ce1af55d55ade6fdce93f2868917c93556c3106d08832cc3b1fbb7c68e6",
+    "weather.frag": "3d0fc178582899266e4de971c8d34b737a6ad8d34e7341429821d1a75352f4b1",
+    "weather_common.glsl": "3bd53cca4e54ff34bc0f570a67d907c4a295d8db1baaf2fada8d021fea7de86b",
+    "weather_depth.glsl": "8f0fe0b4ed24c426c433cbcf0488a0552e8e4150b377ff8e1499c816bb26daf1"
+  },
+  "runs": [
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.2673625,
+        "p95_ms": 18.637527,
+        "p99_ms": 26.167717,
+        "max_ms": 430.887002,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.918344999999999
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.2413635,
+        "p95_ms": 16.865304,
+        "p99_ms": 23.042376,
+        "max_ms": 31.074758,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.90308
+      }
+    },
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 19.2596435,
+        "p95_ms": 40.796306,
+        "p99_ms": 50.110021,
+        "max_ms": 454.796645,
+        "deadline_misses": 14,
+        "gpu_median_ms": 16.413629999999998
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 19.215666,
+        "p95_ms": 39.43812,
+        "p99_ms": 42.474183,
+        "max_ms": 50.110021,
+        "deadline_misses": 11,
+        "gpu_median_ms": 16.37401
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.376937999999999,
+        "p95_ms": 21.046484,
+        "p99_ms": 30.572957,
+        "max_ms": 434.091842,
+        "deadline_misses": 1,
+        "gpu_median_ms": 11.037379999999999
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.342659000000001,
+        "p95_ms": 16.075964,
+        "p99_ms": 25.715169,
+        "max_ms": 31.169716,
+        "deadline_misses": 0,
+        "gpu_median_ms": 11.004445
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 18.7935395,
+        "p95_ms": 39.20352,
+        "p99_ms": 41.54995,
+        "max_ms": 436.73597,
+        "deadline_misses": 13,
+        "gpu_median_ms": 15.881924999999999
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 18.755167999999998,
+        "p95_ms": 31.125062,
+        "p99_ms": 40.774676,
+        "max_ms": 42.274739,
+        "deadline_misses": 9,
+        "gpu_median_ms": 15.84811
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.2740245,
+        "p95_ms": 19.602156,
+        "p99_ms": 23.813683,
+        "max_ms": 464.341433,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.9435
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.258055,
+        "p95_ms": 16.919014,
+        "p99_ms": 22.710815,
+        "max_ms": 25.736418,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.93044
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.925862500000001,
+        "p95_ms": 31.283569,
+        "p99_ms": 49.382216,
+        "max_ms": 429.328471,
+        "deadline_misses": 8,
+        "gpu_median_ms": 13.314965
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.896006499999999,
+        "p95_ms": 18.353945,
+        "p99_ms": 45.040666,
+        "max_ms": 59.104937,
+        "deadline_misses": 6,
+        "gpu_median_ms": 13.30302
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 12.2972535,
+        "p95_ms": 17.74879,
+        "p99_ms": 21.365793,
+        "max_ms": 498.196394,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.01802
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 12.2910925,
+        "p95_ms": 16.542619,
+        "p99_ms": 18.002426,
+        "max_ms": 18.967626,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.000530000000001
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 23.655196,
+        "p95_ms": 41.142446,
+        "p99_ms": 44.948683,
+        "max_ms": 512.002362,
+        "deadline_misses": 14,
+        "gpu_median_ms": 20.72823
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 23.5989395,
+        "p95_ms": 36.932231,
+        "p99_ms": 44.812658,
+        "max_ms": 45.000039,
+        "deadline_misses": 10,
+        "gpu_median_ms": 20.699370000000002
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 11.704222,
+        "p95_ms": 16.7355,
+        "p99_ms": 26.57992,
+        "max_ms": 472.395565,
+        "deadline_misses": 2,
+        "gpu_median_ms": 9.61826
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 11.6957105,
+        "p95_ms": 15.005196,
+        "p99_ms": 16.912563,
+        "max_ms": 17.596936,
+        "deadline_misses": 0,
+        "gpu_median_ms": 9.586055
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 17.473895,
+        "p95_ms": 35.566451,
+        "p99_ms": 45.866093,
+        "max_ms": 441.73259,
+        "deadline_misses": 10,
+        "gpu_median_ms": 14.956869999999999
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 17.4355835,
+        "p95_ms": 21.403834,
+        "p99_ms": 40.412137,
+        "max_ms": 76.573944,
+        "deadline_misses": 7,
+        "gpu_median_ms": 14.945645
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 1,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.1039765,
+        "p95_ms": 30.438625,
+        "p99_ms": 41.881822,
+        "max_ms": 503.170963,
+        "deadline_misses": 8,
+        "gpu_median_ms": 12.93426
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.0859375,
+        "p95_ms": 23.837257,
+        "p99_ms": 41.324758,
+        "max_ms": 44.778755,
+        "deadline_misses": 7,
+        "gpu_median_ms": 12.921465000000001
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 1,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 36.593792,
+        "p95_ms": 47.94403,
+        "p99_ms": 54.373966,
+        "max_ms": 512.527737,
+        "deadline_misses": 180,
+        "gpu_median_ms": 33.738960000000006
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 36.5677975,
+        "p95_ms": 39.800379,
+        "p99_ms": 53.993282,
+        "max_ms": 54.509921,
+        "deadline_misses": 170,
+        "gpu_median_ms": 33.709199999999996
+      }
+    },
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 19.188655500000003,
+        "p95_ms": 37.225771,
+        "p99_ms": 44.608605,
+        "max_ms": 453.09176,
+        "deadline_misses": 12,
+        "gpu_median_ms": 16.15571
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 19.1316985,
+        "p95_ms": 24.271832,
+        "p99_ms": 43.162494,
+        "max_ms": 57.690725,
+        "deadline_misses": 8,
+        "gpu_median_ms": 16.117784999999998
+      }
+    },
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.1144255,
+        "p95_ms": 20.859884,
+        "p99_ms": 32.080083,
+        "max_ms": 444.600338,
+        "deadline_misses": 2,
+        "gpu_median_ms": 10.989775000000002
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.08211,
+        "p95_ms": 16.09532,
+        "p99_ms": 25.897931,
+        "max_ms": 32.080083,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.975735
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 18.850977,
+        "p95_ms": 33.767568,
+        "p99_ms": 43.993713,
+        "max_ms": 448.070775,
+        "deadline_misses": 11,
+        "gpu_median_ms": 15.95945
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 18.7955585,
+        "p95_ms": 22.352083,
+        "p99_ms": 42.016615,
+        "max_ms": 58.698736,
+        "deadline_misses": 7,
+        "gpu_median_ms": 15.93126
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.2215165,
+        "p95_ms": 18.924966,
+        "p99_ms": 26.373543,
+        "max_ms": 433.133156,
+        "deadline_misses": 1,
+        "gpu_median_ms": 11.026605
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.175505,
+        "p95_ms": 15.666957,
+        "p99_ms": 19.83893,
+        "max_ms": 26.373543,
+        "deadline_misses": 0,
+        "gpu_median_ms": 11.00904
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.804565,
+        "p95_ms": 35.820116,
+        "p99_ms": 49.424305,
+        "max_ms": 437.404675,
+        "deadline_misses": 10,
+        "gpu_median_ms": 13.349805
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.7653315,
+        "p95_ms": 18.400713,
+        "p99_ms": 39.778318,
+        "max_ms": 49.86953,
+        "deadline_misses": 7,
+        "gpu_median_ms": 13.32391
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.245125999999999,
+        "p95_ms": 18.836961,
+        "p99_ms": 34.03063,
+        "max_ms": 466.646849,
+        "deadline_misses": 3,
+        "gpu_median_ms": 11.0092
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.2343905,
+        "p95_ms": 15.725797,
+        "p99_ms": 28.197543,
+        "max_ms": 39.02245,
+        "deadline_misses": 2,
+        "gpu_median_ms": 10.99501
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 23.763959,
+        "p95_ms": 39.234548,
+        "p99_ms": 41.576359,
+        "max_ms": 515.556137,
+        "deadline_misses": 16,
+        "gpu_median_ms": 20.80519
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 23.732349999999997,
+        "p95_ms": 35.689161,
+        "p99_ms": 41.30458,
+        "max_ms": 41.996708,
+        "deadline_misses": 10,
+        "gpu_median_ms": 20.772905
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 12.330406,
+        "p95_ms": 17.810646,
+        "p99_ms": 19.325317,
+        "max_ms": 506.630561,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.009405000000001
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 12.3035305,
+        "p95_ms": 16.187163,
+        "p99_ms": 18.610326,
+        "max_ms": 18.860095,
+        "deadline_misses": 0,
+        "gpu_median_ms": 9.985865
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 17.2969735,
+        "p95_ms": 31.913341,
+        "p99_ms": 44.811516,
+        "max_ms": 462.944565,
+        "deadline_misses": 9,
+        "gpu_median_ms": 14.917275
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 17.245030999999997,
+        "p95_ms": 21.121655,
+        "p99_ms": 41.001441,
+        "max_ms": 60.705509,
+        "deadline_misses": 7,
+        "gpu_median_ms": 14.8753
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 11.8198735,
+        "p95_ms": 17.621182,
+        "p99_ms": 18.964982,
+        "max_ms": 477.635863,
+        "deadline_misses": 1,
+        "gpu_median_ms": 9.555679999999999
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 11.809123,
+        "p95_ms": 15.337138,
+        "p99_ms": 18.641634,
+        "max_ms": 18.964982,
+        "deadline_misses": 0,
+        "gpu_median_ms": 9.537455000000001
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 2,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 36.6266885,
+        "p95_ms": 49.147806,
+        "p99_ms": 53.770835,
+        "max_ms": 511.722239,
+        "deadline_misses": 179,
+        "gpu_median_ms": 33.71686
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 36.591963500000006,
+        "p95_ms": 39.968054,
+        "p99_ms": 53.012955,
+        "max_ms": 54.895124,
+        "deadline_misses": 170,
+        "gpu_median_ms": 33.679815000000005
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 2,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.3074935,
+        "p95_ms": 32.839197,
+        "p99_ms": 48.676333,
+        "max_ms": 499.111122,
+        "deadline_misses": 9,
+        "gpu_median_ms": 12.982209999999998
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.277096,
+        "p95_ms": 31.880439,
+        "p99_ms": 45.694541,
+        "max_ms": 57.601929,
+        "deadline_misses": 8,
+        "gpu_median_ms": 12.952985
+      }
+    },
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.1984735,
+        "p95_ms": 19.630309,
+        "p99_ms": 27.336399,
+        "max_ms": 432.813067,
+        "deadline_misses": 1,
+        "gpu_median_ms": 11.015785000000001
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.176012,
+        "p95_ms": 16.935817,
+        "p99_ms": 23.290532,
+        "max_ms": 31.120244,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.99081
+      }
+    },
+    {
+      "scene": "forest-cloudbanks",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 19.000082,
+        "p95_ms": 41.260117,
+        "p99_ms": 45.109194,
+        "max_ms": 465.537268,
+        "deadline_misses": 14,
+        "gpu_median_ms": 16.10455
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 18.978502,
+        "p95_ms": 23.480668,
+        "p99_ms": 44.207293,
+        "max_ms": 55.179266,
+        "deadline_misses": 8,
+        "gpu_median_ms": 16.07054
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.1613685,
+        "p95_ms": 19.077612,
+        "p99_ms": 27.580506,
+        "max_ms": 468.965437,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.930745
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.140695000000001,
+        "p95_ms": 15.825995,
+        "p99_ms": 25.09751,
+        "max_ms": 30.158881,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.905485
+      }
+    },
+    {
+      "scene": "forest-cumulus",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 18.717336500000002,
+        "p95_ms": 36.262836,
+        "p99_ms": 43.630121,
+        "max_ms": 451.434423,
+        "deadline_misses": 11,
+        "gpu_median_ms": 15.83661
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 18.684260000000002,
+        "p95_ms": 28.883299,
+        "p99_ms": 42.943955,
+        "max_ms": 48.32774,
+        "deadline_misses": 8,
+        "gpu_median_ms": 15.816055
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 13.215335499999998,
+        "p95_ms": 19.597988,
+        "p99_ms": 26.21722,
+        "max_ms": 435.818142,
+        "deadline_misses": 1,
+        "gpu_median_ms": 11.013275
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 13.1961095,
+        "p95_ms": 16.656282,
+        "p99_ms": 22.685758,
+        "max_ms": 29.368128,
+        "deadline_misses": 0,
+        "gpu_median_ms": 10.9966
+      }
+    },
+    {
+      "scene": "forest-storm",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1260,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.7504085,
+        "p95_ms": 25.176919,
+        "p99_ms": 50.111634,
+        "max_ms": 465.468109,
+        "deadline_misses": 6,
+        "gpu_median_ms": 13.399335
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.699667999999999,
+        "p95_ms": 18.74609,
+        "p99_ms": 39.484417,
+        "max_ms": 62.755783,
+        "deadline_misses": 4,
+        "gpu_median_ms": 13.379435
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 12.134974,
+        "p95_ms": 17.326409,
+        "p99_ms": 19.836365,
+        "max_ms": 500.846697,
+        "deadline_misses": 1,
+        "gpu_median_ms": 10.00042
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 12.1229115,
+        "p95_ms": 16.149712,
+        "p99_ms": 17.860861,
+        "max_ms": 18.947118,
+        "deadline_misses": 0,
+        "gpu_median_ms": 9.977905
+      }
+    },
+    {
+      "scene": "ocean",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 0,
+      "weather_seconds": 0,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 23.7417985,
+        "p95_ms": 36.783252,
+        "p99_ms": 43.536646,
+        "max_ms": 522.199917,
+        "deadline_misses": 14,
+        "gpu_median_ms": 20.80162
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 23.710774999999998,
+        "p95_ms": 31.319537,
+        "p99_ms": 43.243476,
+        "max_ms": 43.80075,
+        "deadline_misses": 9,
+        "gpu_median_ms": 20.782159999999998
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 11.857188,
+        "p95_ms": 16.04727,
+        "p99_ms": 17.349953,
+        "max_ms": 475.867128,
+        "deadline_misses": 1,
+        "gpu_median_ms": 9.594355
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 11.8449855,
+        "p95_ms": 15.082952,
+        "p99_ms": 16.967616,
+        "max_ms": 17.349953,
+        "deadline_misses": 0,
+        "gpu_median_ms": 9.58316
+      }
+    },
+    {
+      "scene": "snow",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 360,
+      "route_seconds": 210600,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 17.269046,
+        "p95_ms": 27.24139,
+        "p99_ms": 47.000571,
+        "max_ms": 450.02932,
+        "deadline_misses": 8,
+        "gpu_median_ms": 14.92009
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 17.224713,
+        "p95_ms": 21.135261,
+        "p99_ms": 40.370319,
+        "max_ms": 61.499979,
+        "deadline_misses": 4,
+        "gpu_median_ms": 14.899265
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 3,
+      "version": "baseline",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 15.2507415,
+        "p95_ms": 34.480194,
+        "p99_ms": 43.549008,
+        "max_ms": 485.598686,
+        "deadline_misses": 10,
+        "gpu_median_ms": 13.025555
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 15.2064585,
+        "p95_ms": 25.597648,
+        "p99_ms": 38.781018,
+        "max_ms": 45.58152,
+        "deadline_misses": 8,
+        "gpu_median_ms": 13.015605
+      }
+    },
+    {
+      "scene": "coast",
+      "pair": 3,
+      "version": "candidate",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 180,
+        "median_ms": 36.621313,
+        "p95_ms": 47.076443,
+        "p99_ms": 54.432757,
+        "max_ms": 507.277236,
+        "deadline_misses": 180,
+        "gpu_median_ms": 33.65598
+      },
+      "steady": {
+        "frames": 170,
+        "median_ms": 36.59026,
+        "p95_ms": 42.00831,
+        "p99_ms": 53.481603,
+        "max_ms": 54.68506,
+        "deadline_misses": 170,
+        "gpu_median_ms": 33.61919
+      }
+    }
+  ],
+  "display_state_after": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.026,
+      "dpmsStatus": false
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.0,
+      "dpmsStatus": false
+    }
+  ]
+}

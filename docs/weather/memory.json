@@ -1,0 +1,14 @@
+{
+  "frames": 720,
+  "peak_process_rss_mib": 372.390625,
+  "second_half_process_rss_range_mib": [
+    280.41015625,
+    372.390625
+  ],
+  "mesh_revisions": 5,
+  "normal_upload_max_bytes": 2097152,
+  "steady_render_median_ms": 20.807616,
+  "steady_deadline_misses": 124,
+  "steady_render_max_ms": 59.19641,
+  "note": "Process RSS does not include all GPU residency; weather targets and caches have fixed dimensions."
+}
