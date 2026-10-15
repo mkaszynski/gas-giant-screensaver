@@ -42,6 +42,14 @@ public:
     return surface ? surface->reflectionRevision() : 0;
   }
 
+  size_t surfaceBuildsStarted() const {
+    return surface ? surface->buildsStarted() : 0;
+  }
+
+  bool surfaceBuildPending() const {
+    return surface && surface->buildPending();
+  }
+
 private:
   struct Target {
     GLuint texture = 0, framebuffer = 0, depth = 0;

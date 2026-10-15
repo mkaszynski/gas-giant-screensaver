@@ -14,7 +14,9 @@ jobs:
       - name: Build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
       - name: Unit and CLI tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          ctest --test-dir build --output-on-failure
+          python3 tests/test_frame_profile.py
       - name: Offline galaxy model behavior
         run: |
           python3 -m venv /tmp/sky-model-tests
