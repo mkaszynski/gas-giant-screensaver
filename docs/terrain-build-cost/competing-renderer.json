@@ -1,0 +1,30 @@
+{
+  "source": "4f880f92e88396a209313cc604142b5bcef19a5c",
+  "duration_seconds": 7.365420299989637,
+  "competing_lock_gpu_seconds": 2.740933845,
+  "lock_source_pin": "f882d4d701308b06c25be0a2118871dc244f9794",
+  "start_outputs": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.026,
+      "dpmsStatus": true
+    }
+  ],
+  "end_outputs": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "refreshRate": 60.026,
+      "dpmsStatus": true
+    }
+  ],
+  "steady_frames": 170,
+  "render_ms": {
+    "median": 17.7199605,
+    "p95": 28.142005,
+    "maximum": 36.307171
+  },
+  "deadline_misses": 3,
+  "presentation_measured": false
+}

@@ -189,6 +189,8 @@ The moving world streams bounded local geometry with one background worker;
 shadow updates and multisample rendering are limited to the visible terrain.
 
 Measurements and limitations: [validation report](docs/VALIDATION.md).
+The [terrain build report](docs/TERRAIN_BUILD_COST.md) records exact geometry
+comparisons, background CPU costs and frame-stall diagnostics.
 The frame cap and output suspension matter more for power than peak FPS.
 
 ## Build and test

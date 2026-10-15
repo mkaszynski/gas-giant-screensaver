@@ -1,0 +1,12 @@
+{
+  "source": "4f880f92e88396a209313cc604142b5bcef19a5c",
+  "width": 1920,
+  "height": 1080,
+  "scene_seconds": 900,
+  "travel_seconds": 162000,
+  "baseline_rgb_sha256": "4b87a6ae87ab26d9f9b0c9480ac806bb56e16b986a9c9680e9c45fa482ece5fa",
+  "candidate_rgb_sha256": "4b87a6ae87ab26d9f9b0c9480ac806bb56e16b986a9c9680e9c45fa482ece5fa",
+  "pixel_identical": true,
+  "candidate_package": "/nix/store/xin93r7jwfa8mcfcwcjk4jbwdw1kq5sq-gas-giant-screensaver-0.1.0",
+  "baseline_package": "/nix/store/7k58s3lic08mpnqwhviridxdw4ssfz0a-gas-giant-screensaver-0.1.0"
+}

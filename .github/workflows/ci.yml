@@ -14,9 +14,7 @@ jobs:
       - name: Build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
       - name: Unit and CLI tests
-        run: |
-          ctest --test-dir build --output-on-failure
-          python3 tests/test_frame_profile.py
+        run: ctest --test-dir build --output-on-failure
       - name: Offline galaxy model behavior
         run: |
           python3 -m venv /tmp/sky-model-tests
@@ -27,6 +25,8 @@ jobs:
           /tmp/sky-model-tests/bin/python tests/test_world_bake.py
           /tmp/sky-model-tests/bin/python tests/test_surface_materials.py
           /tmp/sky-model-tests/bin/python tests/test_landform_bake.py
+      - name: Frame-profile analysis tests
+        run: python3 tests/test_frame_profile.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
