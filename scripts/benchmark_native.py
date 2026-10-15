@@ -45,6 +45,9 @@ def main():
     parser.add_argument("--duration", type=float, default=20)
     parser.add_argument("--warmup", type=float, default=5)
     parser.add_argument("--refresh", type=int, default=60)
+    parser.add_argument(
+        "--capture", type=Path, help="capture the owned output after timing"
+    )
     args = parser.parse_args()
     if not 5 <= args.duration <= 600 or not 1 <= args.warmup <= 60:
         parser.error("duration must be 5..600 seconds; warmup 1..60")
@@ -52,6 +55,18 @@ def main():
         parser.error("refresh must be 30..240 Hz")
     root = Path(__file__).resolve().parents[1]
     env = {k: v for k, v in os.environ.items() if k != "LD_LIBRARY_PATH"}
+    try:
+        monitors = json.loads(
+            subprocess.check_output(
+                ["hyprctl", "monitors", "-j"], env=env, stderr=subprocess.DEVNULL
+            )
+        )
+        parent_outputs = [
+            {k: m[k] for k in ("width", "height", "refreshRate", "dpmsStatus")}
+            for m in monitors
+        ]
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        parent_outputs = None
     # Preserve the renderer donor connection through an absolute socket path,
     # while keeping the child compositor's IPC/surfaces in a private runtime.
     if not env.get("WAYLAND_DISPLAY") or not env.get("XDG_RUNTIME_DIR"):
@@ -178,6 +193,8 @@ def main():
                         "warmup_seconds": args.warmup,
                         "presentation_measured": False,
                         "uses_running_wayland_parent": True,
+                        "parent_output_state": parent_outputs,
+                        "data_directory": str(args.data_dir.resolve()),
                         "package": str(args.package.resolve()),
                     }
                 )
@@ -186,6 +203,14 @@ def main():
                 print(
                     json.dumps({k: v for k, v in report.items() if k != "intervals_ms"})
                 )
+                if args.capture:
+                    args.capture.parent.mkdir(parents=True, exist_ok=True)
+                    subprocess.run(
+                        ["grim", "-o", name, str(args.capture)],
+                        env=env,
+                        check=True,
+                        timeout=10,
+                    )
                 lock.send_signal(signal.SIGUSR1)
                 if lock.wait(timeout=10) != 0:
                     raise RuntimeError("Owned lock did not exit cleanly")
