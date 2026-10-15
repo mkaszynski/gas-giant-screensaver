@@ -61,6 +61,16 @@ int main() {
         for (double instant : {510., 900., 1200.}) {
           auto culled = capture(reference, instant);
           auto full = capture(complete, instant);
+          if (culled != full) {
+            int changed = 0, peak = 0;
+            for (size_t i = 0; i < culled.size(); ++i) {
+              int delta = std::abs(int(culled[i]) - int(full[i]));
+              changed += delta > 0;
+              peak = std::max(peak, delta);
+            }
+            std::cerr << "Culling at " << instant << ": " << changed
+                      << " channels, peak " << peak << '\n';
+          }
           require(culled == full,
                   "terrain/shadow block culling must preserve every pixel");
         }

@@ -77,7 +77,7 @@ float weatherShadowAt(vec3 p,float observerHeight){
  return exp(-min(6.,optical));
 }
 struct WeatherLighting {
- vec3 ambient;
+ vec3 ambient,planet;
  float forward,sunlit;
 };
 WeatherLighting weatherLighting(vec3 direction){
@@ -88,14 +88,16 @@ WeatherLighting weatherLighting(vec3 direction){
  vec3 zenith=sky(vec3(0.,1.,0.));
  terms.ambient=mix(zenith,vec3(dot(zenith,vec3(.2126,.7152,.0722))),.45)*.95;
  float giantPhase=.12+.10*pow(max(0.,dot(direction,uWeatherPlanetDirection)),4.);
- terms.ambient+=vec3(.97,.98,1.)*uPlanetLight*giantPhase;
+ terms.planet=vec3(.97,.98,1.)*uPlanetLight*giantPhase;
  return terms;
 }
 vec3 weatherLightPrepared(WeatherLighting terms,float height,vec2 attenuation){
  // Evaluate the height-dependent solar transmission once; the sky and phase
  // terms are invariant along a view ray and prepared outside the volume loop.
  vec3 solar=transmission(uTrans,height,uSun.y)*terms.sunlit;
- return solar*(terms.forward*attenuation.x+.032*(.35+.65*attenuation.y))+terms.ambient;
+ vec3 direct=solar*terms.forward*attenuation.x;
+ vec3 ambient=terms.ambient+solar*.032*(.35+.65*attenuation.y);
+ return direct+ambient+terms.planet;
 }
 vec3 weatherLightTrans(vec3 direction,float height,vec2 attenuation){
  return weatherLightPrepared(weatherLighting(direction),height,attenuation);
