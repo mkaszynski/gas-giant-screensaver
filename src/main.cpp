@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
                "frame\n  --no-rings             Disable rings for comparison\n"
-               "  --weather-time SECONDS  Starting weather clock (lightning "
-               "follows orbital speed)\n"
+               "  --weather-time SECONDS  Independent cloud/storm clock\n"
+               "  --no-weather           Previous thin-cloud comparison\n"
                "  --lightning-brightness N  Lightning multiplier, 0..1000000 "
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
                "  --no-stars             Disable catalog stars for comparison\n"
                "  --uncompressed-galaxy  Expand HDR sky on GPU for format "
                "comparison\n"
-               "  --no-emissions         Disable lightning and auroras for "
+               "  --no-emissions         Disable giant lightning/auroras for "
                "comparison\n"
                "  --travel-time SECONDS   Start at this point of the airborne "
                "72-hour "
@@ -102,6 +102,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-terrain-reflections") {
         surface.reflections = false;
+        continue;
+      }
+      if (a == "--no-weather") {
+        surface.weather = false;
         continue;
       }
       if (a == "--fixed-view") {
@@ -293,7 +297,8 @@ int main(int argc, char **argv) {
         renderer.render(w, h, sceneTime, day, 1, true, drawRings,
                         {drawEmissions ? weatherTime + weatherElapsed : -1,
                          1. / fps, true, true, lightningBrightness,
-                         auroraBrightness});
+                         auroraBrightness},
+                        weatherTime + weatherElapsed);
         if (controls) {
           int ww, wh;
           glfwGetWindowSize(window, &ww, &wh);
@@ -365,6 +370,10 @@ int main(int argc, char **argv) {
                       << " p95=" << gpuDurations[gpuDurations.size() * 95 / 100]
                       << '\n';
           }
+          auto cloudSize = renderer.weatherResolution();
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud buffer: " << cloudSize[0] << 'x' << cloudSize[1]
+                      << '\n';
           break;
         }
         std::this_thread::sleep_until(frameStart +

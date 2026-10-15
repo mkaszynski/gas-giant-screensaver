@@ -118,13 +118,18 @@ int main() {
         {
           Fixture noClouds(false);
           Renderer noShadow(noClouds.path.string(), {}, {true, 0, 162000});
-          noShadow.render(w, h, 510);
+          // A low sun and fair banks leave visible land outside the cloud
+          // footprint; an opaque storm can legitimately hide every shadow.
+          constexpr double weather = 1790900000.;
+          r.render(w, h, 900, 1800, 1, true, true, {}, weather);
+          auto shadowed = pixels(w, h);
+          noShadow.render(w, h, 900, 1800, 1, true, true, {}, weather);
           auto unshadowed = pixels(w, h);
           int cloudPixels = 0, cloudPeak = 0;
           for (int i = 0; i < w * h / 4; ++i)
             for (int c = 0; c < 3; ++c) {
-              int difference =
-                  std::abs(int(bodies[4 * i + c]) - int(unshadowed[4 * i + c]));
+              int difference = std::abs(int(shadowed[4 * i + c]) -
+                                        int(unshadowed[4 * i + c]));
               cloudPixels += difference > 0;
               cloudPeak = std::max(cloudPeak, difference);
             }
@@ -174,7 +179,7 @@ int main() {
               "identical route phases render identically across a circuit");
       {
         Renderer moving(Renderer::defaultDataDirectory(), {},
-                        {true, 1, 162000 - 510});
+                        {true, 1, 162000 - 510, false, true, true, false});
         moving.render(w, h, 510);
         auto first = pixels(w, h);
         size_t initialRevision = moving.surfaceMeshRevision();
@@ -211,7 +216,7 @@ int main() {
         std::vector<unsigned char> reference;
         {
           Renderer fresh(Renderer::defaultDataDirectory(), {},
-                         {true, 1, 162000 - 510});
+                         {true, 1, 162000 - 510, false, true, true, false});
           fresh.render(w, h, 520);
           reference = pixels(w, h);
         }

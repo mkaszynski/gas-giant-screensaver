@@ -1,3 +1,4 @@
+#include "weather_common.glsl"
 // One curved thin-cloud field is shared by sky, ground shadows and reflections.
 uniform highp sampler2D uNoise;
 uniform vec2 uCloudOffset[5];
@@ -15,6 +16,7 @@ float cloudDensity(vec3 point,float elevation){
  return (1.-exp(-opticalDepth))*smoothstep(.02,.15,elevation);
 }
 float cloudTransmissionAt(vec3 point,float observerHeight){
+ if(uWeatherEnabled)return weatherShadowAt(point,observerHeight);
  if(uSun.y<=.02)return 1.;
  vec3 origin=vec3(0,Rg+observerHeight,0)+point;
  float distance=sphere(origin,uSun,Rg+8.).y;
@@ -22,6 +24,7 @@ float cloudTransmissionAt(vec3 point,float observerHeight){
 }
 float cloudTransmission(vec3 point){return cloudTransmissionAt(point,uObserverHeight);}
 vec3 cloudSceneAt(vec3 d,vec3 L,vec3 origin){
+ if(uWeatherEnabled)return weatherReflection(d,L,origin);
  vec2 roots=sphere(vec3(0,Rg+uObserverHeight,0)+origin,d,Rg+8.);
  float dist=roots.y;vec3 q=origin+d*dist;
  vec2 p=q.xz*vec2(.85*uCloudLongitudeScale,1.9);

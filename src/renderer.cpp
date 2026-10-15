@@ -176,9 +176,11 @@ void Renderer::release(Target &t) {
     glDeleteFramebuffers(1, &t.framebuffer);
   if (t.texture)
     glDeleteTextures(1, &t.texture);
+  if (t.skyTexture)
+    glDeleteTextures(1, &t.skyTexture);
   t = {};
 }
-void Renderer::target(Target &t, int w, int h, bool depth) {
+void Renderer::target(Target &t, int w, int h, bool depth, bool skyLayer) {
   if (t.width == w && t.height == h)
     return;
   release(t);
@@ -196,6 +198,18 @@ void Renderer::target(Target &t, int w, int h, bool depth) {
   glBindFramebuffer(GL_FRAMEBUFFER, t.framebuffer);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          t.texture, 0);
+  if (skyLayer) {
+    glGenTextures(1, &t.skyTexture);
+    glBindTexture(GL_TEXTURE_2D, t.skyTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                           t.skyTexture, 0);
+    const GLenum buffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, buffers);
+  }
   if (depth) {
     glGenRenderbuffers(1, &t.depth);
     glBindRenderbuffer(GL_RENDERBUFFER, t.depth);
@@ -357,6 +371,46 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
     surface = std::make_unique<SurfaceRenderer>(
         root, surfaceOptions.reflections, surfaceOptions.culling,
         surfaceOptions.waterLod);
+    if (surfaceOptions.weather) {
+      weatherProgram = program("weather.frag");
+      weatherLightProgram = program("weather-light.frag");
+      glGenTextures(1, &weatherLightTexture);
+      textures.push_back(weatherLightTexture);
+      glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
+      glTexImage3D(GL_TEXTURE_3D, 0, GL_RG16F, 128, 128, 32, 0, GL_RG,
+                   GL_HALF_FLOAT, nullptr);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      for (auto axis :
+           {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+        glTexParameteri(GL_TEXTURE_3D, axis, GL_CLAMP_TO_EDGE);
+      glGenFramebuffers(1, &weatherLightFbo);
+      glBindFramebuffer(GL_FRAMEBUFFER, weatherLightFbo);
+      glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                weatherLightTexture, 0, 0);
+      if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        throw std::runtime_error("Cloud light cache framebuffer unavailable");
+      auto volume = weatherNoise();
+      glGenTextures(1, &weatherNoiseTexture);
+      textures.push_back(weatherNoiseTexture);
+      glBindTexture(GL_TEXTURE_3D, weatherNoiseTexture);
+      // UNORM8 filtering is quantized on some software GLES implementations.
+      // A floating cache retains smooth subframe interpolation of the same
+      // data.
+      std::vector<float> filtered(volume.size());
+      std::transform(volume.begin(), volume.end(), filtered.begin(),
+                     [](uint8_t value) { return value / 255.f; });
+      glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, weatherNoiseSize,
+                   weatherNoiseSize, weatherNoiseSize, 0, GL_RGBA, GL_FLOAT,
+                   filtered.data());
+      glGenerateMipmap(GL_TEXTURE_3D);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER,
+                      GL_LINEAR_MIPMAP_LINEAR);
+      glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      for (auto axis :
+           {GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T, GL_TEXTURE_WRAP_R})
+        glTexParameteri(GL_TEXTURE_3D, axis, GL_REPEAT);
+    }
     unsigned char empty[4]{};
     glGenTextures(1, &mountains);
     textures.push_back(mountains);
@@ -482,6 +536,8 @@ Renderer::~Renderer() {
   release(multi);
   release(sky);
   release(scene);
+  release(weather);
+  glDeleteFramebuffers(1, &weatherLightFbo);
   for (auto p : programs)
     glDeleteProgram(p);
   for (auto t : textures)
@@ -535,7 +591,36 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   bind(p, 0, "uSky", sky.texture);
   bind(p, 1, "uTrans", trans.texture);
 }
+void Renderer::weatherUniforms(GLuint p, const Scene &s) {
+  integer(p, "uWeatherEnabled", bool(weatherProgram));
+  glActiveTexture(GL_TEXTURE15);
+  glBindTexture(GL_TEXTURE_3D, weatherNoiseTexture);
+  integer(p, "uWeatherNoise", 15);
+  if (!weatherProgram)
+    return;
+  auto &v = weatherState;
+  vector(p, "uWeatherOffset", v.noiseOffset);
+  vector(p, "uWeatherRegionalOffset", v.regionalOffset);
+  vector(p, "uWeatherCirrusOffset", v.cirrusOffset);
+  vector(p, "uWeatherPlanetDirection", normalized(s.local(-s.observer)));
+  glUniform4f(glGetUniformLocation(p, "uWeatherKind"), v.cover, v.storm,
+              v.stratus, v.cirrus);
+  glUniform4f(glGetUniformLocation(p, "uWeatherLayer"), v.base, v.thickness,
+              v.fog, v.fogTop);
+  glUniform4f(glGetUniformLocation(p, "uWeatherFlash"), v.flash.x, v.flash.y,
+              v.flash.z, v.flashRadiance);
+  scalar(p, "uWeatherRain", v.rain);
+  auto east = geographicEast({s.latitude, s.longitude});
+  auto up = geographicUp({s.latitude, s.longitude});
+  auto north = geographicNorth({s.latitude, s.longitude});
+  float frame[9] = {float(east.x),  float(east.y),  float(east.z),
+                    float(up.x),    float(up.y),    float(up.z),
+                    float(north.x), float(north.y), float(north.z)};
+  glUniformMatrix3fv(glGetUniformLocation(p, "uWeatherFrame"), 1, GL_FALSE,
+                     frame);
+}
 void Renderer::cloudUniforms(GLuint p, const Scene &s, double seconds) {
+  weatherUniforms(p, s);
   // Reduce each octave separately at the repeating noise texture's period.
   // A single wrapped clock cannot preserve noninteger octave frequencies.
   // Upload small offsets so Unix-scale time never loses subframe precision
@@ -562,25 +647,34 @@ void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
   bind(p, 5, "uRingProfile", ringProfile);
 }
 void Renderer::render(int w, int h, double seconds, double day, float opacity,
-                      bool drawBodies, bool drawRings, EmissionFrame emission) {
+                      bool drawBodies, bool drawRings, EmissionFrame emission,
+                      double weatherSeconds) {
   if (surface) {
     auto s = travelScene(surface->world(), seconds,
                          seconds * surfaceOptions.speed + surfaceOptions.offset,
                          day, drawRings);
-    renderScene(w, h, s, seconds, day, opacity, drawBodies, drawRings,
-                emission);
+    renderScene(w, h, s, seconds, day, opacity, drawBodies, drawRings, emission,
+                weatherSeconds);
   } else {
     renderScene(w, h, sceneAt(seconds, day, drawRings), seconds, day, opacity,
-                drawBodies, drawRings, emission);
+                drawBodies, drawRings, emission, weatherSeconds);
   }
 }
 void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                            double day, float opacity, bool drawBodies,
-                           bool drawRings, EmissionFrame emission) {
+                           bool drawRings, EmissionFrame emission,
+                           double weatherSeconds) {
   if (w <= 0 || h <= 0)
     return;
   if (surface)
     surfaceLocation = {s.latitude, s.longitude};
+  if (weatherProgram) {
+    double clock = weatherSeconds >= 0
+                       ? weatherSeconds
+                       : (emission.seconds >= 0 ? emission.seconds : seconds);
+    weatherState = weatherAt(weatherClimate(surface->world(), surfaceLocation),
+                             surfaceLocation, clock, emission.exposure);
+  }
   const GLState state;
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
@@ -760,6 +854,37 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                                        common(p, s, w, h);
                                        cloudUniforms(p, s, seconds);
                                      });
+  if (weatherProgram) {
+    // Cache broad solar attenuation in a small geographic volume. Fine view
+    // extinction stays at display resolution; repeated up-sun probes do not.
+    if (s.sunLocal.y > -.08 && s.sunVisibility > 0.) {
+      glBindFramebuffer(GL_FRAMEBUFFER, weatherLightFbo);
+      glViewport(0, 0, 128, 128);
+      common(weatherLightProgram, s, w, h);
+      weatherUniforms(weatherLightProgram, s);
+      for (int layer = 0; layer < 32; ++layer) {
+        glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                  weatherLightTexture, 0, layer);
+        scalar(weatherLightProgram, "uWeatherCacheSlice", (layer + .5) / 32.);
+        quad(weatherLightProgram);
+      }
+    }
+    // Match cloud and terrain pixels; mixed MSAA pixels retain a sky path too.
+    target(weather, w, h, false, true);
+    glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
+    glViewport(0, 0, weather.width, weather.height);
+    common(weatherProgram, s, w, h);
+    weatherUniforms(weatherProgram, s);
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
+    integer(weatherProgram, "uWeatherLightCache", 12);
+    glUniform2f(glGetUniformLocation(weatherProgram, "uWeatherResolution"),
+                weather.width, weather.height);
+    scalar(weatherProgram, "uSurfaceFraction", surface->coverageFraction());
+    bind(weatherProgram, 11, "uSurfaceDistance", surface->distanceTexture());
+    bind(weatherProgram, 9, "uSurface", surfaceTexture);
+    quad(weatherProgram);
+  }
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);
@@ -768,6 +893,10 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
          surface ? surface->coverageFraction() : 1.);
   bind(postProgram, 9, "uSurface", surfaceTexture ? surfaceTexture : mountains);
   cloudUniforms(postProgram, s, seconds);
+  bind(postProgram, 10, "uWeather",
+       weather.texture ? weather.texture : mountains);
+  bind(postProgram, 11, "uSkyWeather",
+       weather.skyTexture ? weather.skyTexture : mountains);
   bind(postProgram, 2, "uScene", scene.texture);
   bind(postProgram, 3, "uMountains", mountains);
   bind(postProgram, 4, "uNoise", noise);

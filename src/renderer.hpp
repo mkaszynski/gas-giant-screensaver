@@ -2,6 +2,7 @@
 #include "emissions.hpp"
 #include "surface_renderer.hpp"
 #include "system.hpp"
+#include "weather.hpp"
 #include <GLES3/gl3.h>
 #include <memory>
 #include <string>
@@ -18,14 +19,19 @@ public:
   ~Renderer();
   Renderer(const Renderer &) = delete;
   Renderer &operator=(const Renderer &) = delete;
+  // A negative weatherSeconds follows the emission clock (when enabled),
+  // otherwise scene time. Explicit weather time remains independent of the sky.
   void render(int width, int height, double seconds, double daySeconds = 1800,
               float opacity = 1, bool drawBodies = true, bool drawRings = true,
-              EmissionFrame emission = {});
+              EmissionFrame emission = {}, double weatherSeconds = -1);
   void renderScene(int width, int height, const Scene &, double seconds,
                    double daySeconds = 1800, float opacity = 1,
                    bool drawBodies = true, bool drawRings = true,
-                   EmissionFrame emission = {});
+                   EmissionFrame emission = {}, double weatherSeconds = -1);
   static std::string defaultDataDirectory();
+  std::array<int, 2> weatherResolution() const {
+    return {weather.width, weather.height};
+  }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
   }
@@ -44,7 +50,7 @@ public:
 
 private:
   struct Target {
-    GLuint texture = 0, framebuffer = 0, depth = 0;
+    GLuint texture = 0, framebuffer = 0, depth = 0, skyTexture = 0;
     int width = 0, height = 0;
   };
   std::string root;
@@ -53,16 +59,19 @@ private:
   std::unique_ptr<SurfaceRenderer> surface;
   TravelLocation surfaceLocation{};
   double lastAltitude = -1e30;
+  WeatherState weatherState;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
          postProgram = 0, ringProgram = 0, giantProgram = 0,
-         giantLimbProgram = 0, emissionProgram = 0;
+         giantLimbProgram = 0, emissionProgram = 0, weatherProgram = 0,
+         weatherLightProgram = 0;
   GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
          terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
-         emissionVao = 0;
-  Target trans, multi, sky, scene;
+         emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
+         weatherLightFbo = 0;
+  Target trans, multi, sky, scene, weather;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;
   Vec3 lastSun;
@@ -73,11 +82,12 @@ private:
                  int giantAtmosphere = 0);
   GLuint imageTexture(const std::string &);
   GLuint galaxyTexture();
-  void target(Target &, int, int, bool depth = false);
+  void target(Target &, int, int, bool depth = false, bool skyLayer = false);
   void release(Target &);
   void bind(GLuint, int, const char *, GLuint);
   void common(GLuint, const Scene &, int, int);
   void cloudUniforms(GLuint, const Scene &, double);
+  void weatherUniforms(GLuint, const Scene &);
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,

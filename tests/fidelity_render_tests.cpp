@@ -90,10 +90,16 @@ int main() {
            "vec3(0.)", 510},
           {"dielectric reflection",
            "land+=irradiance*NoL*spec*mix(1.,.35,forest);", "", 510}};
+      // Material behavior must remain measurable even when the weather model
+      // happens to put an opaque cloud bank between the camera and the forest.
+      const SurfaceOptions clearTerrain{true, 0,    162000, false,
+                                        true, true, false};
+      Renderer materialReference(Renderer::defaultDataDirectory(), {},
+                                 clearTerrain);
       for (auto c : cases) {
         Fixture fixture(c.term, c.replacement);
-        Renderer without(fixture.path.string(), {}, {true, 0, 162000});
-        auto lit = capture(reference, c.instant);
+        Renderer without(fixture.path.string(), {}, clearTerrain);
+        auto lit = capture(materialReference, c.instant);
         auto dark = capture(without, c.instant);
         int changed = 0, peak = 0;
         for (int i = 0; i < 640 * 360 / 5; ++i)

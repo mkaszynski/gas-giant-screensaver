@@ -13,6 +13,7 @@ public:
   SurfaceRenderer(const SurfaceRenderer &) = delete;
   const SurfaceWorld &world() const { return terrain; }
   double coverageFraction() const { return fraction; }
+  GLuint distanceTexture() const { return distanceTextureId; }
   size_t meshRevision() const { return revision; }
   size_t shadowRevision() const { return shadowDraws; }
   size_t reflectionRevision() const { return reflectionDraws; }
@@ -39,8 +40,8 @@ private:
   bool cullingEnabled = true;
   bool waterLodEnabled = true;
   GLuint waterIndices = 0;
-  GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, resolved = 0,
-         texture = 0;
+  GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, distanceBuffer = 0,
+         resolved = 0, texture = 0, distanceTextureId = 0;
   GLuint shadowFbo[4]{}, shadowTex[4]{};
   float shadowMatrices[4][16]{};
   int width = 0, height = 0, samples = 1;

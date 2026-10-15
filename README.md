@@ -8,8 +8,17 @@ the whole scene. Space pauses/resumes. The native lock screen has no debug UI.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
-geometry. The sky changes through a 30-minute solar day, with thin drifting
-clouds and stars emerging at dusk.
+geometry. The sky changes through a 30-minute solar day, with biome-dependent drifting
+cloud banks, occasional storms, and stars emerging at dusk.
+
+## Biome weather beta
+
+`feat/biome-weather` adds altitude-aware cloud banks, high cloud, valley fog,
+distant precipitation and local intracloud lightning. Weather evolves independently
+of the solar day and responds to regional climate. Fair weather usually leaves
+the giant visible; occasional tall storms can obscure it. The cloud field also
+supplies ground shadows and water reflections. This feature is awaiting review.
+See [weather behavior, rendering and review commands](docs/WEATHER.md).
 
 ## Landscape fidelity beta
 
@@ -29,8 +38,9 @@ nix build .#gas-giant-screensaver -o result-landscape-phase2
 
 Explicit packaged data prevents an older executable loading shaders from a
 newer working directory. The target is 30 fps at 1080p within 30% additional
-complete-renderer cost versus Phase 1. The [feature PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
-remains separate until operator review; the NixOS source pin is unchanged.
+complete-renderer cost versus Phase 1. The [landscape PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
+is merged; the NixOS source pin is unchanged. Frame stalls remain tracked in
+[issue 13](https://github.com/mkaszynski/gas-giant-screensaver/issues/13).
 
 ## Earth sky and Milky Way
 
@@ -270,7 +280,8 @@ rendering details](docs/EMISSIONS.md).
 
 This is a purpose-built screensaver, not an orbital habitability simulator.
 Keplerian paths are prescribed; long-term N-body stability is not claimed.
-Mountains are a fixed photographic-style layer, not navigable terrain.
+The default landscape is a streamed procedural surface along a fixed airborne
+route. `--fixed-view` retains the old stationary mountain layer.
 Atmospheric eclipses use local visibility rather than a volumetric shadow
 integration; overlapping penumbras use an approximation. See
 [design](docs/DESIGN.md) and [asset provenance and prompts](docs/ASSETS.md).

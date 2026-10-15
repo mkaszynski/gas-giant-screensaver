@@ -257,7 +257,11 @@ void SurfaceRenderer::releaseTargets() {
   glDeleteFramebuffers(1, &resolved);
   glDeleteRenderbuffers(1, &colorBuffer);
   glDeleteRenderbuffers(1, &depthBuffer);
+  glDeleteRenderbuffers(1, &distanceBuffer);
+  distanceBuffer = 0;
   glDeleteTextures(1, &texture);
+  glDeleteTextures(1, &distanceTextureId);
+  distanceTextureId = 0;
   multisample = resolved = colorBuffer = depthBuffer = texture = 0;
 }
 SurfaceRenderer::~SurfaceRenderer() {
@@ -304,6 +308,13 @@ void SurfaceRenderer::resize(int w, int h) {
                                    GL_DEPTH_COMPONENT24, w, h);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                             GL_RENDERBUFFER, depthBuffer);
+  glGenRenderbuffers(1, &distanceBuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, distanceBuffer);
+  glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_R16F, w, h);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+                            GL_RENDERBUFFER, distanceBuffer);
+  const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+  glDrawBuffers(2, outputs);
   check();
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -317,6 +328,17 @@ void SurfaceRenderer::resize(int w, int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, resolved);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          texture, 0);
+  glGenTextures(1, &distanceTextureId);
+  glBindTexture(GL_TEXTURE_2D, distanceTextureId);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, w, h, 0, GL_RED, GL_HALF_FLOAT,
+               nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                         distanceTextureId, 0);
+  glDrawBuffers(2, outputs);
   check();
 }
 void SurfaceRenderer::resizeReflection(int w, int h) {
@@ -808,8 +830,22 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, multisample);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resolved);
+  // Resolve distance with the same MSAA weights as radiance/coverage. Dividing
+  // by coverage recovers foreground distance even when sample zero is
+  // uncovered.
+  const GLenum colorOnly[] = {GL_COLOR_ATTACHMENT0, GL_NONE};
+  glDrawBuffers(2, colorOnly);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
   glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
                     GL_NEAREST);
+  const GLenum distanceOnly[] = {GL_NONE, GL_COLOR_ATTACHMENT1};
+  glDrawBuffers(2, distanceOnly);
+  glReadBuffer(GL_COLOR_ATTACHMENT1);
+  glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
+                    GL_NEAREST);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+  glDrawBuffers(2, outputs);
   return texture;
 }
 } // namespace observatory

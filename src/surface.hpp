@@ -15,6 +15,7 @@ struct SurfaceOptions {
   bool reflections = false;
   bool culling = true;
   bool waterLod = true;
+  bool weather = true;
 };
 struct TravelLocation {
   double latitude, longitude;
