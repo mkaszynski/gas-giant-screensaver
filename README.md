@@ -13,11 +13,13 @@ cloud banks, occasional storms, and stars emerging at dusk.
 
 ## Biome weather beta
 
-`feat/biome-weather` adds altitude-aware cloud banks, high cloud, valley fog,
+`feat/weather-integration` combines altitude-aware cloud banks, high cloud, valley fog,
 distant precipitation and local intracloud lightning. Weather evolves independently
 of the solar day and responds to regional climate. Fair weather usually leaves
 the giant visible; occasional tall storms can obscure it. The cloud field also
-supplies ground shadows and water reflections. This feature is awaiting review.
+supplies ground shadows and water reflections. The integration branch includes
+the native timer and terrain CPU optimizations; it is awaiting combined validation
+and operator review before merging or changing the NixOS source pin.
 See [weather behavior, rendering and review commands](docs/WEATHER.md).
 
 ## Reviewed landscape fidelity
@@ -191,9 +193,11 @@ inside the giant’s atmosphere are not simulated. Details and numerical checks:
 The renderer is C++20 / OpenGL ES 3.0. A cached transmittance table and an
 isotropic multiple-scattering table feed a small sky lookup texture. Only the
 sky table changes during the day. Sphere draws are bounded to screen rectangles;
-impossible shadow casters are rejected on the CPU. Clouds are thin texture
-layers, and solar glare adds no extra rendering pass. There is no runtime AI,
-network access, volumetric cloud marching, or per-frame asset texture upload.
+impossible shadow casters are rejected on the CPU. Weather integrates cached
+cloud density at display resolution with a bounded sample count and a small
+solar-transmission volume. `--no-weather` retains the thin-cloud path.
+Solar glare adds no extra rendering pass. There is no runtime AI,
+network access or per-frame asset texture upload.
 The moving world streams bounded local geometry with one background worker;
 shadow updates and multisample rendering are limited to the visible terrain.
 

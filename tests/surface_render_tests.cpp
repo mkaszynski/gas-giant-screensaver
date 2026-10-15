@@ -177,10 +177,15 @@ int main() {
       std::cout << "Periodic image maximum " << wrap << " codes\n";
       require(wrap <= 2,
               "identical route phases render identically across a circuit");
-      {
-        Renderer moving(Renderer::defaultDataDirectory(), {},
-                        {true, 1, 162000 - 510, false, true, true, false});
+      for (bool weatherEnabled : {false, true}) {
+        Renderer moving(
+            Renderer::defaultDataDirectory(), {},
+            {true, 1, 162000 - 510, false, true, true, weatherEnabled});
         moving.render(w, h, 510);
+        require(moving.weatherResolution() == (weatherEnabled
+                                                   ? std::array<int, 2>{w, h}
+                                                   : std::array<int, 2>{0, 0}),
+                "streamed terrain uses the selected weather path");
         auto first = pixels(w, h);
         require(moving.surfaceBuildsStarted() == 1 &&
                     !moving.surfaceBuildPending(),
@@ -210,7 +215,8 @@ int main() {
             pop += std::abs(int(beforeRefresh[i * 4 + c]) -
                             int(travelled[i * 4 + c]));
         double popMean = double(pop) / (w * h / 4 * 3);
-        std::cout << "Mesh refresh mean " << popMean << " codes\n";
+        std::cout << "Mesh refresh (weather=" << weatherEnabled << ") mean "
+                  << popMean << " codes\n";
         require(popMean < 3.,
                 "refresh does not introduce a visible landscape jump");
         long delta = 0;
@@ -221,8 +227,9 @@ int main() {
         require(delta > w * h, "surface actually moves through space");
         std::vector<unsigned char> reference;
         {
-          Renderer fresh(Renderer::defaultDataDirectory(), {},
-                         {true, 1, 162000 - 510, false, true, true, false});
+          Renderer fresh(
+              Renderer::defaultDataDirectory(), {},
+              {true, 1, 162000 - 510, false, true, true, weatherEnabled});
           fresh.render(w, h, 520);
           reference = pixels(w, h);
         }

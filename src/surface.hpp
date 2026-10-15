@@ -2,6 +2,7 @@
 #include "system.hpp"
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 namespace observatory {
@@ -84,7 +85,10 @@ struct SurfaceMesh {
   std::vector<uint32_t> waterIndices;
   std::vector<Bounds> bounds;
 };
-SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation);
+// Optional cooperative checkpoints let the streaming worker share CPU/APU
+// resources without changing the mesh. Offline and initial builds run directly.
+SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation,
+                             const std::function<void()> &checkpoint = {});
 struct SurfacePlane {
   Vec3 normal;
   double offset;

@@ -341,7 +341,8 @@ Scene travelScene(const SurfaceWorld &world, double seconds,
   s.cameraUp = cross(s.forward, s.right);
   return s;
 }
-SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
+SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
+                             const std::function<void()> &checkpoint) {
   // A bounded radial mesh. Fine rings near the camera, progressively larger
   // triangles past the visible horizon. One immutable CPU result per stream
   // job.
@@ -428,13 +429,15 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
            baseHeight + curvature * (1. + baseHeight / surfaceRadius),
            z * (1. + baseHeight / surfaceRadius)});
     }
+    if (checkpoint)
+      checkpoint();
   }
   // Conservative blocks let each frame project thousands of boxes instead
   // of every terrain vertex. Back-sector blocks are narrower because those
   // angular cells are deliberately coarse.
   mesh.indices.reserve(radial * angular * 6);
   mesh.waterIndices.reserve(radial * angular * 2);
-  for (int j = 0; j < radial; j += 16)
+  for (int j = 0; j < radial; j += 16) {
     for (int i = 0; i < angular;) {
       int columns = i < visible ? 16 : 1;
       SurfaceMesh::Bounds b{{1.e30, 1.e30, 1.e30}, {-1.e30, -1.e30, -1.e30}};
@@ -496,11 +499,16 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
       mesh.bounds.push_back(b);
       i += columns;
     }
+    if (checkpoint)
+      checkpoint();
+  }
   // Smooth continental, canopy and spherical normals. Measured relief is
   // deliberately excluded here: its full-resolution cached gradient is added
   // in the fragment shader, independently of the geometry's distance LOD.
   // Reuse the sampled heights; no extra procedural height queries are needed.
   for (size_t i = 0; i < mesh.indices.size(); i += 3) {
+    if (checkpoint && i % (4096 * 3) == 0)
+      checkpoint();
     auto point = [&](uint32_t index) { return basePositions[index]; };
     auto a = mesh.indices[i], b = mesh.indices[i + 1], c = mesh.indices[i + 2];
     Vec3 n = cross(point(b) - point(a), point(c) - point(a));
@@ -511,7 +519,10 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
       v.nz += n.z;
     }
   }
-  for (auto &v : mesh.vertices) {
+  for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+    if (checkpoint && i % 4096 == 0)
+      checkpoint();
+    auto &v = mesh.vertices[i];
     Vec3 n{v.nx, v.ny, v.nz};
     n = length(n) > 1.e-20 ? normalized(n) : Vec3{0, 1, 0};
     v.nx = n.x;

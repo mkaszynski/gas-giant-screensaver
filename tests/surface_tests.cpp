@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <thread>
 using namespace observatory;
 void require(bool b, const char *m) {
   if (!b)
@@ -242,6 +243,36 @@ int main() {
             "flight actually crosses all three coherent landform types");
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
+    {
+      size_t checkpoints = 0;
+      auto sliced = buildSurfaceMesh(w, center, [&] {
+        ++checkpoints;
+        std::this_thread::yield();
+      });
+      require(checkpoints > 0,
+              "streaming mesh construction cooperates with its scheduler");
+      require(
+          sliced.vertices.size() == mesh.vertices.size() &&
+              std::memcmp(sliced.vertices.data(), mesh.vertices.data(),
+                          mesh.vertices.size() * sizeof(SurfaceVertex)) == 0 &&
+              sliced.indices == mesh.indices &&
+              sliced.waterIndices == mesh.waterIndices &&
+              sliced.hasLand == mesh.hasLand &&
+              sliced.hasWater == mesh.hasWater &&
+              sliced.bounds.size() == mesh.bounds.size(),
+          "cooperative scheduling preserves every vertex and index exactly");
+      for (size_t i = 0; i < mesh.bounds.size(); ++i) {
+        const auto &a = mesh.bounds[i], &b = sliced.bounds[i];
+        require(length(a.minimum - b.minimum) == 0 &&
+                    length(a.maximum - b.maximum) == 0 &&
+                    a.firstIndex == b.firstIndex &&
+                    a.indexCount == b.indexCount &&
+                    a.waterFirstIndex == b.waterFirstIndex &&
+                    a.waterIndexCount == b.waterIndexCount &&
+                    a.deepWater == b.deepWater,
+                "cooperative scheduling preserves culling and water bounds");
+      }
+    }
     require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");
     require(mesh.bounds.size() <= 8192,

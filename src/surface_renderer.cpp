@@ -5,6 +5,7 @@
 #include <png.h>
 #include <sstream>
 #include <stdexcept>
+#include <thread>
 namespace observatory {
 namespace {
 std::string shader(const std::string &root, const std::string &file) {
@@ -618,7 +619,18 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   } else if (length(eye) > 750. && !pending.valid() && !staged) {
     ++buildStarts;
     pending = std::async(std::launch::async, [this, location] {
-      return buildSurfaceMesh(terrain, location);
+      // A continuous CPU burst competes with the GPU on shared-power APUs,
+      // even before any mesh upload. Spread only background work over short
+      // slices; the resident mesh covers the flight while this one is built.
+      // Reset after sleeping so an oversleep never causes catch-up work.
+      using Clock = std::chrono::steady_clock;
+      auto activeUntil = Clock::now() + std::chrono::milliseconds(1);
+      return buildSurfaceMesh(terrain, location, [&] {
+        if (Clock::now() >= activeUntil) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(4));
+          activeUntil = Clock::now() + std::chrono::milliseconds(1);
+        }
+      });
     });
   }
   double altitude = s.altitudeMeters;
