@@ -42,6 +42,10 @@ public:
   double reliefTexelMeters() const { return reliefSpacing; }
 
 private:
+  struct BaseSample {
+    double height, moisture, uplift, seam;
+    std::array<double, 2> landforms;
+  };
   int width = 0, height = 0;
   std::vector<int16_t> heights, relief;
   std::array<std::vector<int16_t>, 2> extraRelief;
@@ -50,11 +54,10 @@ private:
   double reliefSpacing = 8;
   double localRelief(double x, double z, int layer = 0) const;
   double elevationAt(double latitude, double longitude,
-                     std::array<double, 2> coordinates,
+                     std::array<double, 2> coordinates, const BaseSample &,
                      double *reliefHeight = nullptr) const;
   std::vector<uint8_t> moisture, uplift;
-  double field(const std::vector<uint8_t> &, double, double) const;
-  double coarse(double, double) const;
+  BaseSample baseSample(double latitude, double longitude) const;
 };
 Vec3 geographicUp(TravelLocation);
 Vec3 geographicEast(TravelLocation);

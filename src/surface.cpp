@@ -192,12 +192,17 @@ SurfaceWorld::SurfaceWorld(const std::string &file, bool allowMissingFlight,
       throw std::runtime_error("Invalid flight altitude");
   }
 }
-double SurfaceWorld::field(const std::vector<uint8_t> &a, double lat,
-                           double lon) const {
-  return interpolate(a, grid(lat, lon, width, height), width) / 255.;
-}
-double SurfaceWorld::coarse(double lat, double lon) const {
-  return interpolate(heights, grid(lat, lon, width, height), width);
+SurfaceWorld::BaseSample SurfaceWorld::baseSample(double lat,
+                                                  double lon) const {
+  // Height, climate and landform weights refer to the same geographic texel.
+  // Share its coordinates and values across elevation and material sampling.
+  const auto g = grid(lat, lon, width, height);
+  const double h = interpolate(heights, g, width);
+  const double m = interpolate(moisture, g, width) / 255.;
+  const double u = interpolate(uplift, g, width) / 255.;
+  const double seam =
+      1. - smooth(pi - .04, pi, std::abs(std::remainder(lon, 2 * pi)));
+  return {h, m, u, seam, landformWeights(lat, h, m)};
 }
 double SurfaceWorld::localRelief(double x, double z, int layer) const {
   const auto &values = layer == 0 ? relief : extraRelief.at(layer - 1);
@@ -222,27 +227,28 @@ std::array<double, 2> SurfaceWorld::reliefCoordinates(double lat,
           z + (noise(x, z, 43000, 611) - .5) * 900};
 }
 double SurfaceWorld::elevation(double lat, double lon) const {
-  return elevationAt(lat, lon, reliefCoordinates(lat, lon));
+  return elevationAt(lat, lon, reliefCoordinates(lat, lon),
+                     baseSample(lat, lon));
 }
 double SurfaceWorld::elevationAt(double lat, double lon,
                                  std::array<double, 2> coordinates,
+                                 const BaseSample &base,
                                  double *reliefHeight) const {
   // Longitude/pole-safe local relief, anchored in moon-fixed coordinates.
   // The orbit never reaches the poles, but the field remains well-defined
   // there.
   const double x = surfaceRadius * std::remainder(lon, 2 * pi),
                z = surfaceRadius * lat;
-  double h = coarse(lat, lon), u = field(uplift, lat, lon);
-  double seam =
-      1. - smooth(pi - .04, pi, std::abs(std::remainder(lon, 2 * pi)));
-  const auto weights = landformWeights(lat, h, field(moisture, lat, lon));
+  double h = base.height;
+  const double seam = base.seam;
+  const auto &weights = base.landforms;
   double measured = (1. - weights[0] - weights[1]) *
                     localRelief(coordinates[0], coordinates[1]);
   for (int i = 0; i < 2; ++i)
     if (weights[i] > 0.)
       measured +=
           weights[i] * localRelief(coordinates[0], coordinates[1], i + 1);
-  measured *= .65 + .75 * u;
+  measured *= .65 + .75 * base.uplift;
   measured *= seam * smooth(-100, 500, h);
   if (reliefHeight)
     *reliefHeight = measured;
@@ -253,23 +259,21 @@ double SurfaceWorld::elevationAt(double lat, double lon,
 }
 SurfaceSample SurfaceWorld::sample(double lat, double lon) const {
   auto coordinates = reliefCoordinates(lat, lon);
+  const auto base = baseSample(lat, lon);
   double measured = 0;
-  double h = elevationAt(lat, lon, coordinates, &measured),
-         m = field(moisture, lat, lon), u = field(uplift, lat, lon);
+  double h = elevationAt(lat, lon, coordinates, base, &measured);
   const double temp =
       30. - 55. * std::pow(std::sin(lat), 2) - std::max(0., h) * .006;
-  const double coarseHeight = coarse(lat, lon);
-  const double seam =
-      1. - smooth(pi - .04, pi, std::abs(std::remainder(lon, 2 * pi)));
   return {h,
           0.,
-          m,
-          u,
+          base.moisture,
+          base.uplift,
           temp,
-          seam * smooth(-100., 500., coarseHeight) * (.65 + .75 * u),
+          base.seam * smooth(-100., 500., base.height) *
+              (.65 + .75 * base.uplift),
           measured,
           coordinates,
-          landformWeights(lat, coarseHeight, m)};
+          base.landforms};
 }
 
 TravelLocation SurfaceWorld::location(double seconds) const {
@@ -360,6 +364,16 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   Vec3 bearing = normalized(Vec3{1, 0, 0} - origin * origin.x);
   const double azimuth =
       std::atan2(dot(bearing, east), dot(bearing, north)) + .12;
+  // Every radial ring uses the same azimuths. Evaluate these transcendental
+  // functions once per column, retaining the original arithmetic and values.
+  std::array<std::array<double, 2>, angular> directions;
+  for (int i = 0; i < angular; ++i) {
+    double a = azimuth - pi / 3 +
+               (i < visible ? (2 * pi / 3) * i / visible
+                            : 2 * pi / 3 + (4 * pi / 3) * (i - visible) /
+                                               (angular - visible));
+    directions[i] = {std::sin(a), std::cos(a)};
+  }
   for (int j = 0; j <= radial; ++j) {
     // The bottom of the fixed aircraft view looks only ten degrees below
     // level. Spend most rings on the visible 1.5--45 km slopes, rather than
@@ -371,15 +385,15 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
                                       (detailEnd - inner))
                    : 45000. * std::exp(std::log(far / 45000.) *
                                        (j - detailEnd) / (radial - detailEnd));
+    const double sphere =
+        std::sqrt(1. - r * r / (surfaceRadius * surfaceRadius));
+    const double curvature =
+        -(r * r) /
+        (surfaceRadius + std::sqrt(surfaceRadius * surfaceRadius - r * r));
     for (int i = 0; i < angular; ++i) {
-      double a = azimuth - pi / 3 +
-                 (i < visible ? (2 * pi / 3) * i / visible
-                              : 2 * pi / 3 + (4 * pi / 3) * (i - visible) /
-                                                 (angular - visible));
-      double x = r * std::sin(a), z = r * std::cos(a);
-      Vec3 direction =
-          origin * std::sqrt(1. - r * r / (surfaceRadius * surfaceRadius)) +
-          east * (x / surfaceRadius) + north * (z / surfaceRadius);
+      double x = r * directions[i][0], z = r * directions[i][1];
+      Vec3 direction = origin * sphere + east * (x / surfaceRadius) +
+                       north * (z / surfaceRadius);
       double lat = std::asin(direction.y),
              lon = std::atan2(direction.z, direction.x);
       auto v = world.sample(lat, lon);
@@ -398,9 +412,6 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
                                             surfaceRadius * lat, 80, 1397));
       double baseHeight = std::max(v.ground - v.reliefHeight, v.water) + h -
                           std::max(v.ground, v.water);
-      double curvature =
-          -(r * r) /
-          (surfaceRadius + std::sqrt(surfaceRadius * surfaceRadius - r * r));
       mesh.vertices.push_back(
           {float(x * (1. + h / surfaceRadius)),
            float(h + curvature * (1. + h / surfaceRadius)),
@@ -422,6 +433,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
   // of every terrain vertex. Back-sector blocks are narrower because those
   // angular cells are deliberately coarse.
   mesh.indices.reserve(radial * angular * 6);
+  mesh.waterIndices.reserve(radial * angular * 2);
   for (int j = 0; j < radial; j += 16)
     for (int i = 0; i < angular;) {
       int columns = i < visible ? 16 : 1;
@@ -461,20 +473,23 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center) {
         for (int row = j; row < j + 16; row += 4)
           for (int col = i; col < i + columns; col += 4) {
             const auto centerIndex = index(row + 2, col + 2);
-            std::vector<uint32_t> edge;
+            // A four-cell fan has at most four vertices on each of its four
+            // edges. Avoid repeated heap allocations in every terrain block.
+            std::array<uint32_t, 16> edge;
+            size_t edgeCount = 0;
             for (int k = 0, step = col == i ? 1 : 4; k < 4; k += step)
-              edge.push_back(index(row + k, col));
+              edge[edgeCount++] = index(row + k, col);
             for (int k = 0, step = row + 4 == j + 16 ? 1 : 4; k < 4; k += step)
-              edge.push_back(index(row + 4, col + k));
+              edge[edgeCount++] = index(row + 4, col + k);
             for (int k = 0, step = col + 4 == i + columns ? 1 : 4; k < 4;
                  k += step)
-              edge.push_back(index(row + 4 - k, col + 4));
+              edge[edgeCount++] = index(row + 4 - k, col + 4);
             for (int k = 0, step = row == j ? 1 : 4; k < 4; k += step)
-              edge.push_back(index(row, col + 4 - k));
-            for (size_t k = 0; k < edge.size(); ++k)
+              edge[edgeCount++] = index(row, col + 4 - k);
+            for (size_t k = 0; k < edgeCount; ++k)
               mesh.waterIndices.insert(
                   mesh.waterIndices.end(),
-                  {centerIndex, edge[k], edge[(k + 1) % edge.size()]});
+                  {centerIndex, edge[k], edge[(k + 1) % edgeCount]});
           }
       }
       b.waterIndexCount = mesh.waterIndices.size() - b.waterFirstIndex;

@@ -37,6 +37,17 @@ struct RouteFixture {
 int main() {
   try {
     SurfaceWorld w(SURFACE_ASSET_DIR "/moon.ggworld");
+    for (double lat : {-pi * .5 + 1.e-8, -.8, 0., .8, pi * .5 - 1.e-8})
+      for (double lon : {-pi - .01, -pi + 1.e-9, -.3, 0., pi - .01, pi + .01}) {
+        const auto sample = w.sample(lat, lon);
+        require(
+            sample.ground == w.elevation(lat, lon),
+            "material and elevation sampling share exactly the same ground");
+        require(
+            sample.moisture >= 0 && sample.moisture <= 1 &&
+                sample.uplift >= 0 && sample.uplift <= 1,
+            "shared climate interpolation stays bounded at seams and poles");
+      }
     RouteFixture invalid;
     invalid.rejected("GGFLY001");
     std::string bytes = "GGFLY001";
@@ -297,7 +308,9 @@ int main() {
             "open ocean skips unneeded terrain-shadow rendering");
     require(ocean.waterIndices.size() < ocean.indices.size() / 3,
             "deep water omits unneeded interior triangles");
-    for (size_t block : {size_t(0), size_t(1700), size_t(3167)}) {
+    for (size_t block :
+         {size_t(0), size_t(47), size_t(48), size_t(79), size_t(1700),
+          size_t(3120), size_t(3167), size_t(3168), size_t(3199)}) {
       const auto &box = ocean.bounds.at(block);
       using Edge = std::pair<uint32_t, uint32_t>;
       auto boundary = [](const std::vector<uint32_t> &indices, uint32_t first,
@@ -321,6 +334,9 @@ int main() {
                            box.waterIndexCount),
               "coarse water retains every fine boundary edge without cracks");
     }
+    for (auto index : ocean.waterIndices)
+      require(index < ocean.vertices.size(),
+              "fixed-capacity water fans only reference valid vertices");
     int curvedWaterNormals = 0;
     for (auto v : ocean.vertices) {
       double radius = std::hypot(v.x, v.z);
