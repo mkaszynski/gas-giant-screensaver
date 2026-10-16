@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix="observatory-benchmark-") as directory:
             assert int(row["upload_bytes"]) <= 2 * 1024 * 1024
     assert "p99=" in run.stdout and "deadline_misses=" in run.stdout, run.stdout
     assert "Cloud buffer: 128x72" in run.stdout, run.stdout
-    assert "Cloud sky cache: 64x36" in run.stdout, run.stdout
+    assert "Cloud sky cache: 43x36" in run.stdout, run.stdout
     ordinary = subprocess.run(
         [
             binary,

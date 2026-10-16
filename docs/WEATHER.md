@@ -27,11 +27,11 @@ advances weather along with the selected scene time; pausing freezes both.
   never regenerated during animation. Double-precision CPU offsets keep
   animation smooth at Unix-scale times.
 * Cloud composition and terrain clipping use display resolution (1920×1080 at 1080p).
-  A same-frame half-resolution cache reuses low-cloud radiance and transmission
+  A same-frame cache at one third display width and half display height reuses low-cloud radiance and transmission
   only across smooth sky regions. Ground, partial MSAA coverage, bright unresolved
   sources and steep cloud transitions retain direct display-pixel integration.
   Thin high clouds, fog and precipitation remain at display resolution. The cache
-  adds about 4 MiB at 1080p; it has no temporal history or delayed lighting.
+  adds about 2.64 MiB at 1080p; it has no temporal history or delayed lighting.
   `--no-weather-cache` traces every ray for comparison. Both paths use
   12–48 deterministic samples according to the distance through the layer
   (a 150 m target interval, bounded by that range). Detail lookups are skipped

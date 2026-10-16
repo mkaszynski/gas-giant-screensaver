@@ -21,8 +21,9 @@ supplies ground shadows and water reflections. The integration branch includes
 the native timer, terrain CPU optimizations, cooperative background mesh building
 and a same-frame optical cache for smooth sky clouds. See the
 [integration review and validation](docs/WEATHER_INTEGRATION.md). Operator review
-is required before merging or changing the NixOS source pin. The cloud-heavy
-coast remains above the 30 fps budget; intermittent stalls remain elsewhere.
+is required before merging. Coastal rendering optimizations, measured budgets
+and NixOS installation preparation are tracked in the
+[coastal follow-up](docs/COASTAL_WEATHER.md).
 See [weather behavior, rendering and review commands](docs/WEATHER.md).
 
 ## Reviewed landscape fidelity

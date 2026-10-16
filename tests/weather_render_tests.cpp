@@ -204,7 +204,7 @@ int main() {
             auto cached = capture(cachedSky, view, 1790900000. + elapsed, sky);
             auto traced = capture(exact, view, 1790900000. + elapsed, sky);
             require(cachedSky.weatherSkyCacheResolution() ==
-                            std::array<int, 2>{width / 2, height / 2} &&
+                            std::array<int, 2>{(width + 2) / 3, (height + 1) / 2} &&
                         exact.weatherSkyCacheResolution() ==
                             std::array<int, 2>{0, 0},
                     "cache allocation follows the selected rendering path");
@@ -237,6 +237,52 @@ int main() {
         auto traced = capture(fresh, jumped, 1790901000., 900);
         require(difference(cached, traced).peak <= 1,
                 "time and viewpoint changes retain exact current cloud state");
+      }
+      {
+        // Alternate very different cloud emission/transmission pairs whose
+        // final color is identical over the matching background. This checks
+        // actual reuse, rather than merely comparing the decision formula.
+        Fixture balanced;
+        balanced.replace("weather_sky_cache.glsl", "bool cachedSkyWeather(",
+                         "bool cacheUsed=false;\nbool cachedSkyWeather(");
+        balanced.replace("weather_sky_cache.glsl", " return true;",
+                         " cacheUsed=true;return true;");
+        const std::string background =
+            "vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),"
+            "0).rgb*(uExposure/uSceneScale);";
+        balanced.replace("weather_sky_cache.glsl", background,
+                         "vec3 background=vec3(.1)*uExposure;");
+        balanced.append("weather.frag", R"(
+ if(uWeatherSkyPass){
+  float t=.1+.8*mod(floor(gl_FragCoord.x),2.);
+  color=vec4(vec3(.1)*(1.-t)*uSceneScale,t);
+ }else color=vec4(vec3(cacheUsed?1.:0.),1.);
+)");
+        balanced.replace("post.frag", "if(coverage>=1.)", "if(false)");
+        balanced.append("post.frag", R"(
+ color=vec4(texelFetch(uWeather,ivec2(gl_FragCoord.xy),0).rgb,1.);
+)");
+        Fixture contrasting;
+        contrasting.copyShaders(balanced);
+        contrasting.replace("weather_sky_cache.glsl",
+                            "vec3 background=vec3(.1)*uExposure;",
+                            "vec3 background=vec3(.03,.1,.3)*uExposure;");
+        Renderer cancellation(balanced.root.string(), {}, {true, 0, 162000});
+        Renderer contrast(contrasting.root.string(), {}, {true, 0, 162000});
+        auto view = travelScene(world, 1740, 5600.390625);
+        auto matching = capture(cancellation, view, 1790900000., 1740);
+        auto different = capture(contrast, view, 1790900000., 1740);
+        int reusedMatching = 0, reusedDifferent = 0;
+        for (size_t i = 0; i < matching.size(); i += 4) {
+          reusedMatching += matching[i] > 127;
+          reusedDifferent += different[i] > 127;
+        }
+        std::cout << "Projected cloud cache: matching=" << reusedMatching
+                  << " contrasting=" << reusedDifferent << '\n';
+        require(reusedMatching > width * height * .7 &&
+                    reusedDifferent < reusedMatching / 2,
+                "cache must reuse cancelling optical columns and reject "
+                "visible background-dependent contrast");
       }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
@@ -393,6 +439,34 @@ int main() {
                     << '\n';
           require(delta.mean < .5 && delta.peak <= 16,
                   "solar cache must preserve broad cloud lighting and energy");
+        }
+      }
+      {
+        Fixture twoTaps;
+        twoTaps.replace("weather.frag",
+                        "stepLength*2.3*weatherDensity(p+uSun*(stepLength*(2."
+                        "55/2.3)),uObserverHeight,lod+1.)",
+                        "stepLength*(.9*weatherDensity(p+uSun*(stepLength*.5),"
+                        "uObserverHeight,lod+1.)+"
+                        "1.4*weatherDensity(p+uSun*(stepLength*1.5),"
+                        "uObserverHeight,lod+1.))");
+        SurfaceOptions precise{true, 0, 162000};
+        precise.weatherCache = false;
+        Renderer centroid(Renderer::defaultDataDirectory(), {}, precise);
+        Renderer reference(twoTaps.root.string(), {}, precise);
+        for (double elapsed : {0., 4., 10.}) {
+          auto view = travelScene(world, 1740 + elapsed, 5600.390625 + elapsed);
+          auto a =
+              capture(centroid, view, 1790900000. + elapsed, 1740 + elapsed);
+          auto b =
+              capture(reference, view, 1790900000. + elapsed, 1740 + elapsed);
+          auto delta = difference(a, b);
+          std::cout << "Far solar centroid elapsed=" << elapsed
+                    << ": mean=" << delta.mean << " peak=" << delta.peak
+                    << '\n';
+          require(delta.mean < .1 && delta.peak <= 16,
+                  "far sunlight approximation must preserve coastal cloud "
+                  "lighting");
         }
       }
       {

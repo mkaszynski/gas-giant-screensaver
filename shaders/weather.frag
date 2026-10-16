@@ -23,8 +23,9 @@ vec2 cloudSunTransmission(vec3 p,float density,float lod){
   column=textureLod(uWeatherLightCache,cacheUV,0.).rg;
  }
  if(edge>0.){
-  float distant=stepLength*(.9*weatherDensity(p+uSun*(stepLength*.5),uObserverHeight,lod+1.)+
-                1.4*weatherDensity(p+uSun*(stepLength*1.5),uObserverHeight,lod+1.));
+  // Preserve the weight and first moment of the two broad far-column taps.
+  // Local extinction and the detailed nearby solar cache remain unchanged.
+  float distant=stepLength*2.3*weatherDensity(p+uSun*(stepLength*(2.55/2.3)),uObserverHeight,lod+1.);
   column=mix(column,exp(-distant*vec2(1.,.2)),edge);
  }
  // Fine local extinction preserves the illuminated cloud skin even when the
@@ -51,7 +52,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  bool reused=false;
  if(span>0.&&allowSkyCache){
   vec4 cached;
-  reused=cachedSkyWeather(cached);
+  reused=cachedSkyWeather(d,cached);
   if(reused){L=cached.rgb/uSceneScale;T=cached.a;}
  }
  if(span>0.&&!reused){
@@ -72,7 +73,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
    if(density>.001){
     float segmentT=exp(-density*stepLength);
     float extinction=1.-segmentT;
-    // Two up-sun probes capture illuminated rims and dark storm cores.
+    // Cached nearby columns and the broad far tap light rims and storm cores.
     vec2 shadow=cloudSunTransmission(p,density,lod);
     // Combine scalar solar weights before the vector multiplication. The
     // surface path retains its original evaluation order; volume roundoff is
