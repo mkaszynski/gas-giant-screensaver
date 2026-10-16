@@ -1,0 +1,14 @@
+{
+  "schema": "observatory-pacing-image-comparison-v1",
+  "candidate_source": "e2982e26fbf1665bcad5c23668fc4dbedb6982a0",
+  "baseline_source": "c7adb00b59bd7f91567ec6a7d19f7cb7c42bfbba",
+  "width": 1920,
+  "height": 1080,
+  "scene_seconds": 900,
+  "travel_seconds": 162000,
+  "data_directory": "/nix/store/7k58s3lic08mpnqwhviridxdw4ssfz0a-gas-giant-screensaver-0.1.0/share/gas-giant-screensaver",
+  "pixel_identical": true,
+  "baseline_rgb_sha256": "4b87a6ae87ab26d9f9b0c9480ac806bb56e16b986a9c9680e9c45fa482ece5fa",
+  "candidate_rgb_sha256": "4b87a6ae87ab26d9f9b0c9480ac806bb56e16b986a9c9680e9c45fa482ece5fa",
+  "candidate_package": "/nix/store/gaccgbg62pgv6dbkkm5n37llx7243lwh-gas-giant-screensaver-0.1.0"
+}

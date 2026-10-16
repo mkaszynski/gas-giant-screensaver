@@ -1,7 +1,8 @@
 #version 300 es
 precision highp float;
 in vec3 vPosition,vNormal,vProperties,vMesh;
-out vec4 color;
+layout(location=0)out vec4 color;
+layout(location=1)out float weatherDistance;
 #include "atmosphere.glsl"
 #include "scene.glsl"
 #include "clouds.glsl"
@@ -32,7 +33,8 @@ vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude){
  vec2 slope=vec2(0.);float unresolved=0.;
  for(int i=0;i<4;++i){
   slope+=normalize(uWaves[i].xy)*sin(mod(phase[i],2.*PI)+uWaves[i].z)*amplitude[i];
-  unresolved+=(uWaves[i].w*uWaves[i].w-amplitude[i]*amplitude[i])*.5;
+  float wind=uWeatherEnabled?1.+.7*uWeatherKind.y:1.;
+  unresolved+=(uWaves[i].w*uWaves[i].w*wind*wind-amplitude[i]*amplitude[i])*.5;
  }
  vec3 wn=normalize(normal+uMeshFrame*vec3(slope.x*uReliefLongitudeScale,0.,slope.y));
  vec3 reflected=reflect(d,wn);float z=dot(reflected,uForward);vec3 L=sky(reflected);
@@ -145,10 +147,12 @@ void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,fl
 }
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);
+ weatherDistance=distance*.001;
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
  vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
  vec4 foot=fwidth(phase);
  vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
+ if(uWeatherEnabled)amplitude*=1.+.7*uWeatherKind.y;
  // Sphere normal avoids coastal land slopes tilting the sea reflection.
  vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
  // Pure water avoids land's shadow/normal/material work. Mixed shore pixels
@@ -241,6 +245,7 @@ void main(){
  float variance=min(.25,dot(dFdx(N),dFdx(N))+dot(dFdy(N),dFdy(N)));
  roughness=sqrt(min(1.,roughness*roughness+variance));
  float wetness=(1.-smoothstep(.4,6.,vProperties.x))*(1.-cold);
+ if(uWeatherEnabled)wetness=max(wetness,uWeatherRain*.65*(1.-cold));
  land*=mix(1.,.62,wetness);
  roughness=mix(roughness,.28,wetness);
  float spec=dielectricSpecular(N,-d,uSun,max(.28,roughness),.04);

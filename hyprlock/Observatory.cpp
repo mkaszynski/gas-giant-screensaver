@@ -3,7 +3,6 @@
 #include "../../core/hyprlock.hpp"
 #include "../../helpers/Color.hpp"
 #include "../../helpers/Log.hpp"
-#include "../../observatory/frame_pacing.hpp"
 #include "../Renderer.hpp"
 #include <algorithm>
 #include <hyprlang.hpp>
@@ -17,6 +16,7 @@ void CObservatory::configure(
   viewport = p->getViewport();
   output = p->stringPort;
   fps = std::clamp<int>(std::any_cast<Hyprlang::INT>(props.at("fps")), 1, 60);
+  framePacer = observatory::FramePacer(fps);
   day = std::clamp<int>(std::any_cast<Hyprlang::INT>(props.at("day_seconds")),
                         30, 86400);
   lightningBrightness =
@@ -61,8 +61,7 @@ bool CObservatory::draw(const SRenderData &data) {
   // when an output is off, it cannot perpetually schedule new render work.
   if (!failed && !timer)
     timer = g_pHyprlock->addTimer(
-        observatory::frameDelay(frameStart, std::chrono::steady_clock::now(),
-                                fps),
+        framePacer.delay(frameStart, std::chrono::steady_clock::now()),
         [ref = weakSelf](auto, auto) {
           if (auto self = ref.lock()) {
             self->timer.reset();

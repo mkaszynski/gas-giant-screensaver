@@ -8,29 +8,44 @@ the whole scene. Space pauses/resumes. The native lock screen has no debug UI.
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that
-geometry. The sky changes through a 30-minute solar day, with thin drifting
-clouds and stars emerging at dusk.
+geometry. The sky changes through a 30-minute solar day, with biome-dependent drifting
+cloud banks, occasional storms, and stars emerging at dusk.
 
-## Landscape fidelity beta
+## Biome weather beta
 
-`feat/landscape-fidelity` adds coherent alpine/canyon/coastal terrain, cached
+`feat/weather-integration` combines altitude-aware cloud banks, high cloud, valley fog,
+distant precipitation and local intracloud lightning. Weather evolves independently
+of the solar day and responds to regional climate. Fair weather usually leaves
+the giant visible; occasional tall storms can obscure it. The cloud field also
+supplies ground shadows and water reflections. The integration branch includes
+the native timer, terrain CPU optimizations, cooperative background mesh building
+and a same-frame optical cache for smooth sky clouds. See the
+[integration review and validation](docs/WEATHER_INTEGRATION.md). Operator review
+is required before merging or changing the NixOS source pin. The cloud-heavy
+coast remains above the 30 fps budget; intermittent stalls remain elsewhere.
+See [weather behavior, rendering and review commands](docs/WEATHER.md).
+
+## Reviewed landscape fidelity
+
+The merged landscape fidelity work adds coherent alpine/canyon/coastal terrain, cached
 physical materials, dense crown shading, filtered water glints, wet shores and
 optional coarse coastal terrain reflections. Thin clouds have shared lighting, shadows
 and reflected coverage. Geometry streams in bounded uploads without replacing
 a partially drawn mesh. See [landscape design](docs/SURFACE.md) and
 [Phase 2 scope and validation](docs/LANDSCAPE_PHASE2.md).
 
-From this feature checkout:
+To preview the reviewed landscape without weather:
 
 ```sh
-nix build .#gas-giant-screensaver -o result-landscape-phase2
+nix build github:mkaszynski/gas-giant-screensaver/d5fc3d572f91f83e1c46dcab26cdffa8db16c491#gas-giant-screensaver -o result-landscape-phase2
 ./result-landscape-phase2/bin/gas-giant-screensaver --data-dir ./result-landscape-phase2/share/gas-giant-screensaver --fullscreen --debug --fps 30 --time 900 --travel-time 162000
 ```
 
 Explicit packaged data prevents an older executable loading shaders from a
 newer working directory. The target is 30 fps at 1080p within 30% additional
-complete-renderer cost versus Phase 1. The [feature PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
-remains separate until operator review; the NixOS source pin is unchanged.
+complete-renderer cost versus Phase 1. The [landscape PR](https://github.com/mkaszynski/gas-giant-screensaver/pull/12)
+is merged; the NixOS source pin is unchanged. Frame stalls remain tracked in
+[issue 13](https://github.com/mkaszynski/gas-giant-screensaver/issues/13).
 
 ## Earth sky and Milky Way
 
@@ -52,7 +67,7 @@ populations and distant dust are approximations, described in the design notes.
 Preview the merged galaxy version without changing the installed screensaver:
 
 ```sh
-nix run github:mkaszynski/gas-giant-screensaver/feat/galaxy -- \
+nix run github:mkaszynski/gas-giant-screensaver -- \
   --fullscreen --time 437625
 ```
 
@@ -65,7 +80,6 @@ nix run . -- --capture galaxy.png --fixed-view --time 437625 --width 1920 --heig
 
 Compare with `--no-galaxy`, `--no-stars`, or both. See
 [sky sources, calibration, efficiency and limitations](docs/GALAXY.md).
-The airborne biome feature remains on `feat/airborne-biomes` until operator review.
 
 [Eclipse sky capture](docs/images/galaxy-eclipse.png) ·
 [Sky beside the sunlit giant](docs/images/galaxy-night.png)
@@ -182,13 +196,17 @@ inside the giant’s atmosphere are not simulated. Details and numerical checks:
 The renderer is C++20 / OpenGL ES 3.0. A cached transmittance table and an
 isotropic multiple-scattering table feed a small sky lookup texture. Only the
 sky table changes during the day. Sphere draws are bounded to screen rectangles;
-impossible shadow casters are rejected on the CPU. Clouds are thin texture
-layers, and solar glare adds no extra rendering pass. There is no runtime AI,
-network access, volumetric cloud marching, or per-frame asset texture upload.
+impossible shadow casters are rejected on the CPU. Weather integrates cached
+cloud density at display resolution with a bounded sample count and a small
+solar-transmission volume. `--no-weather` retains the thin-cloud path.
+Solar glare adds no extra rendering pass. There is no runtime AI,
+network access or per-frame asset texture upload.
 The moving world streams bounded local geometry with one background worker;
 shadow updates and multisample rendering are limited to the visible terrain.
 
 Measurements and limitations: [validation report](docs/VALIDATION.md).
+The [terrain build report](docs/TERRAIN_BUILD_COST.md) records exact geometry
+comparisons, background CPU costs and frame-stall diagnostics.
 The frame cap and output suspension matter more for power than peak FPS.
 
 ## Build and test
@@ -221,6 +239,10 @@ Capture and measure the real renderer:
 nix run . -- --capture twilight.png --time 1180 --width 1920 --height 1080
 nix run . -- --benchmark 180 --time 900 --width 1920 --height 1080
 ```
+
+The separate [native cadence tool](docs/FRAME_PACING.md) measures packaged
+Hyprlock surface submissions on an owned headless output. It does not measure
+physical presentation.
 
 `--time` sets the starting scene time in seconds; `--capture` freezes it.
 Normal launches use continuous Unix seconds (since 1970-01-01 UTC), then advance
@@ -270,7 +292,8 @@ rendering details](docs/EMISSIONS.md).
 
 This is a purpose-built screensaver, not an orbital habitability simulator.
 Keplerian paths are prescribed; long-term N-body stability is not claimed.
-Mountains are a fixed photographic-style layer, not navigable terrain.
+The default landscape is a streamed procedural surface along a fixed airborne
+route. `--fixed-view` retains the old stationary mountain layer.
 Atmospheric eclipses use local visibility rather than a volumetric shadow
 integration; overlapping penumbras use an approximation. See
 [design](docs/DESIGN.md) and [asset provenance and prompts](docs/ASSETS.md).

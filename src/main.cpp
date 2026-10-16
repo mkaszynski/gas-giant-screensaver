@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
                "sequence\n  --frames N             Recording length (default "
                "270)\n  --time-step SECONDS    Simulation step per recorded "
                "frame\n  --no-rings             Disable rings for comparison\n"
-               "  --weather-time SECONDS  Starting weather clock (lightning "
-               "follows orbital speed)\n"
+               "  --weather-time SECONDS  Independent cloud/storm clock\n"
+               "  --no-weather           Previous thin-cloud comparison\n"
                "  --lightning-brightness N  Lightning multiplier, 0..1000000 "
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
                "  --no-stars             Disable catalog stars for comparison\n"
                "  --uncompressed-galaxy  Expand HDR sky on GPU for format "
                "comparison\n"
-               "  --no-emissions         Disable lightning and auroras for "
+               "  --no-emissions         Disable giant lightning/auroras for "
                "comparison\n"
                "  --travel-time SECONDS   Start at this point of the airborne "
                "72-hour "
@@ -87,6 +87,8 @@ int main(int argc, char **argv) {
                "reflections\n"
                "  --no-terrain-reflections  Disable coastal terrain "
                "reflections\n"
+               "  --no-weather-cache      Trace every cloud ray for "
+               "comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
                "  --debug                 Time slider: day, flight or year; "
@@ -102,6 +104,14 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-terrain-reflections") {
         surface.reflections = false;
+        continue;
+      }
+      if (a == "--no-weather") {
+        surface.weather = false;
+        continue;
+      }
+      if (a == "--no-weather-cache") {
+        surface.weatherCache = false;
         continue;
       }
       if (a == "--fixed-view") {
@@ -254,8 +264,10 @@ int main(int argc, char **argv) {
         frameLog.open(benchmarkOutput);
         if (!frameLog)
           throw std::runtime_error("Cannot write benchmark output");
-        frameLog << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
-                    "revision,upload_bytes,reflection_revision\n";
+        frameLog
+            << "frame,scene_seconds,render_ms,gpu_ms,mesh_revision,shadow_"
+               "revision,upload_bytes,reflection_revision,submit_ms,wait_ms,"
+               "monotonic_seconds,mesh_builds_started,mesh_build_pending\n";
         frameLog << std::setprecision(12);
       }
       int frames = 0;
@@ -293,13 +305,15 @@ int main(int argc, char **argv) {
         renderer.render(w, h, sceneTime, day, 1, true, drawRings,
                         {drawEmissions ? weatherTime + weatherElapsed : -1,
                          1. / fps, true, true, lightningBrightness,
-                         auroraBrightness});
+                         auroraBrightness},
+                        weatherTime + weatherElapsed);
         if (controls) {
           int ww, wh;
           glfwGetWindowSize(window, &ww, &wh);
           controls->draw(w, h, ww, wh, elapsed);
         }
         if (benchmark) {
+          const auto submitted = Clock::now();
           if (query)
             glEndQuery(0x88BF);
           glFinish();
@@ -312,8 +326,9 @@ int main(int argc, char **argv) {
             glGetQueryObjectuiv(query, GL_QUERY_RESULT, &ns);
             gpuDurations.push_back(ns / 1e6);
           }
+          const auto finished = Clock::now();
           durations.push_back(
-              std::chrono::duration<double, std::milli>(Clock::now() - measure)
+              std::chrono::duration<double, std::milli>(finished - measure)
                   .count());
           if (frameLog.is_open()) {
             frameLog << frames << "," << sceneTime << "," << durations.back()
@@ -323,7 +338,20 @@ int main(int argc, char **argv) {
             frameLog << "," << renderer.surfaceMeshRevision() << ","
                      << renderer.surfaceShadowRevision() << ","
                      << renderer.surfaceUploadBytes() << ","
-                     << renderer.surfaceReflectionRevision() << "\n";
+                     << renderer.surfaceReflectionRevision() << ","
+                     << std::chrono::duration<double, std::milli>(submitted -
+                                                                  measure)
+                            .count()
+                     << ","
+                     << std::chrono::duration<double, std::milli>(finished -
+                                                                  submitted)
+                            .count()
+                     << ","
+                     << std::chrono::duration<double>(
+                            measure.time_since_epoch())
+                            .count()
+                     << "," << renderer.surfaceBuildsStarted() << ","
+                     << renderer.surfaceBuildPending() << "\n";
             if (!frameLog)
               throw std::runtime_error("Cannot write benchmark frame");
           }
@@ -365,6 +393,16 @@ int main(int argc, char **argv) {
                       << " p95=" << gpuDurations[gpuDurations.size() * 95 / 100]
                       << '\n';
           }
+          auto cloudSize = renderer.weatherResolution();
+          auto cacheSize = renderer.weatherSkyCacheResolution();
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud buffer: " << cloudSize[0] << 'x' << cloudSize[1]
+                      << "; noise "
+                      << (renderer.floatingWeatherNoise() ? "RGBA16F" : "RGBA8")
+                      << '\n';
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud sky cache: " << cacheSize[0] << 'x'
+                      << cacheSize[1] << '\n';
           break;
         }
         std::this_thread::sleep_until(frameStart +

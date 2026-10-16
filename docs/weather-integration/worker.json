@@ -1,0 +1,640 @@
+{
+  "schema": "observatory-weather-worker-paired-v1",
+  "completed": true,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps_cap": 30,
+  "frames_per_run": 360,
+  "startup_frames_excluded": 10,
+  "presentation_measured": false,
+  "before_source": "22dcd29",
+  "after_source": "0d78215b13122db55b3e4f9347636096d7e8ee40",
+  "binary_sha256": {
+    "before": "58683eecafb355a90089e09838136e63197179335fc59e11e45e7547c33becac",
+    "after": "73c283bc3ef416d88c970b828ceb7083331743e2ed0bfec74954ce7f8205954e"
+  },
+  "shader_sha256": {
+    "atmosphere.glsl": "276861659b47ccfea4acd22ad08f527c14eaa59473b7b7b19bfa5dcd67ec3abc",
+    "background.frag": "7fbd879b78d4c5f1f898b3ccedfc2b4559e56375389891b8d46182584df3de9c",
+    "body.frag": "b228b8fbec1a1bd852d5bbe2c212a40a779ba36588d27206502ad6ed3024c1e8",
+    "clouds.glsl": "398e456b56a52cf84bab9d9b22c312d3bd1c6b27f33f0423fc42b8e970d9b873",
+    "emission.frag": "45e35fee757d0b623c73c46f53d6cef99d254700903af3ecfa3881a085474d48",
+    "emission.vert": "1e31d6e444bbc9a1ddd10ac5067410655bfbf2d7f8df10b267e5c26e12860040",
+    "fullscreen.vert": "2945ca9d242def3d04f29cffabd1ead2628f7e060eaf5e688d2129a0e5c64658",
+    "giant_atmosphere.glsl": "d7730b730b837f41e70ccd2340b01bc7e891e7f702258f3f5a66738017f3b349",
+    "giant_filter.glsl": "2061f832d6df9849c2654fbaa953dfb1c2cdfbd7a00fa7a6432db12f32f72cb1",
+    "multiple.frag": "60749303cc472e7c7bba03d0af8232b855a8f1f1ed4ecaa70e36fd4a3b3cb0c2",
+    "post.frag": "7b05ed6f4f9ded6d79c81d3b288e9f1ca522f44feec7965f9ff88c58eca3ba82",
+    "ring_layer.glsl": "6465ffa6a3915e548ae9aefaaa1ceb7380143f6ba25e353450a74c37cf104070",
+    "ring_profile.glsl": "e17b72d437455134e86cc95041a1eed896de6e5319628749be00186c9dba0e78",
+    "rings.frag": "aa36aa621c318d4f4030efa8e200216b1e5839ac58dd1ef0da27b86728c11a31",
+    "scene.glsl": "60b5184ea1563520b09844adb7c81e6d9d4934ea9ef8bfbc31c89274480db710",
+    "sky_lut.frag": "02d25067c3999dfd2129704a39b49800d72b7c5fb84e04824aa71ca8338423a1",
+    "sphere_shadow.glsl": "1eaf660e13a6dc60d814315dc6ae77acd33946c96294360b432310027e17bcc2",
+    "stars.frag": "5c0d51fef657ed0846d6d16e87a52e22c4f15242a449da6bca806f7c7d3ec10b",
+    "stars.vert": "0fec9b2824fd5b518c0597fc3b7e7f06f176942f35b45da9713d60fd17419c67",
+    "surface.frag": "fcc645718e40cfdb910fac5fb4dc767d3323dee60be1601d2274f2e36b780a30",
+    "surface.vert": "94cc5c6fe4ff30cd5c801a20e45b205ad41621a6101427f50829d7a60cdeaf13",
+    "surface_shadow.frag": "5d0df7d61af04f1d841d1313ef44c4a8cd942622d7bbc5d34d9e66797c03f8b7",
+    "surface_shadow.vert": "e403af00c5aff3e24674759646b5142f519cc45f1033bde9b3582a8f369010f3",
+    "terrain.glsl": "0537a034755b49e80bf6eac0ccf664069e8a47dceca397e37cc236dedaac37c0",
+    "transmittance.frag": "d4771015cfa5ff28e2b41e80fa208ebcda7f8677d73b5e3c2f7cac6a8b4bbd4c",
+    "weather-filter-probe.frag": "d3b820623e0a9bf2730fe17b2cd8b37190398b89cc7e4467ee42a7a272613f74",
+    "weather-light.frag": "036c1ce1af55d55ade6fdce93f2868917c93556c3106d08832cc3b1fbb7c68e6",
+    "weather.frag": "3d0fc178582899266e4de971c8d34b737a6ad8d34e7341429821d1a75352f4b1",
+    "weather_common.glsl": "3bd53cca4e54ff34bc0f570a67d907c4a295d8db1baaf2fada8d021fea7de86b",
+    "weather_depth.glsl": "8f0fe0b4ed24c426c433cbcf0488a0552e8e4150b377ff8e1499c816bb26daf1"
+  },
+  "runs": [
+    {
+      "pair": 1,
+      "scene": "coast",
+      "version": "before",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 39.2885435,
+        "p95_ms": 48.864431,
+        "p99_ms": 54.761589,
+        "max_ms": 451.226955,
+        "deadline_misses": 360,
+        "gpu_median_ms": 36.2976
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 39.266723,
+        "p95_ms": 47.295737,
+        "p99_ms": 51.988976,
+        "max_ms": 54.761589,
+        "deadline_misses": 350,
+        "gpu_median_ms": 36.259384999999995
+      },
+      "worker_pending_misses": 24,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 16.341646750006475,
+      "other_existing_clients_gfx_seconds": 0.850547184,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "scene": "coast",
+      "version": "after",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 39.3818135,
+        "p95_ms": 43.110902,
+        "p99_ms": 54.795383,
+        "max_ms": 452.997917,
+        "deadline_misses": 360,
+        "gpu_median_ms": 36.462
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 39.3305275,
+        "p95_ms": 42.366907,
+        "p99_ms": 44.263686,
+        "max_ms": 46.512567,
+        "deadline_misses": 350,
+        "gpu_median_ms": 36.42322
+      },
+      "worker_pending_misses": 187,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 16.338238575990545,
+      "other_existing_clients_gfx_seconds": 0.811414568,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "scene": "forest",
+      "version": "before",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 21.033034999999998,
+        "p95_ms": 31.081125,
+        "p99_ms": 44.535907,
+        "max_ms": 396.327344,
+        "deadline_misses": 14,
+        "gpu_median_ms": 18.252065
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 20.998520999999997,
+        "p95_ms": 25.699273,
+        "p99_ms": 36.93973,
+        "max_ms": 50.323178,
+        "deadline_misses": 7,
+        "gpu_median_ms": 18.2314
+      },
+      "worker_pending_misses": 7,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 13.55997233299422,
+      "other_existing_clients_gfx_seconds": 0.526777998,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "scene": "forest",
+      "version": "after",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 21.037494000000002,
+        "p95_ms": 24.390227,
+        "p99_ms": 38.393398,
+        "max_ms": 395.252215,
+        "deadline_misses": 8,
+        "gpu_median_ms": 18.21649
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 20.990491,
+        "p95_ms": 23.280484,
+        "p99_ms": 26.266728,
+        "max_ms": 30.533126,
+        "deadline_misses": 0,
+        "gpu_median_ms": 18.166895
+      },
+      "worker_pending_misses": 0,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 15.584069014992565,
+      "other_existing_clients_gfx_seconds": 0.64421275,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "scene": "coast",
+      "version": "after",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 39.330462,
+        "p95_ms": 48.474639,
+        "p99_ms": 55.677017,
+        "max_ms": 435.138744,
+        "deadline_misses": 360,
+        "gpu_median_ms": 36.427585
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 39.2607955,
+        "p95_ms": 46.060488,
+        "p99_ms": 51.770735,
+        "max_ms": 63.323107,
+        "deadline_misses": 350,
+        "gpu_median_ms": 36.39438
+      },
+      "worker_pending_misses": 190,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 16.276589785993565,
+      "other_existing_clients_gfx_seconds": 0.606957589,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "scene": "coast",
+      "version": "before",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 38.459441999999996,
+        "p95_ms": 46.952021,
+        "p99_ms": 56.433346,
+        "max_ms": 464.445978,
+        "deadline_misses": 360,
+        "gpu_median_ms": 35.556705
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 38.435131,
+        "p95_ms": 46.234113,
+        "p99_ms": 51.168204,
+        "max_ms": 57.075592,
+        "deadline_misses": 350,
+        "gpu_median_ms": 35.52691
+      },
+      "worker_pending_misses": 27,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 15.791530803995556,
+      "other_existing_clients_gfx_seconds": 0.514648241,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "scene": "forest",
+      "version": "after",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 21.2175915,
+        "p95_ms": 25.914226,
+        "p99_ms": 42.201004,
+        "max_ms": 407.307988,
+        "deadline_misses": 7,
+        "gpu_median_ms": 18.452125000000002
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 21.1698325,
+        "p95_ms": 24.524608,
+        "p99_ms": 28.206449,
+        "max_ms": 45.784339,
+        "deadline_misses": 2,
+        "gpu_median_ms": 18.37014
+      },
+      "worker_pending_misses": 2,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 15.74940387600509,
+      "other_existing_clients_gfx_seconds": 0.84042186,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "scene": "forest",
+      "version": "before",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 20.153379,
+        "p95_ms": 31.061026,
+        "p99_ms": 41.556665,
+        "max_ms": 360.003144,
+        "deadline_misses": 15,
+        "gpu_median_ms": 17.315755
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 20.1449335,
+        "p95_ms": 24.54133,
+        "p99_ms": 41.307497,
+        "max_ms": 52.485386,
+        "deadline_misses": 13,
+        "gpu_median_ms": 17.295765
+      },
+      "worker_pending_misses": 12,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 13.521049246002804,
+      "other_existing_clients_gfx_seconds": 0.180777536,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "scene": "coast",
+      "version": "before",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 38.3889395,
+        "p95_ms": 44.598754,
+        "p99_ms": 52.811798,
+        "max_ms": 440.993648,
+        "deadline_misses": 360,
+        "gpu_median_ms": 35.47643
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 38.3562475,
+        "p95_ms": 42.61984,
+        "p99_ms": 46.037505,
+        "max_ms": 52.060268,
+        "deadline_misses": 350,
+        "gpu_median_ms": 35.43152
+      },
+      "worker_pending_misses": 25,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 15.6227561209962,
+      "other_existing_clients_gfx_seconds": 0.541113023,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "scene": "coast",
+      "version": "after",
+      "sky_seconds": 1740,
+      "route_seconds": 5600.390625,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 38.6929495,
+        "p95_ms": 41.105498,
+        "p99_ms": 54.084978,
+        "max_ms": 455.20019,
+        "deadline_misses": 360,
+        "gpu_median_ms": 35.88841
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 38.6095075,
+        "p95_ms": 40.870116,
+        "p99_ms": 41.505769,
+        "max_ms": 45.263151,
+        "deadline_misses": 350,
+        "gpu_median_ms": 35.826589999999996
+      },
+      "worker_pending_misses": 184,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 16.366888321004808,
+      "other_existing_clients_gfx_seconds": 0.789102724,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "scene": "forest",
+      "version": "before",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 21.329362,
+        "p95_ms": 31.378391,
+        "p99_ms": 42.691074,
+        "max_ms": 363.255525,
+        "deadline_misses": 12,
+        "gpu_median_ms": 18.441765
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 21.285779499999997,
+        "p95_ms": 27.214597,
+        "p99_ms": 35.968827,
+        "max_ms": 45.355263,
+        "deadline_misses": 8,
+        "gpu_median_ms": 18.409860000000002
+      },
+      "worker_pending_misses": 8,
+      "mesh_revisions": 3,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 13.489157467003679,
+      "other_existing_clients_gfx_seconds": 0.606858638,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "scene": "forest",
+      "version": "after",
+      "sky_seconds": 510,
+      "route_seconds": 162000,
+      "weather_seconds": 1790900000,
+      "all_frames": {
+        "frames": 360,
+        "median_ms": 21.022871000000002,
+        "p95_ms": 26.626092,
+        "p99_ms": 39.165637,
+        "max_ms": 399.118363,
+        "deadline_misses": 6,
+        "gpu_median_ms": 18.217145000000002
+      },
+      "steady": {
+        "frames": 350,
+        "median_ms": 21.010272999999998,
+        "p95_ms": 24.460548,
+        "p99_ms": 28.232928,
+        "max_ms": 32.36343,
+        "deadline_misses": 0,
+        "gpu_median_ms": 18.17588
+      },
+      "worker_pending_misses": 0,
+      "mesh_revisions": 2,
+      "mesh_builds_started": 3,
+      "maximum_normal_upload_bytes": 2097152,
+      "wall_seconds_including_startup": 15.676509347002138,
+      "other_existing_clients_gfx_seconds": 0.684568955,
+      "lock_present_after": false,
+      "display_before": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ],
+      "display_after": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "refreshRate": 60.026,
+          "dpmsStatus": true
+        }
+      ]
+    }
+  ]
+}

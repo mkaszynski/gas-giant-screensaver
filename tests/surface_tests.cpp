@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <thread>
 using namespace observatory;
 void require(bool b, const char *m) {
   if (!b)
@@ -37,6 +38,17 @@ struct RouteFixture {
 int main() {
   try {
     SurfaceWorld w(SURFACE_ASSET_DIR "/moon.ggworld");
+    for (double lat : {-pi * .5 + 1.e-8, -.8, 0., .8, pi * .5 - 1.e-8})
+      for (double lon : {-pi - .01, -pi + 1.e-9, -.3, 0., pi - .01, pi + .01}) {
+        const auto sample = w.sample(lat, lon);
+        require(
+            sample.ground == w.elevation(lat, lon),
+            "material and elevation sampling share exactly the same ground");
+        require(
+            sample.moisture >= 0 && sample.moisture <= 1 &&
+                sample.uplift >= 0 && sample.uplift <= 1,
+            "shared climate interpolation stays bounded at seams and poles");
+      }
     RouteFixture invalid;
     invalid.rejected("GGFLY001");
     std::string bytes = "GGFLY001";
@@ -231,6 +243,36 @@ int main() {
             "flight actually crosses all three coherent landform types");
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
+    {
+      size_t checkpoints = 0;
+      auto sliced = buildSurfaceMesh(w, center, [&] {
+        ++checkpoints;
+        std::this_thread::yield();
+      });
+      require(checkpoints > 0,
+              "streaming mesh construction cooperates with its scheduler");
+      require(
+          sliced.vertices.size() == mesh.vertices.size() &&
+              std::memcmp(sliced.vertices.data(), mesh.vertices.data(),
+                          mesh.vertices.size() * sizeof(SurfaceVertex)) == 0 &&
+              sliced.indices == mesh.indices &&
+              sliced.waterIndices == mesh.waterIndices &&
+              sliced.hasLand == mesh.hasLand &&
+              sliced.hasWater == mesh.hasWater &&
+              sliced.bounds.size() == mesh.bounds.size(),
+          "cooperative scheduling preserves every vertex and index exactly");
+      for (size_t i = 0; i < mesh.bounds.size(); ++i) {
+        const auto &a = mesh.bounds[i], &b = sliced.bounds[i];
+        require(length(a.minimum - b.minimum) == 0 &&
+                    length(a.maximum - b.maximum) == 0 &&
+                    a.firstIndex == b.firstIndex &&
+                    a.indexCount == b.indexCount &&
+                    a.waterFirstIndex == b.waterFirstIndex &&
+                    a.waterIndexCount == b.waterIndexCount &&
+                    a.deepWater == b.deepWater,
+                "cooperative scheduling preserves culling and water bounds");
+      }
+    }
     require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");
     require(mesh.bounds.size() <= 8192,
@@ -297,7 +339,9 @@ int main() {
             "open ocean skips unneeded terrain-shadow rendering");
     require(ocean.waterIndices.size() < ocean.indices.size() / 3,
             "deep water omits unneeded interior triangles");
-    for (size_t block : {size_t(0), size_t(1700), size_t(3167)}) {
+    for (size_t block :
+         {size_t(0), size_t(47), size_t(48), size_t(79), size_t(1700),
+          size_t(3120), size_t(3167), size_t(3168), size_t(3199)}) {
       const auto &box = ocean.bounds.at(block);
       using Edge = std::pair<uint32_t, uint32_t>;
       auto boundary = [](const std::vector<uint32_t> &indices, uint32_t first,
@@ -321,6 +365,9 @@ int main() {
                            box.waterIndexCount),
               "coarse water retains every fine boundary edge without cracks");
     }
+    for (auto index : ocean.waterIndices)
+      require(index < ocean.vertices.size(),
+              "fixed-capacity water fans only reference valid vertices");
     int curvedWaterNormals = 0;
     for (auto v : ocean.vertices) {
       double radius = std::hypot(v.x, v.z);

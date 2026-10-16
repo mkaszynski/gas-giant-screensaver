@@ -118,13 +118,18 @@ int main() {
         {
           Fixture noClouds(false);
           Renderer noShadow(noClouds.path.string(), {}, {true, 0, 162000});
-          noShadow.render(w, h, 510);
+          // A low sun and fair banks leave visible land outside the cloud
+          // footprint; an opaque storm can legitimately hide every shadow.
+          constexpr double weather = 1790900000.;
+          r.render(w, h, 900, 1800, 1, true, true, {}, weather);
+          auto shadowed = pixels(w, h);
+          noShadow.render(w, h, 900, 1800, 1, true, true, {}, weather);
           auto unshadowed = pixels(w, h);
           int cloudPixels = 0, cloudPeak = 0;
           for (int i = 0; i < w * h / 4; ++i)
             for (int c = 0; c < 3; ++c) {
-              int difference =
-                  std::abs(int(bodies[4 * i + c]) - int(unshadowed[4 * i + c]));
+              int difference = std::abs(int(shadowed[4 * i + c]) -
+                                        int(unshadowed[4 * i + c]));
               cloudPixels += difference > 0;
               cloudPeak = std::max(cloudPeak, difference);
             }
@@ -172,11 +177,19 @@ int main() {
       std::cout << "Periodic image maximum " << wrap << " codes\n";
       require(wrap <= 2,
               "identical route phases render identically across a circuit");
-      {
-        Renderer moving(Renderer::defaultDataDirectory(), {},
-                        {true, 1, 162000 - 510});
+      for (bool weatherEnabled : {false, true}) {
+        Renderer moving(
+            Renderer::defaultDataDirectory(), {},
+            {true, 1, 162000 - 510, false, true, true, weatherEnabled});
         moving.render(w, h, 510);
+        require(moving.weatherResolution() == (weatherEnabled
+                                                   ? std::array<int, 2>{w, h}
+                                                   : std::array<int, 2>{0, 0}),
+                "streamed terrain uses the selected weather path");
         auto first = pixels(w, h);
+        require(moving.surfaceBuildsStarted() == 1 &&
+                    !moving.surfaceBuildPending(),
+                "initial synchronous mesh has one completed build");
         size_t initialRevision = moving.surfaceMeshRevision();
         // Ten seconds gives measurable parallax at airplane height.
         moving.render(w, h, 520);
@@ -192,6 +205,9 @@ int main() {
         }
         require(moving.surfaceMeshRevision() > initialRevision,
                 "background terrain replacement actually finishes and uploads");
+        require(moving.surfaceBuildsStarted() == 2 &&
+                    !moving.surfaceBuildPending(),
+                "background build telemetry records the completed replacement");
         auto travelled = pixels(w, h);
         long pop = 0;
         for (int i = 0; i < w * h / 4; ++i)
@@ -199,7 +215,8 @@ int main() {
             pop += std::abs(int(beforeRefresh[i * 4 + c]) -
                             int(travelled[i * 4 + c]));
         double popMean = double(pop) / (w * h / 4 * 3);
-        std::cout << "Mesh refresh mean " << popMean << " codes\n";
+        std::cout << "Mesh refresh (weather=" << weatherEnabled << ") mean "
+                  << popMean << " codes\n";
         require(popMean < 3.,
                 "refresh does not introduce a visible landscape jump");
         long delta = 0;
@@ -210,8 +227,9 @@ int main() {
         require(delta > w * h, "surface actually moves through space");
         std::vector<unsigned char> reference;
         {
-          Renderer fresh(Renderer::defaultDataDirectory(), {},
-                         {true, 1, 162000 - 510});
+          Renderer fresh(
+              Renderer::defaultDataDirectory(), {},
+              {true, 1, 162000 - 510, false, true, true, weatherEnabled});
           fresh.render(w, h, 520);
           reference = pixels(w, h);
         }

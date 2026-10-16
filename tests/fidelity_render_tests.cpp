@@ -61,10 +61,27 @@ int main() {
         for (double instant : {510., 900., 1200.}) {
           auto culled = capture(reference, instant);
           auto full = capture(complete, instant);
-          require(culled == full,
-                  "terrain/shadow block culling must preserve every pixel");
+          int changed = 0, peak = 0;
+          for (size_t i = 0; i < culled.size(); ++i) {
+            int delta = std::abs(int(culled[i]) - int(full[i]));
+            changed += delta > 0;
+            peak = std::max(peak, delta);
+          }
+          std::cout << "Weather/culling at " << instant << ": " << changed
+                    << " channels, peak " << peak << '\n';
+          // R16F distance resolves and equivalent cloud-lighting expressions
+          // may land on opposite sides of one 8-bit rounding boundary.
+          require(peak <= 1 && changed <= 16,
+                  "weather composition may differ only by isolated rounding");
         }
-        std::cout << "Terrain/shadow culling: pixel-identical in daylight, "
+        Renderer terrain(Renderer::defaultDataDirectory(), {},
+                         {true, 0, 162000, false, true, true, false});
+        Renderer allTerrain(Renderer::defaultDataDirectory(), {},
+                            {true, 0, 162000, false, false, true, false});
+        for (double instant : {510., 900., 1200.})
+          require(capture(terrain, instant) == capture(allTerrain, instant),
+                  "terrain-only culling must remain pixel-identical");
+        std::cout << "Terrain-only culling: pixel-identical in daylight, "
                      "sunset and night\n";
       }
 
@@ -90,10 +107,16 @@ int main() {
            "vec3(0.)", 510},
           {"dielectric reflection",
            "land+=irradiance*NoL*spec*mix(1.,.35,forest);", "", 510}};
+      // Material behavior must remain measurable even when the weather model
+      // happens to put an opaque cloud bank between the camera and the forest.
+      const SurfaceOptions clearTerrain{true, 0,    162000, false,
+                                        true, true, false};
+      Renderer materialReference(Renderer::defaultDataDirectory(), {},
+                                 clearTerrain);
       for (auto c : cases) {
         Fixture fixture(c.term, c.replacement);
-        Renderer without(fixture.path.string(), {}, {true, 0, 162000});
-        auto lit = capture(reference, c.instant);
+        Renderer without(fixture.path.string(), {}, clearTerrain);
+        auto lit = capture(materialReference, c.instant);
         auto dark = capture(without, c.instant);
         int changed = 0, peak = 0;
         for (int i = 0; i < 640 * 360 / 5; ++i)

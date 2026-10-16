@@ -14,7 +14,9 @@ jobs:
       - name: Build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 2
       - name: Unit and CLI tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          ctest --test-dir build --output-on-failure
+          python3 tests/test_native_benchmark.py
       - name: Offline galaxy model behavior
         run: |
           python3 -m venv /tmp/sky-model-tests
@@ -25,6 +27,8 @@ jobs:
           /tmp/sky-model-tests/bin/python tests/test_world_bake.py
           /tmp/sky-model-tests/bin/python tests/test_surface_materials.py
           /tmp/sky-model-tests/bin/python tests/test_landform_bake.py
+      - name: Frame-profile analysis tests
+        run: python3 tests/test_frame_profile.py
       - name: GPU behavior on Mesa software renderer
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
@@ -40,12 +44,15 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-shadow-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py
       - name: Render daylight and twilight
         run: |
           mkdir -p captures
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 510 --travel-time 162000 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/day.png --time 510 --travel-time 162000 --weather-time 1790900000 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --travel-time 0 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-storm.png --time 510 --travel-time 162000 --weather-time 1260 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-lightning.png --time 1200 --travel-time 162000 --weather-time 1512.8 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --fixed-view --time 437625 --width 1920 --height 1080
       - uses: actions/upload-artifact@v4
         with:
