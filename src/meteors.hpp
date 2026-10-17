@@ -216,8 +216,11 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
           return start + velocity * t +
                  field.global(Vec3{.025, .002, -.012}) * std::pow(delay, 1.15);
         };
-        const double glow =
-            .035 * flux * std::exp(-std::max(0., age - (a + b) * .5) / 1.2);
+        const double trainFade =
+            smooth(.20, .35, age) *
+            (1 - smooth(duration + 2.8, duration + 3.5, age));
+        const double glow = .035 * flux * trainFade *
+                            std::exp(-std::max(0., age - (a + b) * .5) / 1.2);
         add(deposit(a), deposit(b), {.87, .93, 1.}, glow, .9);
       }
     }

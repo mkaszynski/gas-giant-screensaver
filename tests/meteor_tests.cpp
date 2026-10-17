@@ -84,6 +84,18 @@ int main() {
       require(length(a - b) < 1.e-6,
               "meteors remain anchored in moon coordinates, not the camera");
     }
+    auto trainPower = [&](double phase) {
+      auto f = frame;
+      f.options.previewStart = 1254;
+      f.seconds = 1254 + phase;
+      auto batch = meteorsAt(f, scene, 16. / 9., 1800, radiant, &scene);
+      double sum = 0;
+      for (size_t i = 0; i < batch.count; ++i)
+        sum += batch.segments[i].flux;
+      return sum;
+    };
+    require(std::abs(trainPower(.750001) - trainPower(.749999)) < .01,
+            "persistent train emerges continuously instead of popping on");
     auto daylight = scene;
     daylight.sunLocal.y = .1;
     require(!meteorsAt(frame, daylight, 16. / 9., 1800, radiant).count,
