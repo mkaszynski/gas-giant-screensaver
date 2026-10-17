@@ -57,6 +57,8 @@ int main(int argc, char **argv) {
     bool fullscreen = false, drawRings = true, drawEmissions = true,
          debug = false;
     StarfieldOptions starfield;
+    MeteorOptions meteorOptions;
+    double meteorPreviewStart = -1;
     std::string benchmarkOutput;
     std::string capture, record, data = Renderer::defaultDataDirectory();
     for (int i = 1; i < argc; ++i) {
@@ -89,6 +91,12 @@ int main(int argc, char **argv) {
                "  --no-stars             Disable catalog stars for comparison\n"
                "  --uncompressed-galaxy  Expand HDR sky on GPU for format "
                "comparison\n"
+               "  --meteor-mode auto|preview|off  Rare natural showers or "
+               "preview\n"
+               "  --meteor-rate N         Shower rate, .5..60 meteors/min "
+               "(default 3)\n"
+               "  --meteor-preview-start SECONDS  Fixed preview epoch for "
+               "captures\n"
                "  --no-emissions         Disable giant lightning/auroras for "
                "comparison\n"
                "  --travel-time SECONDS   Start at this point of the airborne "
@@ -171,6 +179,20 @@ int main(int argc, char **argv) {
         travelTime = number(v, 0, 1e10);
       else if (a == "--travel-speed")
         travelSpeed = number(v, 0, 10000);
+      else if (a == "--meteor-mode") {
+        const std::string mode(v);
+        if (mode == "auto")
+          meteorOptions.mode = MeteorMode::Auto;
+        else if (mode == "preview")
+          meteorOptions.mode = MeteorMode::Preview;
+        else if (mode == "off")
+          meteorOptions.mode = MeteorMode::Off;
+        else
+          throw std::runtime_error("Invalid meteor mode: " + mode);
+      } else if (a == "--meteor-rate")
+        meteorOptions.rate = number(v, .5, 60);
+      else if (a == "--meteor-preview-start")
+        meteorPreviewStart = number(v, 0, 1.e10);
       else if (a == "--weather-time")
         weatherTime = number(v, 0, 1e10);
       else if (a == "--lightning-brightness")
@@ -286,9 +308,14 @@ int main(int argc, char **argv) {
         time = sceneClockNow();
       if (weatherTime < 0)
         weatherTime = time;
+      meteorOptions.previewStart = meteorPreviewStart >= 0
+                                       ? meteorPreviewStart
+                                       : std::max(0., time - .65);
       std::unique_ptr<DebugOverlay> controls;
       if (interactive)
         controls = std::make_unique<DebugOverlay>(time, day, debug);
+      if (controls)
+        controls->menu.meteorOptions = meteorOptions;
       // Shader/asset loading is not part of the interactive timeline.
       start = Clock::now();
       std::ofstream frameLog;
@@ -362,12 +389,16 @@ int main(int argc, char **argv) {
                                       : !record.empty()
                                           ? frames * timeStep
                                           : (capture.empty() ? elapsed : 0);
+        renderer.setMeteorFrame(
+            {sceneTime, 1. / fps,
+             controls ? controls->menu.meteorOptions : meteorOptions});
         renderer.render(w, h, sceneTime, day, 1, true, drawRings,
                         {drawEmissions ? weatherTime + weatherElapsed : -1,
                          1. / fps, true, true, lightningBrightness,
                          auroraBrightness},
                         weatherTime + weatherElapsed);
         if (controls) {
+          controls->menu.meteorDark = renderer.meteorDarkEnough();
           int ww, wh;
           glfwGetWindowSize(window, &ww, &wh);
           controls->draw(w, h, ww, wh, elapsed);

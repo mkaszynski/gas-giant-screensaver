@@ -186,6 +186,44 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
     }
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 196 * layout.scale,
          1.5 * layout.scale, "AUTO RESTORES BIOME WEATHER");
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 226 * layout.scale,
+         1.5 * layout.scale, "METEOR SHOWERS");
+    const std::array<std::string, 3> modes{"AUTO", "PREVIEW NOW", "OFF"};
+    for (int i = 0; i < 3; ++i) {
+      const auto button = layout.meteorMode(i);
+      const bool selected = int(menu.meteorOptions.mode) == i;
+      rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(button.x + 8 * layout.scale, button.y + 6 * layout.scale,
+           1.5 * layout.scale, modes[i]);
+    }
+    if (menu.meteorOptions.mode != MeteorMode::Off) {
+      std::ostringstream rate;
+      rate << std::fixed << std::setprecision(1) << "RATE "
+           << menu.meteorOptions.rate << " METEORS PER MIN";
+      text(layout.panel.x + 8 * layout.scale,
+           layout.panel.y + 282 * layout.scale, 1.5 * layout.scale, rate.str());
+      auto slider = layout.meteorSlider();
+      auto bar = slider;
+      bar.y += 6 * layout.scale;
+      bar.height = 6 * layout.scale;
+      rectangle(bar, .12, .19, .24);
+      const double knob = bar.x + std::log(menu.meteorOptions.rate / .5) /
+                                      std::log(120.) * bar.width;
+      bar.width = knob - bar.x;
+      rectangle(bar, .18, .72, .90);
+      rectangle(
+          {knob - 4 * layout.scale, slider.y, 8 * layout.scale, slider.height},
+          .8, .94, 1.);
+    }
+    const std::string status = menu.meteorOptions.mode == MeteorMode::Off
+                                   ? "SHOWERS DISABLED"
+                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
+                               : menu.meteorOptions.mode == MeteorMode::Preview
+                                   ? "PREVIEW SHOWER - NIGHT ONLY"
+                                   : "NATURAL SHOWERS EVERY 1 TO 8 H";
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
+         1.5 * layout.scale, status);
   } else {
     auto button = layout.prompt(ww);
     rectangle(button, .018, .028, .043, .94);

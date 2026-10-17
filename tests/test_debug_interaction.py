@@ -10,6 +10,9 @@ from PIL import ImageChops, ImageGrab, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
 CAPTURES = ROOT / "captures"
+SCALE = .9  # DebugLayout for this 640x360 logical window.
+def point(x, y):
+    return round(x * SCALE), round(y * SCALE)
 
 
 def run():
@@ -56,16 +59,17 @@ def run():
 
             def selected(image, px, py):
                 return all(abs(v - expected) <= 3 for v, expected in
-                           zip(image.getpixel((px, py)), (20, 71, 97)))
+                           zip(image.getpixel(point(px, py)), (20, 71, 97)))
 
             def click(px, py):
-                x("mousemove", "--window", window, px, py)
+                x("mousemove", "--window", window, *point(px, py))
                 x("click", 1)
 
             shot("hidden", lambda i: max(i.getpixel((500, 300))) > 30)
             x("mousemove", "--window", window, 639, 1)
-            shot("prompt", lambda i: min(i.getpixel((414, 23))) > 200)
-            click(500, 28)
+            shot("prompt", lambda i: min(i.getpixel((round(640-226*SCALE), round(23*SCALE)))) > 200)
+            x("mousemove", "--window", window, round(640-140*SCALE), round(28*SCALE))
+            x("click", 1)
             shot("open", lambda i: selected(i, 26, 138))
             click(60, 38)  # Pause; don't require an idle release frame between clicks.
             click(290, 145)
@@ -77,9 +81,18 @@ def run():
             mean = sum(ImageStat.Stat(delta).mean) / 3
             if mean <= 2:
                 raise RuntimeError("weather controls did not change the rendered atmosphere")
+            click(460, 273)
+            shot("meteors-off", lambda i: selected(i, 388, 262))
+            click(290, 273)
+            shot("meteors-preview", lambda i: selected(i, 207, 262))
+            x("mousemove", "--window", window, *point(30, 330))
+            x("mousedown", 1)
+            x("mousemove", "--window", window, *point(600, 330))
+            x("mouseup", 1)
+            shot("meteor-frequency", lambda i: min(i.getpixel(point(568,330))) > 190)
             click(553, 38)
             shot("closed", lambda i: not selected(i, 388, 172))
-            print(f"Live menu: hover, open, consecutive clicks, weather ({mean:.3f}/255), close pass")
+            print(f"Live menu: hover, open, consecutive clicks, weather ({mean:.3f}/255), meteor frequency and close pass")
         except Exception:
             log.seek(0)
             print(log.read())

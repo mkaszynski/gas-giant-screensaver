@@ -1,5 +1,6 @@
 #pragma once
 #include "debug_timeline.hpp"
+#include "meteor_control.hpp"
 #include "weather_control.hpp"
 #include <array>
 namespace observatory {
@@ -47,6 +48,16 @@ public:
         timeline.range(year, real);
       else if (layout.button(4).contains(x, y))
         timeline.seek(0, real);
+      else if (layout.meteorMode(0).contains(x, y))
+        meteorOptions.mode = MeteorMode::Auto;
+      else if (layout.meteorMode(1).contains(x, y)) {
+        meteorOptions.mode = MeteorMode::Preview;
+        meteorOptions.previewStart = time(real);
+      } else if (layout.meteorMode(2).contains(x, y))
+        meteorOptions.mode = MeteorMode::Off;
+      else if (meteorOptions.mode != MeteorMode::Off &&
+               layout.meteorSlider().contains(x, y))
+        meteorDragging = true;
       else
         for (int i = 0; i < int(weatherPresetNames.size()); ++i)
           if (layout.weather(i).contains(x, y))
@@ -58,12 +69,19 @@ public:
       if (!down)
         timeline.endDrag(real);
     }
+    if (meteorDragging) {
+      if (present)
+        meteorOptions.rate = .5 * std::pow(120., layout.meteorFraction(x));
+      if (!down)
+        meteorDragging = false;
+    }
     mouseDown = down;
   }
   // Preview shortcuts only. The lock screen keeps keyboard input for PAM.
   void keys(std::array<bool, 4> pressed, double real) {
     for (int i = 0; i < 4; ++i) {
-      if (open_ && pressed[i] && !previousKeys[i] && !timeline.dragging()) {
+      if (open_ && pressed[i] && !previousKeys[i] && !timeline.dragging() &&
+          !meteorDragging) {
         switch (i) {
         case 0:
           timeline.play(!timeline.playing(), real);
@@ -86,11 +104,13 @@ public:
   bool promptVisible(double real) const { return !open_ && real < promptUntil; }
   WeatherPreset weather() const { return weather_; }
   double time(double real) const { return timeline.time(real); }
+  MeteorOptions meteorOptions;
+  bool meteorDark = false;
   DebugTimeline timeline;
   const double day, year, route;
 
 private:
-  bool open_, initialized, mouseDown = false;
+  bool open_, initialized, mouseDown = false, meteorDragging = false;
   double promptUntil = -1;
   WeatherPreset weather_ = WeatherPreset::Auto;
   std::array<bool, 4> previousKeys{};

@@ -1,5 +1,6 @@
 #pragma once
 #include "emissions.hpp"
+#include "meteors.hpp"
 #include "surface_renderer.hpp"
 #include "system.hpp"
 #include "weather.hpp"
@@ -36,6 +37,8 @@ public:
     return {skyWeatherCache.width, skyWeatherCache.height};
   }
   void setWeatherPreset(WeatherPreset preset) { weatherPreset = preset; }
+  void setMeteorFrame(MeteorFrame frame) { meteorFrame = frame; }
+  bool meteorDarkEnough() const { return meteorDark; }
   bool floatingWeatherNoise() const { return floatingNoise; }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
@@ -74,6 +77,16 @@ private:
   double lastAltitude = -1e30;
   WeatherState weatherState;
   WeatherPreset weatherPreset = WeatherPreset::Auto;
+  MeteorFrame meteorFrame;
+  Vec3 previewRadiant{};
+  Scene meteorField;
+  double meteorFieldAspect = 16. / 9.;
+  uint64_t meteorWindowId = uint64_t(-1);
+  MeteorMode lastMeteorMode = MeteorMode::Off;
+  double lastMeteorPreview = -1;
+  bool meteorDark = false;
+  GLuint meteorProgram = 0, meteorVao = 0, meteorBuffer = 0;
+  std::vector<float> meteorVertices;
   bool floatingNoise = false;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
@@ -106,6 +119,7 @@ private:
   bool needsFloatingWeatherNoise();
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
+  void drawMeteors(const Scene &, int, int, double daySeconds);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,
                  double daySeconds);
 };

@@ -67,6 +67,24 @@ int main() {
       near(menu.timeline.fraction(300023), .75,
            "focus loss commits the last drag target, not zero");
       require(!menu.timeline.dragging(), "focus loss releases capture");
+      click(layout.meteorMode(1), 300024);
+      require(menu.meteorOptions.mode == MeteorMode::Preview &&
+                  menu.meteorOptions.previewStart == menu.time(300024),
+              "preview starts at the current debug epoch");
+      auto slider = layout.meteorSlider();
+      menu.pointer(w, h, slider.x, slider.y + 1, true, 300024);
+      menu.pointer(w, h, slider.x + slider.width + 100, slider.y + 1, true,
+                   300024);
+      menu.pointer(w, h, slider.x + slider.width + 100, slider.y + 1, false,
+                   300024);
+      near(menu.meteorOptions.rate, 60,
+           "frequency slider clamps to its upper limit");
+      click(layout.meteorMode(2), 300024);
+      require(menu.meteorOptions.mode == MeteorMode::Off,
+              "showers can be disabled");
+      click(layout.meteorMode(0), 300024);
+      require(menu.meteorOptions.mode == MeteorMode::Auto,
+              "natural rarity can be restored");
       click(layout.close(), 300024);
       require(!menu.open(), "close hides controls");
       near(menu.time(300030), menu.time(300024),
