@@ -27,10 +27,10 @@ self.onmessage = ({data}) => {
     canvas,
     previewOptions: data.options,
     mainScriptUrlOrBlob: new URL('observatory.js', self.location.href).href,
-    preRun() {
+    preRun: [() => {
       // Register the transferred canvas with Emscripten's HTML5 target lookup.
       GL.offscreenCanvases.scene = canvas;
-    },
+    }],
     onRuntimeInitialized() {
       ready = true;
       command({type: 'visibility', value: data.hidden});

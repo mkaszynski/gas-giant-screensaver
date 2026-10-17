@@ -40,7 +40,7 @@ void frame() {
     int width, height;
     emscripten_get_canvas_element_size("#scene", &width, &height);
     // A paused scene needs no repeated GPU work, but seeking/resizing redraws.
-    if (paused && !redraw && width == drawnWidth && height == drawnHeight)
+    if (paused && !synchronize && !redraw && width == drawnWidth && height == drawnHeight)
       return;
     // rAF follows the display; cap work at the desktop's 30 fps without drift.
     if (now + .1 < lastRender + 1000. / 30)
@@ -68,7 +68,10 @@ void frame() {
 }
 } // namespace
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void preview_pause(int value) { paused = value != 0; redraw = true; }
+EMSCRIPTEN_KEEPALIVE void preview_pause(int value) {
+  paused = value != 0;
+  redraw = true;
+}
 EMSCRIPTEN_KEEPALIVE void preview_visibility(int value) {
   hidden = value != 0;
   lastTick = emscripten_get_now();
