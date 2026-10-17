@@ -1,5 +1,9 @@
 # Gas Giant Observatory
 
+![Animated observatory preview](assets/preview.webp)
+
+[Live browser preview](https://mkaszynski.github.io/gas-giant-screensaver/) · [MP4](assets/preview.mp4)
+
 A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
 
 Move the cursor into the upper-right corner to reveal **Open debug menu**,
@@ -64,23 +68,30 @@ cloud banks, occasional storms, and stars emerging at dusk.
 The static GitHub Pages demo compiles the **same `observatory` C++ library**
 into WebAssembly, using the existing shaders, sky, materials, weather and
 background terrain worker. Rendering runs in an OffscreenCanvas worker to keep
-page controls responsive during shader compilation and slow frames. JavaScript only handles page controls, loading and
-browser isolation. There is no application server or lock-screen integration.
+page controls responsive during shader compilation and slow frames. C++ owns the
+scene, simulation, meshes and passes; browser bindings submit those passes to
+WebGPU or WebGL 2. There is no application server or lock-screen integration.
 The live renderer starts only after **Launch preview**; the initial asset
 bundle is about 100 MB. Use Pause, Stop preview, the time-of-day slider, 720p/1080p or
 Fullscreen. Rendering suspends in a hidden tab. The default render budget is
 **30 fps at 1920×1080**, independent of browser size and device pixel ratio;
 720p is an explicit option, with no automatic fidelity reduction.
 
-A current browser with WebAssembly threads, service workers, OffscreenCanvas, WebGL 2 and
-floating-point color attachments is required. HTTPS is required except on
+**WebGPU is preferred**, with WebGL 2 compatibility when WebGPU is unavailable.
+Choose Graphics before launching, or use `?backend=webgpu` / `?backend=webgl2`.
+The footer reports the backend actually in use. Both render the shared scene;
+WebGPU does not render through a hidden WebGL canvas. See
+[backend design, shader conversion and validation](docs/WEBGPU.md).
+
+A current browser with WebAssembly threads, service workers, OffscreenCanvas and
+WebGPU or WebGL 2 with floating-point color attachments is required. HTTPS is required except on
 localhost. A scoped static service worker adds COOP/COEP to same-origin
 responses because Pages cannot configure these headers. The first visit
 reloads once to enable browser threads. No external runtime CDN or asset
 service is used; reloading fetches the current deployment without an offline
 asset cache. Hosting under the repository subpath is covered by browser tests.
 
-Build with Emscripten **4.0.12**, CMake and Ninja:
+Build with Emscripten **4.0.12**, CMake, Ninja, Python 3, Node, glslang and SPIRV-Cross:
 
 ```sh
 emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -89,10 +100,12 @@ python3 -m http.server 8000 --directory build-web
 # Open http://localhost:8000/ and select Launch preview.
 npm ci --prefix web
 npx --prefix web playwright install chromium
-npm test --prefix web
+PREVIEW_BACKEND=webgl2 npm test --prefix web
+PREVIEW_BACKEND=webgpu npm test --prefix web
+node tests/web_backend_parity.cjs
 ```
 
-On Nix, use `nix shell nixpkgs#emscripten nixpkgs#cmake nixpkgs#ninja` and
+On Nix, use `nix shell nixpkgs#emscripten nixpkgs#cmake nixpkgs#ninja nixpkgs#glslang nixpkgs#spirv-cross nixpkgs#python3 nixpkgs#nodejs` and
 writable `EM_CACHE` / `EM_PORTS` directories outside the Nix store. The Pages
 workflow builds and runs browser behavior checks on PRs, then publishes and checks the live site. It deploys only
 HTML, CSS, JavaScript, WASM, the asset bundle and license from `main`.
@@ -102,7 +115,9 @@ with little free memory. Run native and browser performance checks sequentially.
 For repeatable review, URL parameters accept `time` (scene seconds), `travel`
 (route seconds), `weather` (independent seconds), `speed`, and `paused=1`.
 Defaults are `time=510&travel=162000&weather=1790900000&speed=1`.
-`benchmark=1` enables synchronized GPU+CPU timing with `glFinish`, matching
+For sky review, `surface=0` uses the stationary view; `stars=0` and `galaxy=0`
+independently disable those sky layers.
+`benchmark=1&backend=webgl2` enables synchronized GPU+CPU timing with `glFinish`, matching
 the native `--benchmark` measurement method. Normal playback never calls
 `glFinish`. Bounded timing samples are available in `window.previewMetrics`;
 `cost` is submission time in normal playback and complete render time in
@@ -188,7 +203,7 @@ Compare with `--no-galaxy`, `--no-stars`, or both. See
 
 ![Twilight from the observer moon](assets/preview-twilight.png)
 
-[Animated preview](assets/preview.webp) · [MP4](assets/preview.mp4) · [Daylight](assets/preview-day.png) · [Eclipse](assets/preview-eclipse.png)
+[Daylight](assets/preview-day.png) · [Eclipse](assets/preview-eclipse.png)
 
 ## Run on NixOS / Hyprland
 

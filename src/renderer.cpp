@@ -353,6 +353,13 @@ void Renderer::quad(GLuint p) {
   glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 bool Renderer::needsFloatingWeatherNoise() {
+#ifdef __EMSCRIPTEN__
+  // WebGPU has no synchronous readback. Its browser backend uses the precise
+  // floating-point noise field without running the WebGL interpolation probe.
+  if (std::string(reinterpret_cast<const char *>(glGetString(GL_RENDERER))) ==
+      "Observatory WebGPU")
+    return true;
+#endif
   GLuint input = 0, output = 0, fbo = 0;
   const unsigned char ramp[] = {64, 64, 64, 255, 96, 96, 96, 255};
   glGenTextures(1, &input);

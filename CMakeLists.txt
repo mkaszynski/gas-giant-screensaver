@@ -16,6 +16,7 @@ if(EMSCRIPTEN)
   target_link_options(observatory-web PRIVATE
     -pthread -fexceptions -sUSE_LIBPNG=1
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sOFFSCREENCANVAS_SUPPORT=1
+    -sGL_PREINITIALIZED_CONTEXT=1
     -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
     -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
     -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
@@ -32,7 +33,24 @@ if(EMSCRIPTEN)
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/world/*")
   set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
     ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
-  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+  find_program(SPIRV_CROSS spirv-cross REQUIRED)
+  find_program(NODE_EXECUTABLE node REQUIRED)
+  set(OBSERVATORY_TWGSL_DIR "${CMAKE_CURRENT_BINARY_DIR}/shader-tools" CACHE PATH
+      "Checksum-pinned, build-only twgsl compiler cache")
+  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_webgpu_shaders.py"
+      --glslang "${GLSLANG_VALIDATOR}" --spirv-cross "${SPIRV_CROSS}"
+      --node "${NODE_EXECUTABLE}"
+      --tools "${OBSERVATORY_TWGSL_DIR}" --download-tools
+      --output "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json"
+    DEPENDS ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_webgpu_shaders.py"
+    COMMENT "Compile the shared GLSL programs to offline WGSL" VERBATIM)
+  add_custom_target(observatory-webgpu-shaders ALL
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json")
+  add_dependencies(observatory-web observatory-webgpu-shaders)
+  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js graphics-data.js webgpu-context.js)
     configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
   endforeach()
   configure_file(LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE COPYONLY)

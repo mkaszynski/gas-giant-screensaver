@@ -1,0 +1,88 @@
+{
+  "scope": "WebGPU browser backend with WebGL 2 fallback; native rendering unchanged",
+  "browser": "Chromium 144.0.7559.59",
+  "gpu": "SwiftShader software Vulkan; functional evidence only",
+  "shader_programs": 17,
+  "wgsl_modules_validated": 34,
+  "source_render_sizes": {
+    "day": [
+      320,
+      180
+    ],
+    "dusk": [
+      480,
+      270
+    ],
+    "night": [
+      320,
+      180
+    ],
+    "night-no-stars": [
+      320,
+      180
+    ],
+    "storm": [
+      320,
+      180
+    ]
+  },
+  "capture_device_scale": 2,
+  "pixel_comparison_8bit": {
+    "day": {
+      "width": 640,
+      "height": 360,
+      "mean": 0.0540625,
+      "peak": 17,
+      "above8": 1.0127314814814815e-05
+    },
+    "dusk": {
+      "width": 960,
+      "height": 540,
+      "mean": 0.02536522633744856,
+      "peak": 17,
+      "above8": 9.002057613168725e-06
+    },
+    "night": {
+      "width": 640,
+      "height": 360,
+      "mean": 0.0033854166666666668,
+      "peak": 1,
+      "above8": 0
+    },
+    "night-no-stars": {
+      "width": 640,
+      "height": 360,
+      "mean": 0.0032798032407407407,
+      "peak": 1,
+      "above8": 0
+    },
+    "storm": {
+      "width": 640,
+      "height": 360,
+      "mean": 0.002116608796296296,
+      "peak": 3,
+      "above8": 0
+    },
+    "webgl2-star-signal": {
+      "sum": 22092,
+      "peak": 19
+    },
+    "webgpu-star-signal": {
+      "sum": 22127,
+      "peak": 19
+    }
+  },
+  "browser_behavior": [
+    "service-worker isolation and reload below repository subpath",
+    "default 1920x1080 pixel budget independent of DPR",
+    "pause and resume",
+    "time seek",
+    "resize",
+    "moving terrain worker",
+    "stop and relaunch",
+    "explicit WebGPU and WebGL 2 selection",
+    "automatic fallback when WebGPU disabled"
+  ],
+  "hardware_1080p_30fps": "not measured; not claimed",
+  "synchronous_benchmark": "WebGL 2 only; WebGPU rejects benchmark=1 explicitly"
+}
