@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Fly over a moon beneath a gas giant. A live WebAssembly preview of the native Gas Giant Observatory renderer.">
+  <title>Gas Giant Observatory · Live preview</title>
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <canvas id="scene" width="1920" height="1080" aria-label="Live flight over a moon beneath a gas giant"></canvas>
+  <header>
+    <div><h1>Gas Giant Observatory</h1><p>A three-day flight beneath an alien sky</p></div>
+    <a href="https://github.com/mkaszynski/gas-giant-screensaver" target="_blank" rel="noopener">Source ↗</a>
+  </header>
+  <main id="loading" role="status" aria-live="polite">
+    <h2>Explore the observatory</h2>
+    <p id="status">Loading the live preview…</p>
+    <p id="help">A live GPU-rendered flight. The first launch downloads about 100 MB of world, sky and materials. Target: 30 fps at 1080p. Requires WebGL 2 and browser threads.</p>
+    <button id="launch" disabled>Launch preview</button>
+  </main>
+  <footer>
+    <div class="controls">
+      <button id="pause" disabled>Pause</button>
+      <label>Time of day <input id="time" type="range" min="0" max="1800" value="510" step="1" disabled></label>
+      <label>Resolution <select id="resolution"><option value="1080">1080p</option><option value="720">720p</option></select></label>
+      <button id="fullscreen">Fullscreen</button>
+      <output id="performance">30 fps target · 1920 × 1080</output>
+    </div>
+    <p>Live C++ / WebAssembly · WebGL 2 · <a href="https://github.com/mkaszynski/gas-giant-screensaver/blob/main/docs/ASSETS.md" target="_blank" rel="noopener">Credits &amp; asset licenses</a> · <a href="LICENSE">MIT</a></p>
+  </footer>
+  <noscript>This live preview requires JavaScript, WebAssembly and WebGL 2.</noscript>
+</body>
+</html>
