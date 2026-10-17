@@ -67,7 +67,19 @@
       else view.setFloat32(byte, values[offset + i], true);
     }
   }
-  const data = { sourceKey, float16, writeUniform };
+  function textureUsage(
+    { dimension, levels, samples, compressed, render3d },
+    flags,
+  ) {
+    if (samples > 1) return flags.RENDER_ATTACHMENT;
+    let usage = flags.TEXTURE_BINDING | flags.COPY_DST | flags.COPY_SRC;
+    if (dimension === '3d') {
+      if (levels > 1) usage |= flags.STORAGE_BINDING;
+      if (render3d) usage |= flags.RENDER_ATTACHMENT;
+    } else if (!compressed) usage |= flags.RENDER_ATTACHMENT;
+    return usage;
+  }
+  const data = { sourceKey, float16, writeUniform, textureUsage };
   if (typeof module === 'object') module.exports = data;
   else root.ObservatoryGraphicsData = data;
 })(globalThis);

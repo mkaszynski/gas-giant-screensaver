@@ -1,5 +1,10 @@
 const assert = require('node:assert/strict');
-const { float16, writeUniform, sourceKey } = require('../web/graphics-data.js');
+const {
+  float16,
+  writeUniform,
+  sourceKey,
+  textureUsage,
+} = require('../web/graphics-data.js');
 for (const [value, expected] of [
   [0, 0],
   [-0, 0x8000],
@@ -68,3 +73,37 @@ console.log(
 
 assert.equal(sourceKey('a\r\nb\r'), sourceKey('a\nb\n'));
 assert.notEqual(sourceKey('#define A B\nC'), sourceKey('#define A BC'));
+
+// Only the cloud-light cache is rendered to directly. Sampled/storage noise
+// volumes must not enter Dawn's render-attachment lazy-clear path.
+const flags = {
+  COPY_SRC: 1,
+  COPY_DST: 2,
+  TEXTURE_BINDING: 4,
+  STORAGE_BINDING: 8,
+  RENDER_ATTACHMENT: 16,
+};
+const noiseUsage = textureUsage(
+  { dimension: '3d', levels: 7, samples: 1, render3d: false },
+  flags,
+);
+assert(noiseUsage & flags.STORAGE_BINDING);
+assert.equal(noiseUsage & flags.RENDER_ATTACHMENT, 0);
+const lightUsage = textureUsage(
+  { dimension: '3d', levels: 1, samples: 1, render3d: true },
+  flags,
+);
+assert(lightUsage & flags.RENDER_ATTACHMENT);
+assert.equal(lightUsage & flags.STORAGE_BINDING, 0);
+assert.equal(
+  textureUsage({ dimension: '2d', levels: 1, samples: 4 }, flags),
+  flags.RENDER_ATTACHMENT,
+);
+assert.equal(
+  textureUsage(
+    { dimension: '2d', levels: 12, samples: 1, compressed: true },
+    flags,
+  ),
+  flags.COPY_SRC | flags.COPY_DST | flags.TEXTURE_BINDING,
+);
+console.log('WebGPU 3D storage and render-target capabilities remain separate');

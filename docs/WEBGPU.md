@@ -37,7 +37,9 @@ terrain shadows and four-sample MSAA on both terrain color/coverage and distance
 render-target coordinates without changing the shared lighting calculations.
 Star point sprites become instanced quads with the same pixel-integrated optical
 profile. Cached cloud-light slices render directly into the 3D texture through
-WebGPU color-attachment depth slices, without a staging texture or copy. 2D and 3D mipmaps are generated on the GPU.
+WebGPU color-attachment depth slices, without a staging texture or copy.
+Sampled/storage noise volumes omit render-target usage; this also avoids an
+invalid lazy-clear view in older Dawn/Chromium versions. 2D and 3D mipmaps are generated on the GPU.
 Floating-point cloud noise avoids a synchronous readback precision probe, which WebGPU does not
 support. BC6H sky compression is used when the adapter supports BC textures;
 the existing HDR decoder handles other devices.

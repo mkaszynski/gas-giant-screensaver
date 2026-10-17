@@ -7,7 +7,12 @@
   let nextId = 1;
   const object = (fields) => ({ id: nextId++, ...fields });
   const align = (n, alignment) => Math.ceil(n / alignment) * alignment;
-  const { sourceKey, float16: half, writeUniform } = ObservatoryGraphicsData;
+  const {
+    sourceKey,
+    float16: half,
+    writeUniform,
+    textureUsage,
+  } = ObservatoryGraphicsData;
   const formats = new Map([
     [G.RGBA8, ['rgba8unorm', 4, 1]],
     [G.RGB8, ['rgba8unorm', 4, 1]],
@@ -584,7 +589,16 @@
     texParameterf(target, name, value) {
       this.texParameteri(target, name, value);
     }
-    allocate(texture, internal, width, height, depth, levels, sampleCount = 1) {
+    allocate(
+      texture,
+      internal,
+      width,
+      height,
+      depth,
+      levels,
+      sampleCount = 1,
+      render3d = false,
+    ) {
       const format = formats.get(internal);
       if (!format)
         throw new Error(
@@ -600,19 +614,21 @@
       texture.levels = levels;
       texture.samples = sampleCount;
       const dimension = texture.target === G.TEXTURE_3D ? '3d' : '2d';
-      let usage =
-        GPUTextureUsage.TEXTURE_BINDING |
-        GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.COPY_SRC;
-      if (sampleCount > 1) usage = GPUTextureUsage.RENDER_ATTACHMENT;
-      else if (dimension === '3d') {
-        usage |= GPUTextureUsage.RENDER_ATTACHMENT;
-        if (levels > 1) usage |= GPUTextureUsage.STORAGE_BINDING;
-      } else if (!texture.format.startsWith('bc'))
-        usage |= GPUTextureUsage.RENDER_ATTACHMENT;
+      // Sampled/storage noise volumes must not carry render-attachment usage.
+      // Older Dawn attempts an invalid 2D lazy-clear view for those 3D mips.
+      const usage = textureUsage(
+        {
+          dimension,
+          levels,
+          samples: sampleCount,
+          compressed: texture.format.startsWith('bc'),
+          render3d,
+        },
+        GPUTextureUsage,
+      );
       if (texture.gpu) this.retired.push(texture.gpu);
       texture.gpu = this.device.createTexture({
-        label: `texture ${texture.id}`,
+        label: `texture ${texture.id} (${dimension} ${width}x${height}x${depth})`,
         size: [width, height, depth],
         dimension,
         format: texture.format,
@@ -675,6 +691,8 @@
         height,
         depth,
         data ? Math.floor(Math.log2(Math.max(width, height, depth))) + 1 : 1,
+        1,
+        !data,
       );
       if (data)
         this.upload(
