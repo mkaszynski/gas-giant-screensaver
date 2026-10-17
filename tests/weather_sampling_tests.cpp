@@ -76,7 +76,7 @@ int main() {
       Fixture old, reference;
       old.replace("clamp(span/.15,12.,96.)", "clamp(span/.15,12.,48.)");
       old.replace("i<96", "i<48");
-      old.replace("if(stepLength>.18)", "if(false)");
+      old.replace("if(stepLength>.06)", "if(false)");
       reference.replace("clamp(span/.15,12.,96.)",
                         "clamp(span/.035,48.,384.)");
       reference.replace("i<96", "i<384");

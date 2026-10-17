@@ -74,12 +74,12 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
    float density;
    // Two-point Gaussian quadrature resolves density between coarse march
    // positions. Evaluate lighting once at the density-weighted centroid.
-   // Near-field steps already resolve the cloud cells and need only one tap.
-   if(stepLength>.18){
+   // Very short steps already resolve the cloud cells and need only one tap.
+   if(stepLength>.06){
     float a=position+stepLength*.2113248654,b=position+stepLength*.7886751346;
     float da=marchDensity(d,a,lod),db=marchDensity(d,b,lod);
     density=.5*(da+db);
-    float moment=.5*(a*da+b*db),weight=smoothstep(.18,.35,stepLength);
+    float moment=.5*(a*da+b*db),weight=smoothstep(.06,.12,stepLength);
     // Blend quadratures continuously; crossing a step-size threshold cannot
     // draw another contour or make a cloud jump during slow camera motion.
     if(weight<1.){

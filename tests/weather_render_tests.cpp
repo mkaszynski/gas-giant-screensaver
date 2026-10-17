@@ -486,8 +486,8 @@ int main() {
       }
       {
         Fixture reference;
-        reference.replace("weather.frag", "span/clamp(span/.15,12.,48.)",
-                          "span/48.");
+        reference.replace("weather.frag", "span/clamp(span/.15,12.,96.)",
+                          "span/96.");
         reference.replace("weather.frag",
                           "baseStep*(1.+2.*(1.-smoothstep(.02,.2,T)))",
                           "baseStep");
