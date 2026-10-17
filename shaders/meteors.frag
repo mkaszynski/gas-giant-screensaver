@@ -27,9 +27,9 @@ void main(){
               +.02*opticalLine(gl_FragCoord.xy,endpoints.xy,endpoints.zw,sqrt(light.w*light.w+2.));
  float night=1.-smoothstep(.00002,.003,dot(texture(uSky,skyUV(d)).rgb,vec3(.2126,.7152,.0722)));
  float visibility=uMeteorManual?1.:night;
- // Manual daytime review removes the bright giant's contrast suppression;
- // the automatic population keeps its calibrated physical radiance.
- float gain=uMeteorManual?mix(1.,uCelestialGain,night):uCelestialGain;
+ // Manual review must stay visible through every sky/giant phase after a
+ // seek. Automatic showers retain calibrated contrast adaptation.
+ float gain=uMeteorManual?1.:uCelestialGain;
  vec3 L=light.rgb*profile*visibility*gain/uDarkGain*viewT(d);
  // A forced daylight streak can overlap the saturated solar disk. Bounded
  // additive blending stays monotonic and finite in the half-float HDR target.

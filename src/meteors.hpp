@@ -19,7 +19,10 @@ struct MeteorSegment {
   double flux = 0, sigma = .55;
 };
 struct MeteorBatch {
-  std::array<MeteorSegment, 96> segments{};
+  // At most ((6 + .25) * 30 + 3) candidates, with five segments each.
+  // This covers the full 1800/min ceiling without dropping newer heads behind
+  // older ion trains. Storage and work remain bounded at every timestamp.
+  std::array<MeteorSegment, 1024> segments{};
   size_t count = 0;
 };
 namespace meteor_detail {
@@ -30,6 +33,20 @@ inline uint64_t hash(uint64_t x) {
   return x ^ (x >> 31);
 }
 inline double unit(uint64_t x) { return (hash(x) >> 11) * 0x1.0p-53; }
+struct Appearance {
+  double magnitude, flux, endHeight, wakeSeconds, wakeFade;
+};
+inline Appearance appearance(uint64_t seed) {
+  // Keep the naked-eye population calibration. Brighter, larger ablation
+  // events penetrate farther and leave longer-lived luminous wakes, rather
+  // than drawing resolved rocks or inflating the optical point-spread core.
+  const double magnitude = std::clamp(
+      2 + std::log(std::max(1.e-7, unit(seed + 6))) / std::log(2.5), -4., 2.);
+  const double size = (2 - magnitude) / 6.;
+  return {magnitude, std::pow(10., -.4 * magnitude),
+          94 - 10 * size - 3 * unit(seed + 8),
+          .06 + .19 * size + .045 * unit(seed + 9), .06 + .12 * size};
+}
 inline double smooth(double a, double b, double x) {
   x = std::clamp((x - a) / (b - a), 0., 1.);
   return x * x * (3 - 2 * x);
@@ -117,19 +134,23 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
         frame.options.previewStart < 0 || frame.options.previewStart > 1.e10)
       return batch;
     window.start = frame.options.previewStart;
-    window.id = hash(uint64_t(std::max(0., window.start) * 1000));
+    window.id = hash(uint64_t(std::max(0., window.start) * 1000) ^
+                     frame.options.restart);
     window.duration = 1.e11;
   }
   const double phase = frame.seconds - window.start;
   if (phase < -1 || phase > window.duration + 6)
     return batch;
   const double exposure = std::clamp(frame.exposure, .001, .25);
-  const double rate = std::clamp(frame.options.rate, .5, 60.);
+  const double rate =
+      std::clamp(frame.options.rate, meteorMinRate, meteorMaxRate);
   const double interval = 60. / rate;
-  const int64_t first =
-      std::max<int64_t>(0, int64_t(std::floor((phase - 6) / interval)) - 1);
+  const double lead = preview ? .55 : 0.;
+  const double streamPhase = phase - lead;
+  const int64_t first = std::max<int64_t>(
+      0, int64_t(std::floor((streamPhase - 6) / interval)) - 1);
   const int64_t last = std::max<int64_t>(
-      0, int64_t(std::floor((phase + exposure) / interval)) + 1);
+      0, int64_t(std::floor((streamPhase + exposure) / interval)) + 1);
   Vec3 radiantWorld = normalized(Vec3{2 * unit(window.id + 51) - 1,
                                       2 * unit(window.id + 52) - 1,
                                       2 * unit(window.id + 53) - 1});
@@ -144,14 +165,14 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
   const Vec3 eye = field.eye;
   auto add = [&](Vec3 tail, Vec3 head, Vec3 color, double flux, double sigma) {
     if (flux > 1.e-9 && batch.count < batch.segments.size())
-      batch.segments[batch.count++] = {current.local(tail - current.eye),
-                                       current.local(head - current.eye), color,
-                                       flux * (preview ? 1. : meteorNight(s)),
-                                       sigma};
+      batch.segments[batch.count++] = {
+          current.local(tail - current.eye), current.local(head - current.eye),
+          color, flux * (preview ? 1. : meteorNight(s)), sigma};
   };
   for (int64_t i = first; i <= last; ++i) {
     const uint64_t seed = hash(window.id ^ (uint64_t(i) * 0x718aa7));
-    const double birth = preview && i == 0 ? .55 : (i + unit(seed)) * interval;
+    const double birth =
+        lead + (preview && i == 0 ? 0 : (i + unit(seed)) * interval);
     if (birth > window.duration)
       continue;
     if (!preview) {
@@ -188,14 +209,13 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
     if (entry <= .10)
       continue;
     const double speed = 26 + 42 * unit(seed + 5); // km/s, not clock-scaled
+    const auto look = appearance(seed);
     const double duration =
-        std::clamp((startHeight - 88) / (speed * entry), .25, 1.7);
+        std::clamp((startHeight - look.endHeight) / (speed * entry), .25, 1.7);
     const Vec3 velocity = current.global(radiant) * -speed;
     // Sample the bright, naked-eye population (+2 or brighter). The rate
     // describes these events; unresolved faint dust needs no rendering work.
-    const double magnitude = std::clamp(
-        2 + std::log(std::max(1.e-7, unit(seed + 6))) / std::log(2.5), -4., 2.);
-    const double flux = std::pow(10., -.4 * magnitude);
+    const double magnitude = look.magnitude, flux = look.flux;
     const double tint = .35 * std::clamp((1.5 - magnitude) / 4., 0., 1.);
     const Vec3 baseColor = speed > 46 ? Vec3{.80, .92, 1.} : Vec3{1., .88, .73};
     const Vec3 color = Vec3{.94, .97, 1.} * (1 - tint) + baseColor * tint;
@@ -207,10 +227,11 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
           headFlux, .55);
     }
     const double wakeEnd = std::clamp(age, 0., duration);
-    const double wakeStart = std::max(0., wakeEnd - .16);
-    const double wakeFlux = .24 * flux *
-                            meteorLightIntegral(wakeStart, wakeEnd, duration) /
-                            .16 * std::exp(-std::max(0., age - duration) / .12);
+    const double wakeStart = std::max(0., wakeEnd - look.wakeSeconds);
+    const double wakeFlux =
+        .24 * flux * meteorLightIntegral(wakeStart, wakeEnd, duration) /
+        look.wakeSeconds *
+        std::exp(-std::max(0., age - duration) / look.wakeFade);
     if (age > 0 && age < duration + .8)
       add(start + velocity * wakeStart, start + velocity * wakeEnd, color,
           wakeFlux, .65);

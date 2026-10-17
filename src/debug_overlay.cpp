@@ -220,8 +220,8 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
            << menu.meteorOptions.rate << " PER MIN";
       sliderControl(layout.meteorIntervalSlider(),
                     menu.meteorOptions.intervalHours, 12, gap.str());
-      sliderControl(layout.meteorSlider(), menu.meteorOptions.rate, 60,
-                    rate.str());
+      sliderControl(layout.meteorSlider(), menu.meteorOptions.rate,
+                    meteorMaxRate, rate.str());
     }
     std::ostringstream rarity;
     rarity << std::fixed << std::setprecision(1) << "RANDOM GAP "
@@ -232,7 +232,7 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
                                : menu.meteorOptions.mode == MeteorMode::Preview
                                    ? "MANUAL SHOWER - ALL SKIES"
                                : !menu.meteorDark ? "WAITING FOR DARK SKY"
-                                   : rarity.str();
+                                                  : rarity.str();
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
          1.5 * layout.scale, status);
   } else {

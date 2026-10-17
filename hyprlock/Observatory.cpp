@@ -95,7 +95,10 @@ bool CObservatory::draw(const SRenderData &data) {
           controls->time(realElapsed) + elapsed - realElapsed;
       renderer->setWeatherPreset(controls->menu.weather());
       renderer->setMeteorFrame(
-          {seconds, 1. / fps, controls->menu.meteorOptions});
+          {controls->menu.meteorOptions.mode == observatory::MeteorMode::Preview
+               ? controls->menu.meteorTime(realElapsed)
+               : seconds,
+           1. / fps, controls->menu.meteorOptions});
       renderer->render(viewport.x, viewport.y, seconds, day, data.opacity, true,
                        true,
                        {seconds, std::max(.001, double(data.motionScale) / fps),

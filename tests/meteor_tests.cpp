@@ -1,3 +1,4 @@
+#include "debug_menu.hpp"
 #include "meteors.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -82,6 +83,112 @@ int main() {
     }
     require(low > 0 && high > low * 5 && peak > 0,
             "frequency controls actual events");
+    {
+      size_t storm = 0, ordinary = 0, stormPeak = 0;
+      auto early = frame;
+      early.options.rate = 1800;
+      early.seconds = early.options.previewStart + .1;
+      require(!meteorsAt(early, scene, 16. / 9., 1800, radiant).count,
+              "high rates retain the manual preview's initial delay");
+      for (int i = 0; i < 60 * 30; ++i) {
+        auto f = frame;
+        f.seconds = 1200 + i / 30.;
+        f.options.rate = 60;
+        ordinary += meteorsAt(f, scene, 16. / 9., 1800, radiant).count;
+        f.options.rate = 1800;
+        auto batch = meteorsAt(f, scene, 16. / 9., 1800, radiant);
+        storm += batch.count;
+        stormPeak = std::max(stormPeak, batch.count);
+        require(batch.count < batch.segments.size(),
+                "maximum rate never truncates newer events behind old trains");
+      }
+      std::cout << "Maximum-rate population=" << storm << " versus " << ordinary
+                << "; peak segments=" << stormPeak << '\n';
+      require(storm > ordinary * 20,
+              "1800/min produces the requested increase in event density");
+      require(MeteorBatch{}.segments.size() >= 955,
+              "capacity covers the worst-case candidate and train population");
+    }
+    {
+      std::vector<double> powers, wakes;
+      double faintWake = 0, brightWake = 0;
+      int faintCount = 0, brightCount = 0;
+      for (uint64_t seed = 0; seed < 4096; ++seed) {
+        const auto a = meteor_detail::appearance(seed);
+        powers.push_back(a.flux);
+        wakes.push_back(a.wakeSeconds);
+        require(a.endHeight >= 80 && a.endHeight <= 94,
+                "ablation endpoints remain in the modeled luminous layer");
+        if (a.magnitude > 1.5) {
+          faintWake += a.wakeSeconds;
+          ++faintCount;
+        }
+        if (a.magnitude < -1) {
+          brightWake += a.wakeSeconds;
+          ++brightCount;
+        }
+      }
+      std::sort(powers.begin(), powers.end());
+      std::sort(wakes.begin(), wakes.end());
+      require(
+          powers[3686] > powers[409] * 5 && wakes[3686] > wakes[409] * 1.5 &&
+              faintCount && brightCount &&
+              brightWake / brightCount > faintWake / faintCount * 1.5,
+          "population has distinct peak brightness and mass-dependent tails");
+    }
+    {
+      DebugMenu menu(1200, 1800, 1772928, 259200, true);
+      DebugLayout layout(1280, 720);
+      auto click = [&](DebugRect r, double real) {
+        menu.pointer(1280, 720, r.x + r.width * .5, r.y + r.height * .5, true,
+                     real);
+        menu.pointer(1280, 720, r.x + r.width * .5, r.y + r.height * .5, false,
+                     real);
+      };
+      click(layout.meteorMode(1), 0);
+      click(layout.button(3),
+            0); // Year range: large forward and backward seeks.
+      menu.meteorOptions.rate = 1800;
+      double real = 1;
+      for (double fraction : {.9, .1, 1.}) {
+        const auto serial = menu.meteorOptions.restart;
+        const auto bar = layout.slider;
+        menu.pointer(1280, 720, bar.x + bar.width * fraction, bar.y + 1, true,
+                     real);
+        const double held = menu.meteorTime(real);
+        menu.pointer(1280, 720, bar.x + bar.width * fraction, bar.y + 1, false,
+                     real + .1);
+        require(menu.meteorOptions.restart == serial + 1 &&
+                    menu.meteorOptions.previewStart == held &&
+                    std::abs(menu.meteorTime(real + .9) - held - .8) < 1.e-6,
+                "seeks re-anchor events without jumping or halting the "
+                "activity clock");
+        auto view = sceneAt(menu.time(real + .9));
+        const auto aim = meteor_detail::world(
+            view, normalized(view.forward * .65 + Vec3{0, .8, 0}));
+        require(
+            meteorsAt({menu.meteorTime(real + .9), 1. / 30, menu.meteorOptions},
+                      view, 16. / 9., 1800, aim)
+                    .count > 0,
+            "meteors continue after forward/backward seeks and at the timeline "
+            "endpoint");
+        real += 2;
+      }
+      click(layout.button(0), real);
+      const double paused = menu.meteorTime(real);
+      require(menu.meteorTime(real + 20) == paused,
+              "explicit pause still freezes meteor activity");
+      const auto serial = menu.meteorOptions.restart;
+      menu.keys({false, true, false, false}, real + 20); // Home while paused.
+      require(
+          menu.meteorOptions.restart == serial + 1 &&
+              menu.meteorTime(real + 21) == paused,
+          "paused keyboard seek refreshes the field without advancing events");
+      menu.keys({}, real + 21);
+      menu.keys({true, false, false, false}, real + 22);
+      require(std::abs(menu.meteorTime(real + 23) - paused - 1) < 1.e-6,
+              "resuming preserves real-time meteor speed");
+    }
     frame.seconds = 1200.9;
     frame.options.rate = 60;
     const auto fixed = meteorsAt(frame, scene, 16. / 9., 1800, radiant, &scene);

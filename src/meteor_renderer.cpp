@@ -15,7 +15,8 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
     return;
   if (lastMeteorMode != meteorFrame.options.mode ||
       (!preview && lastMeteorInterval != meteorFrame.options.intervalHours) ||
-      (preview ? meteorFrame.options.previewStart != lastMeteorPreview
+      (preview ? meteorFrame.options.previewStart != lastMeteorPreview ||
+                     meteorFrame.options.restart != lastMeteorRestart
                : window.id != meteorWindowId)) {
     meteorField = s;
     meteorFieldAspect = double(width) / height;
@@ -23,6 +24,7 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
       previewRadiant =
           meteor_detail::world(s, normalized(s.forward * .65 + Vec3{0, .8, 0}));
     lastMeteorPreview = meteorFrame.options.previewStart;
+    lastMeteorRestart = meteorFrame.options.restart;
     lastMeteorInterval = meteorFrame.options.intervalHours;
     meteorWindowId = window.id;
     lastMeteorMode = meteorFrame.options.mode;
@@ -101,7 +103,7 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
   glDisable(GL_BLEND);
 }
 void Renderer::revealMeteors(const Scene &s, int width, int height,
-                           GLuint surfaceTexture) {
+                             GLuint surfaceTexture) {
   if (meteorFrame.options.mode != MeteorMode::Preview || meteorVertices.empty())
     return;
   // The manual trigger is a visibility override. The scene already contains

@@ -10,13 +10,13 @@ The debug menu offers Auto, Preview now and Off. Two logarithmic sliders separat
 shower. **Mean gap** selects .5–12 hours, with the default 4.5-hour mean giving
 random gaps of 1–8 hours; the displayed random range scales with that setting.
 Very short debug intervals shorten encounters to avoid overlapping them.
-**Meteors** selects .5–60 bright visible-field candidates per minute within a
+**Meteors** selects .5–1800 bright visible-field candidates per minute within a
 shower, default 3. Preview now resets the stream epoch and gives its first
 candidate after .55 seconds. An explicit trigger is a debug visibility override:
-it renders in daylight and through cloud cover, with daytime contrast adaptation.
+it renders in daylight and through cloud cover, with a manual contrast override even beside the sunlit giant.
 Terrain remains opaque. Auto retains its night gate and physical cloud extinction.
 The menu labels the manual override "Manual shower - all skies". The controls change event rates,
-not the speed of individual meteors. A fresh launch restores defaults.
+not the speed of individual meteors. Manual activity uses a separate, pause-aware clock: forward/backward sky seeks re-anchor the visible field and restart the local shower without jumping meteor ages. Meteors continue at a timeline endpoint while Play is enabled; Pause still freezes them. A fresh launch restores defaults.
 
 ## Appearance and geometry
 
@@ -28,10 +28,10 @@ since birth and the changing local basis enter that transform. This is a visual
 ablation model, not a gas-dynamics simulation.
 
 The modeled bright population has magnitudes +2 to -4, using the existing
-catalog-star flux zero point and contrast adaptation. The rate describes those
+catalog-star flux zero point and contrast adaptation. Event brightness also controls ablation depth and wake persistence: faint short strokes and brighter long tails coexist, with modest seeded variation. Their cores remain optically unresolved. The rate describes those
 bright candidates; fainter dust is omitted. Most heads are close to white with
 weak speed-dependent emission color. Atmospheric extinction reddens grazing
-streaks, and the nearby sunlit giant can wash them out. A selected brighter
+streaks, and the nearby sunlit giant can wash out automatic showers. Manual review bypasses that contrast suppression. A selected brighter
 meteor is useful for reviewing the geometry; a typical frame is much quieter.
 
 Heads use an exact exposure integral of their ablation envelope and a
@@ -55,18 +55,18 @@ particle clouds.
 ## Cost and verification
 
 The natural encounter clock is an O(1) query at arbitrary Unix timestamps;
-consecutive jittered starts have a proven 1–8 hour separation. Only recent
-candidates are inspected. Work and storage are bounded to 96 line segments
-(23 KiB of reusable vertex storage); no extra render target, fullscreen pass or
+consecutive jittered starts have a proven 1–8 hour separation. At most 191 recent
+candidates are inspected, even at 1800/min and the longest supported exposure. Work and storage are bounded to 1024 line segments
+(240 KiB of reusable vertex storage); no extra render target, fullscreen pass or
 texture is added. An inactive effect issues no GPU work. The first active batch
 lazily creates its shader and buffer, and later batches reuse them.
 
 CPU tests cover scheduling, bounds, automatic night gating, manual daylight triggers, rate changes,
-frame-rate-independent exposure energy, physical altitude and observer movement.
+frame-rate-independent exposure energy, physical altitude, observer movement, maximum-rate capacity, size/brightness diversity and forward/backward/endpoint seeks.
 GPU tests check visible manual output in night and daylight, zero automatic daytime output, optical stability
 under quarter-pixel camera shifts, restoration after disabling, the airborne
 HDR path and manual visibility through a deliberately opaque cloud volume. The actual
-preview interaction test selects meteor modes and drags both frequency controls;
+preview interaction test selects meteor modes, drags both frequency controls and verifies actual meteor pixels after large forward/backward and endpoint seeks;
 CI also runs these tests with Mesa software rendering.
 
 For a repeatable night review:

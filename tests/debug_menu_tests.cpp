@@ -69,15 +69,15 @@ int main() {
       require(!menu.timeline.dragging(), "focus loss releases capture");
       click(layout.meteorMode(1), 300024);
       require(menu.meteorOptions.mode == MeteorMode::Preview &&
-                  menu.meteorOptions.previewStart == menu.time(300024),
-              "preview starts at the current debug epoch");
+                  menu.meteorOptions.previewStart == menu.meteorTime(300024),
+              "preview starts at the current activity epoch");
       auto slider = layout.meteorSlider();
       menu.pointer(w, h, slider.x, slider.y + 1, true, 300024);
       menu.pointer(w, h, slider.x + slider.width + 100, slider.y + 1, true,
                    300024);
       menu.pointer(w, h, slider.x + slider.width + 100, slider.y + 1, false,
                    300024);
-      near(menu.meteorOptions.rate, 60,
+      near(menu.meteorOptions.rate, 1800,
            "frequency slider clamps to its upper limit");
       auto gap = layout.meteorIntervalSlider();
       menu.pointer(w, h, gap.x, gap.y + 1, true, 300024);
@@ -85,7 +85,7 @@ int main() {
       menu.pointer(w, h, gap.x + gap.width + 100, gap.y + 1, false, 300024);
       near(menu.meteorOptions.intervalHours, 12,
            "shower frequency slider controls the mean encounter gap");
-      near(menu.meteorOptions.rate, 60,
+      near(menu.meteorOptions.rate, 1800,
            "encounter frequency is independent of meteor rate");
       click(layout.meteorMode(2), 300024);
       require(menu.meteorOptions.mode == MeteorMode::Off,

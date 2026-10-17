@@ -65,6 +65,15 @@ def run():
                 x("mousemove", "--window", window, *point(px, py))
                 x("click", 1)
 
+            def reopen(label, selected_x):
+                x("mousemove", "--window", window, 639, 1)
+                shot(label+"-prompt", lambda i: min(i.getpixel(
+                    (round(640-226*SCALE), round(23*SCALE)))) > 200)
+                x("mousemove", "--window", window,
+                  round(640-140*SCALE), round(28*SCALE))
+                x("click", 1)
+                shot(label+"-open", lambda i: selected(i, selected_x, 262))
+
             shot("hidden", lambda i: max(i.getpixel((500, 300))) > 30)
             x("mousemove", "--window", window, 639, 1)
             shot("prompt", lambda i: min(i.getpixel((round(640-226*SCALE), round(23*SCALE)))) > 200)
@@ -95,6 +104,39 @@ def run():
             x("mousemove", "--window", window, *point(300,330))
             x("mouseup",1)
             shot("shower-gap", lambda i: min(i.getpixel(point(288,330)))>190)
+            click(290, 145)  # Clear: isolate meteor pixels from weather.
+            click(300, 38)   # Year range, with the scene still paused.
+            for index, fraction in enumerate((.9, .1, 1.)):
+                # Keep the existing preview enabled while seeking: selecting
+                # Preview after the seek would hide the original regression.
+                x("mousemove", "--window", window, *point(24 + 544*fraction, 94))
+                x("mousedown", 1)
+                x("mouseup", 1)
+                time.sleep(.3)
+                click(60, 38)
+                time.sleep(.9)
+                click(60, 38)
+                time.sleep(.25)
+                click(553, 38)
+                on = shot("seek-on-"+str(index), lambda i: not selected(i,207,262))
+                reopen("seek-"+str(index), 207)
+                click(460, 273)
+                shot("seek-off-"+str(index), lambda i: selected(i,388,262))
+                click(553, 38)
+                off = shot("seek-reference-"+str(index), lambda i: not selected(i,388,262))
+                # The invitation can briefly reappear after closing the menu.
+                # Ignore its top strip; compare the frozen sky and terrain.
+                delta = ImageChops.difference(on.crop((0,50,640,360)),
+                                              off.crop((0,50,640,360)))
+                histogram = delta.histogram()
+                changed = sum(sum(histogram[c*256+3:(c+1)*256]) for c in range(3))
+                peak = max(high for low,high in delta.getextrema())
+                if peak <= 5 or changed <= 20:
+                    raise RuntimeError(f"meteors halted after seek {fraction}: {peak=}, {changed=}")
+                print(f"Live meteor seek {fraction}: {peak=}, {changed=}")
+                reopen("seek-again-"+str(index), 388)
+                click(290, 273)
+                shot("seek-preview-"+str(index), lambda i: selected(i,207,262))
             click(553, 38)
             shot("closed", lambda i: not selected(i, 388, 172))
             print(f"Live menu: hover, open, consecutive clicks, weather ({mean:.3f}/255), shower gap, meteor frequency and close pass")

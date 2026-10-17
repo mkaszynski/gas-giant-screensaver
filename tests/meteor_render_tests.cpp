@@ -13,8 +13,9 @@ void require(bool ok, const char *why) {
 }
 constexpr int width = 640, height = 360;
 using Pixels = std::vector<unsigned char>;
-Pixels shot(Renderer &r, Scene s, double phase, MeteorMode mode) {
-  r.setMeteorFrame({1200 + phase, 1. / 30, {mode, 60, 1200}});
+Pixels shot(Renderer &r, Scene s, double phase, MeteorMode mode,
+            double rate = 60, uint64_t restart = 0) {
+  r.setMeteorFrame({1200 + phase, 1. / 30, {mode, rate, 1200, 4.5, restart}});
   r.renderScene(width, height, s, 1200, 1800, 1, false, false);
   Pixels p(width * height * 4);
   glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, p.data());
@@ -98,6 +99,17 @@ int main() {
               "manual trigger visibly renders in daylight");
       std::cout << "Manual daylight peak=" << difference(dayOff, dayOn).peak
                 << '\n';
+      {
+        const auto darkOff = shot(renderer, s, .9, MeteorMode::Off);
+        const auto darkOn = shot(renderer, s, .9, MeteorMode::Preview);
+        auto glare = s;
+        glare.bodies[0].radius = 1;
+        const auto glareOff = shot(renderer, glare, .9, MeteorMode::Off);
+        const auto glareOn = shot(renderer, glare, .9, MeteorMode::Preview);
+        require(difference(glareOff, glareOn).peak >=
+                    difference(darkOff, darkOn).peak * .75,
+                "manual visibility survives the bright giant's night glare");
+      }
       auto dayAuto = shot(renderer, day, .9, MeteorMode::Auto);
       require(difference(dayOff, dayAuto).peak == 0,
               "automatic daytime rendering adds no meteor pixels");
@@ -105,9 +117,9 @@ int main() {
         auto glare = day;
         const auto radiant = meteor_detail::world(
             glare, normalized(glare.forward * .65 + Vec3{0, .8, 0}));
-        const auto batch = meteorsAt({1200.9, 1. / 30,
-                                      {MeteorMode::Preview, 60, 1200}},
-                                     glare, 16. / 9., 1800, radiant, &glare);
+        const auto batch =
+            meteorsAt({1200.9, 1. / 30, {MeteorMode::Preview, 60, 1200}}, glare,
+                      16. / 9., 1800, radiant, &glare);
         require(batch.count > 0, "solar-overlap meteor fixture");
         glare.sunLocal = normalized(batch.segments[0].head);
         glare.sun = meteor_detail::world(glare, glare.sunLocal);
@@ -122,6 +134,22 @@ int main() {
       auto disabled = shot(renderer, s, .8, MeteorMode::Off);
       require(difference(reference, disabled).peak == 0,
               "disabling restores exact scene and GL state");
+      {
+        shot(renderer, s, 1.9, MeteorMode::Preview, 1800, 10);
+        auto relocated = sceneAt(1.e7, 1800, false, {-.7, 2.1, 1000});
+        relocated.sunLocal.y = -.4;
+        relocated.giantLight = 0;
+        relocated.bodies[0].radius = 1.e-5;
+        const auto off = shot(renderer, relocated, .9, MeteorMode::Off);
+        const auto on =
+            shot(renderer, relocated, 1.9, MeteorMode::Preview, 1800, 11);
+        const auto delta = difference(off, on);
+        std::cout << "Relocated maximum-rate peak=" << delta.peak
+                  << " channels=" << delta.channels << '\n';
+        require(delta.peak > 8 && delta.channels > 100,
+                "a paused-time restart refreshes the observer field at the "
+                "maximum rate");
+      }
       // Full airborne weather must share the normal depth/composition path.
       Renderer weather(Renderer::defaultDataDirectory(), {false, false},
                        {true, 0, 162000});

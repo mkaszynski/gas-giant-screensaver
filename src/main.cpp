@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
                "comparison\n"
                "  --meteor-mode auto|preview|off  Rare natural showers or "
                "preview\n"
-               "  --meteor-rate N         Shower rate, .5..60 meteors/min "
+               "  --meteor-rate N         Shower rate, .5..1800 meteors/min "
                "(default 3)\n"
                "  --meteor-interval HOURS  Mean shower gap .5..12 (default "
                "4.5)\n"
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
         else
           throw std::runtime_error("Invalid meteor mode: " + mode);
       } else if (a == "--meteor-rate")
-        meteorOptions.rate = number(v, .5, 60);
+        meteorOptions.rate = number(v, meteorMinRate, meteorMaxRate);
       else if (a == "--meteor-interval")
         meteorOptions.intervalHours = number(v, .5, 12);
       else if (a == "--meteor-preview-start")
@@ -394,7 +394,8 @@ int main(int argc, char **argv) {
                                           ? frames * timeStep
                                           : (capture.empty() ? elapsed : 0);
         renderer.setMeteorFrame(
-            {sceneTime, 1. / fps,
+            {controls ? controls->menu.meteorTime(elapsed) : sceneTime,
+             1. / fps,
              controls ? controls->menu.meteorOptions : meteorOptions});
         renderer.render(w, h, sceneTime, day, 1, true, drawRings,
                         {drawEmissions ? weatherTime + weatherElapsed : -1,

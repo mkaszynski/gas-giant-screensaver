@@ -21,7 +21,7 @@ short showers at deterministic random intervals of 1–8 real hours (mean 4.5),
 lasting 6–16 minutes. Some are hidden by daylight, the radiant's position or
 weather. **Mean gap** adjusts whole-shower recurrence from .5–12 hours; its
 4.5-hour default gives random gaps of 1–8 hours. **Meteors** separately adjusts
-.5–60 bright visible-field candidates per minute within a shower, default 3. Preview now starts a stream immediately, with its first
+.5–1800 bright visible-field candidates per minute within a shower, default 3. Preview now starts a stream immediately, with its first
 meteor after about half a second. This manual trigger stays visible in daylight
 and through cloud cover; terrain still occludes it. The menu labels this override
 **Manual shower - all skies**. Auto remains night-only with physical cloud
