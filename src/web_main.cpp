@@ -131,10 +131,14 @@ int main() {
     weather = option("weather", 1790900000, 0, 1e10);
     paused = option("paused", 0, 0, 1) != 0;
     synchronize = option("benchmark", 0, 0, 1) != 0;
-    SurfaceOptions surface{true};
+    SurfaceOptions surface{option("surface", 1, 0, 1) != 0};
+    surface.weather = option("volumetric", 1, 0, 1) != 0;
+    StarfieldOptions sky;
+    sky.stars = option("stars", 1, 0, 1) != 0;
+    sky.galaxy = option("galaxy", 1, 0, 1) != 0;
     surface.speed = option("speed", 1, 0, 10000);
     surface.offset = option("travel", 162000, 0, 1e10) - scene * surface.speed;
-    renderer = std::make_unique<Renderer>("/", StarfieldOptions{}, surface);
+    renderer = std::make_unique<Renderer>("/", sky, surface);
     lastTick = emscripten_get_now();
     emscripten_set_main_loop(frame, 0, false);
     return 0;

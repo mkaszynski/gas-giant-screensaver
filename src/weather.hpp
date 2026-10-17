@@ -1,5 +1,6 @@
 #pragma once
 #include "surface.hpp"
+#include "weather_control.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -100,7 +101,8 @@ inline WeatherClimate weatherClimate(const SurfaceWorld &world,
   return c;
 }
 inline WeatherState weatherAt(WeatherClimate c, TravelLocation location,
-                              double seconds, double exposure = 1. / 30) {
+                              double seconds, double exposure = 1. / 30,
+                              WeatherPreset preset = WeatherPreset::Auto) {
   using namespace weather_detail;
   WeatherState w;
   Vec3 position = geographicUp(location) * (surfaceRadius / 1000.);
@@ -126,6 +128,39 @@ inline WeatherState weatherAt(WeatherClimate c, TravelLocation location,
   w.rain = smooth(.32, .8, w.storm) + .2 * w.stratus;
   w.fog = .10 * wet * wet * smooth(.47, .72, pressure) * (1 - .5 * warm);
   w.fogTop = .20 + .65 * c.elevation + .22 * w.stratus;
+  // Debug presets change the atmospheric state, not the world-space cloud
+  // clock. Shadow, reflection, precipitation and lightning use this same state.
+  if (preset != WeatherPreset::Auto) {
+    w.storm = w.stratus = w.cirrus = w.rain = w.fog = 0;
+    w.cover = 0;
+    w.thickness = .8;
+    switch (preset) {
+    case WeatherPreset::Fair:
+      w.cover = .36;
+      w.cirrus = .25;
+      break;
+    case WeatherPreset::Overcast:
+      w.cover = .94;
+      w.stratus = 1;
+      w.thickness = .85;
+      break;
+    case WeatherPreset::Fog:
+      w.cover = .30;
+      w.stratus = .4;
+      w.fog = .45;
+      w.fogTop = .55 + .65 * c.elevation;
+      break;
+    case WeatherPreset::Storm:
+      w.cover = .94;
+      w.storm = 1;
+      w.stratus = .3;
+      w.rain = 1;
+      w.thickness = 7;
+      break;
+    default:
+      break;
+    }
+  }
   w.noiseOffset = wrap((position - Vec3{.008, .001, -.004} * seconds) / 14.);
   w.regionalOffset =
       wrap((position - Vec3{.006, .001, -.003} * seconds) / 384.);

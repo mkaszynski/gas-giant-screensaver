@@ -10,6 +10,15 @@ const root = path.resolve(__dirname, '../build-web');
 const captureDir = path.resolve(__dirname, '../captures');
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.wasm': 'application/wasm', '.data': 'application/octet-stream' };
 const errors = [];
+const backend = process.env.PREVIEW_BACKEND || 'webgl2';
+assert(['auto', 'webgpu', 'webgl2'].includes(backend));
+const expectedBackend = backend === 'auto' ? 'webgl2' : backend;
+function address(url, query) {
+  const target = new URL(url);
+  target.search = query;
+  target.searchParams.set('backend', backend);
+  return target.href;
+}
 let browser, server;
 function imageStats(buffer) {
   const image = PNG.sync.read(buffer);
@@ -48,7 +57,8 @@ async function ready(page, frames = 1) {
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || undefined,
     headless: process.env.HEADED !== '1',
-    args: ['--no-sandbox', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader']
+    args: ['--no-sandbox', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--use-angle=swiftshader',
+      ...(backend === 'auto' ? ['--disable-webgpu'] : ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader'])]
   });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
   const page = await context.newPage();
@@ -57,7 +67,24 @@ async function ready(page, frames = 1) {
     if (message.type() === 'error' && !message.text().includes('404')) errors.push(message.text());
   });
   // First navigation installs the static worker and reloads into isolation.
-  await page.goto(url + '?paused=1&time=510&travel=162000&weather=1790900000');
+  await page.goto(address(url, 'paused=1&time=510&travel=162000&weather=1790900000'));
+  await page.waitForFunction(() => !document.querySelector('#launch').disabled, null, {timeout: 60000});
+  if (backend === 'webgpu') {
+    const failures = await page.evaluate(async () => {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return ['No WebGPU adapter'];
+      const device = await adapter.requestDevice();
+      const definitions = await (await fetch('webgpu-shaders.json')).json();
+      const errors = [];
+      for (const program of Object.values(definitions)) for (const stage of ['vert', 'frag']) {
+        const info = await device.createShaderModule({code: program[stage].code}).getCompilationInfo();
+        for (const item of info.messages) if (item.type === 'error') errors.push(program.label + ': ' + item.message);
+      }
+      device.destroy();
+      return errors;
+    });
+    assert.deepEqual(failures, [], 'Every offline WGSL variant must pass browser validation');
+  }
   await page.getByRole('button', { name: 'Launch preview' }).click({ timeout: 60000 });
   // Inspect the production pixel budget, then keep CI software rendering small.
   assert.equal(await page.locator('#scene').getAttribute('width'), '1920');
@@ -72,10 +99,24 @@ async function ready(page, frames = 1) {
   }
   await smallCanvas();
   await ready(page);
+  assert.equal(await page.evaluate(() => window.previewMetrics.backend), expectedBackend);
   assert(await page.evaluate(() => crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined'));
   await page.waitForFunction(() => window.previewMetrics.width === 320 && window.previewMetrics.height === 180);
   // Transfer keeps the HTML canvas attributes; the worker owns bitmap size.
-  const day = imageStats(await page.screenshot({ path: path.join(captureDir, 'web-day.png') }));
+  const day = imageStats(await page.screenshot({ path: path.join(captureDir, `web-${backend}-day.png`) }));
+  async function capturePixels(name) {
+    const width = await page.evaluate(() => window.previewMetrics.width);
+    const height = await page.evaluate(() => window.previewMetrics.height);
+    const style = await page.addStyleTag({content: `header,footer,#loading{visibility:hidden}#scene{width:${width}px;height:${height}px;object-fit:fill}`});
+    await page.locator('#scene').screenshot({path: path.join(captureDir, `web-${backend}-${name}-pixels.png`)});
+    await style.evaluate(node => node.remove());
+  }
+  await capturePixels('day');
+  if (backend === 'auto') {
+    assert.equal(await page.locator('#backend-status').textContent(), 'WebGL 2');
+    console.log('Automatic WebGL 2 fallback rendered successfully without WebGPU');
+    return;
+  }
   const before = await page.evaluate(() => ({ ...window.previewMetrics, samples: undefined }));
   await page.waitForTimeout(250);
   assert.equal(await page.evaluate(() => window.previewMetrics.frames), before.frames, 'Pause must stop GPU redraws');
@@ -90,10 +131,23 @@ async function ready(page, frames = 1) {
   await page.locator('#time').fill('1200');
   await page.locator('#time').dispatchEvent('change');
   await page.waitForFunction(() => Math.abs(window.previewMetrics.time - 1200) < .01);
-  const dusk = imageStats(await page.screenshot({ path: path.join(captureDir, 'web-dusk.png') }));
+  const dusk = imageStats(await page.screenshot({ path: path.join(captureDir, `web-${backend}-dusk.png`) }));
+  await capturePixels('dusk');
   assert(Math.abs(day - dusk) / day > .02, 'Seeking must visibly change the shared scene');
+  for (const fixture of [
+    {name: 'night', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0'},
+    {name: 'night-no-stars', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0&stars=0'},
+    {name: 'storm', time: 510, weather: 1260, travel: 162000},
+    {name: 'thin-clouds', time: 510, weather: 1790900000, travel: 162000, options: '&volumetric=0'}
+  ]) {
+    await page.goto(address(url, `paused=1&time=${fixture.time}&travel=${fixture.travel}&weather=${fixture.weather}${fixture.options || ''}`));
+    await page.getByRole('button', {name: 'Launch preview'}).click();
+    await smallCanvas();
+    await ready(page);
+    await capturePixels(fixture.name);
+  }
   // Force a terrain rebase and a worker build during moving flight.
-  await page.goto(url + '?time=510&travel=162000&speed=1');
+  await page.goto(address(url, 'time=510&travel=162000&speed=1'));
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
@@ -108,8 +162,8 @@ async function ready(page, frames = 1) {
   await ready(page);
   assert(await page.evaluate(() => crossOriginIsolated));
   assert.deepEqual(errors, []);
-  fs.writeFileSync(path.join(captureDir, 'web-validation.json'), JSON.stringify({ url, day, dusk, builds, metrics: await page.evaluate(() => window.previewMetrics) }, null, 2));
-  console.log('Static WASM preview: isolation, rendering, pause/resume, seek, HiDPI pixel budget, resize, terrain worker and stop/relaunch passed');
+  fs.writeFileSync(path.join(captureDir, `web-${backend}-validation.json`), JSON.stringify({ url, day, dusk, builds, metrics: await page.evaluate(() => window.previewMetrics) }, null, 2));
+  console.log(backend + ' static WASM preview: isolation, rendering, pause/resume, seek, HiDPI pixel budget, resize, terrain worker and stop/relaunch passed');
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));

@@ -11,6 +11,48 @@ int main() {
     TravelLocation location{.37, .81};
     WeatherClimate wet{.9, 26, .1, .2}, dry{.1, 26, .1, 0},
         cold{.8, -12, .4, .1};
+    for (auto climate : {wet, dry, cold}) {
+      auto normal = weatherAt(climate, location, 1512.8);
+      auto automatic =
+          weatherAt(climate, location, 1512.8, 1. / 30, WeatherPreset::Auto);
+      require(normal.cover == automatic.cover &&
+                  normal.storm == automatic.storm &&
+                  normal.flashRadiance == automatic.flashRadiance,
+              "Auto preserves natural weather");
+      auto clear =
+          weatherAt(climate, location, 1512.8, 1. / 30, WeatherPreset::Clear);
+      auto fair =
+          weatherAt(climate, location, 1512.8, 1. / 30, WeatherPreset::Fair);
+      auto overcast = weatherAt(climate, location, 1512.8, 1. / 30,
+                                WeatherPreset::Overcast);
+      auto fog =
+          weatherAt(climate, location, 1512.8, 1. / 30, WeatherPreset::Fog);
+      auto storm =
+          weatherAt(climate, location, 1512.8, 1. / 30, WeatherPreset::Storm);
+      require(
+          clear.cover == 0 && clear.cirrus == 0 && clear.fog == 0 &&
+              clear.rain == 0 && clear.flashRadiance == 0,
+          "clear preset removes all cloud, fog, precipitation and lightning");
+      require(fair.cover > clear.cover && fair.cover < overcast.cover &&
+                  overcast.stratus == 1,
+              "fair and overcast have distinct physical coverage");
+      require(fog.fog > normal.fog && fog.fogTop > 0,
+              "fog preset supplies a low lying fog bank");
+      require(storm.storm == 1 && storm.rain == 1 &&
+                  storm.thickness > overcast.thickness,
+              "forced storm supplies deep convection and precipitation");
+      require(storm.noiseOffset.x == normal.noiseOffset.x &&
+                  storm.regionalOffset.y == normal.regionalOffset.y &&
+                  clear.cirrusOffset.z == normal.cirrusOffset.z,
+              "presets preserve cloud positions and wind clocks");
+      int forcedFlashes = 0;
+      for (int i = 0; i < 7200; ++i)
+        forcedFlashes +=
+            weatherAt(climate, location, i / 30., 1. / 30, WeatherPreset::Storm)
+                .flashRadiance > 0;
+      require(forcedFlashes > 0,
+              "forced storm has real lightning even in dry or cold biomes");
+    }
     double wetCover = 0, dryCover = 0, wetStorm = 0, dryStorm = 0,
            coldStorm = 0;
     int changed = 0, open = 0, storm = 0, fog = 0, flashes = 0;

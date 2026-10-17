@@ -8,7 +8,11 @@ const performanceOutput = document.querySelector('#performance');
 let isPaused = new URLSearchParams(location.search).get('paused') === '1';
 let failed = false;
 let rendererWorker;
+const backend = document.querySelector('#backend');
+const requestedBackend = new URLSearchParams(location.search).get('backend') || 'auto';
+if (['auto', 'webgpu', 'webgl2'].includes(requestedBackend)) backend.value = requestedBackend;
 window.previewError = message => {
+  if (failed) return;
   failed = true;
   rendererWorker?.terminate();
   document.querySelector('#launch').hidden = true;
@@ -103,6 +107,7 @@ async function start() {
     launch.disabled = false;
     launch.addEventListener('click', () => {
       launch.hidden = true;
+      backend.disabled = true;
       status.textContent = 'Downloading the observatory…';
       if (!canvas.transferControlToOffscreen) {
         window.previewError('This preview requires OffscreenCanvas support.');
@@ -113,11 +118,15 @@ async function start() {
       rendererWorker.onmessage = ({data}) => {
         if (data.type === 'frame') window.previewFrame(data.frame);
         else if (data.type === 'error') window.previewError(data.message);
+        else if (data.type === 'backend') {
+          window.previewMetrics.backend = data.backend;
+          document.querySelector('#backend-status').textContent = data.backend === 'webgpu' ? 'WebGPU' : 'WebGL 2';
+        }
         else if (data.type === 'status' && !failed) status.textContent = data.message;
       };
       const offscreen = canvas.transferControlToOffscreen();
       rendererWorker.postMessage({type: 'start', canvas: offscreen,
-        options: Object.fromEntries(new URLSearchParams(location.search)), hidden: document.hidden}, [offscreen]);
+        options: {...Object.fromEntries(new URLSearchParams(location.search)), backend: backend.value}, hidden: document.hidden}, [offscreen]);
       document.querySelector('#stop').hidden = false;
     }, { once: true });
   } catch (error) { window.previewError(error.message); }

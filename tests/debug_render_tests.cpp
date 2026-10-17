@@ -27,10 +27,21 @@ int main() {
     glfwMakeContextCurrent(window);
     {
       DebugOverlay controls(900, 1800);
+      DebugOverlay hover(900, 1800, false);
       glClearColor(.3, .2, .1, 1);
       glClear(GL_COLOR_BUFFER_BIT);
       const auto sky = pixel(640, 600);
       const auto terrain = pixel(320, 40);
+      const auto corner = pixel(1260, 695);
+      hover.draw(1280, 720, 1280, 720, 0);
+      require(
+          pixel(1260, 695) == corner && pixel(30, 690) == sky,
+          "hidden menu draws nothing, including before lazy GL initialization");
+      hover.menu.pointer(1280, 720, 1279, 1, false, 0);
+      hover.draw(1280, 720, 1280, 720, 0);
+      require(pixel(1260, 695) != corner && pixel(320, 40) == terrain,
+              "corner invitation is visible without covering landscape");
+      glClear(GL_COLOR_BUFFER_BIT);
       glViewport(4, 5, 600, 350);
       glEnable(GL_CULL_FACE);
       glEnable(GL_DEPTH_TEST);
@@ -71,6 +82,24 @@ int main() {
                 int((360 - scaled.slider.y - scaled.slider.height / 2) * 2));
       require(scaledKnob[0] > 190 && scaledKnob[2] > 240,
               "slider renders correctly at 2x display density");
+      // Weather selection has a visible selected state, and hiding is exact.
+      DebugLayout logical(640, 360);
+      auto storm = logical.weather(5);
+      controls.menu.pointer(640, 360, storm.x + 2, storm.y + 2, true, 129600);
+      controls.menu.pointer(640, 360, storm.x + 2, storm.y + 2, false, 129600);
+      glClear(GL_COLOR_BUFFER_BIT);
+      controls.draw(1280, 720, 640, 360, 129600);
+      auto selected =
+          pixel(int((storm.x + 2) * 2), int((360 - storm.y - 2) * 2));
+      require(selected[1] > 55 && selected[2] > 75,
+              "weather selection is visibly highlighted at HiDPI");
+      auto close = logical.close();
+      controls.menu.pointer(640, 360, close.x + 2, close.y + 2, true, 129601);
+      controls.menu.pointer(640, 360, close.x + 2, close.y + 2, false, 129601);
+      glClear(GL_COLOR_BUFFER_BIT);
+      controls.draw(1280, 720, 640, 360, 129603);
+      require(pixel(1260, 695) == corner,
+              "closed menu leaves no pixels behind");
       require(glGetError() == GL_NO_ERROR, "debug GL errors");
     }
     glfwDestroyWindow(window);

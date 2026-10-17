@@ -1,7 +1,5 @@
-#define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
 #include "surface.hpp"
-#include <GLFW/glfw3.h>
 #include <array>
 #include <iomanip>
 #include <sstream>
@@ -63,9 +61,11 @@ std::array<unsigned char, 5> glyph(char c) {
   }
 }
 } // namespace
-DebugOverlay::DebugOverlay(double start, double daySeconds)
-    : timeline(start, travelPeriod), day(daySeconds),
-      year(stellarYearSeconds / simulationTimeScale(daySeconds)) {
+DebugOverlay::DebugOverlay(double start, double daySeconds, bool open)
+    : menu(start, daySeconds,
+           stellarYearSeconds / simulationTimeScale(daySeconds), travelPeriod,
+           open) {}
+void DebugOverlay::initialize() {
   GLuint vertex =
       compile(GL_VERTEX_SHADER,
               "#version 300 es\nlayout(location=0) in vec2 "
@@ -107,49 +107,6 @@ DebugOverlay::~DebugOverlay() {
   glDeleteVertexArrays(1, &vao);
   glDeleteProgram(program);
 }
-void DebugOverlay::input(GLFWwindow *window, double real) {
-  int w, h;
-  glfwGetWindowSize(window, &w, &h);
-  if (w <= 0 || h <= 0)
-    return;
-  DebugLayout layout(w, h);
-  double x, y;
-  glfwGetCursorPos(window, &x, &y);
-  bool down = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-  if (down && !mouseDown) {
-    if (layout.slider.contains(x, y))
-      timeline.beginDrag(layout.fraction(x), real);
-    else if (layout.button(0).contains(x, y))
-      timeline.play(!timeline.playing(), real);
-    else if (layout.button(1).contains(x, y))
-      timeline.range(day, real);
-    else if (layout.button(2).contains(x, y))
-      timeline.range(travelPeriod, real);
-    else if (layout.button(3).contains(x, y))
-      timeline.range(year, real);
-    else if (layout.button(4).contains(x, y))
-      timeline.seek(0, real);
-  }
-  if (timeline.dragging()) {
-    timeline.dragTo(layout.fraction(x));
-    if (!down)
-      timeline.endDrag(real);
-  }
-  mouseDown = down;
-  auto key = [&](int code, bool &previous, auto action) {
-    bool pressed = glfwGetKey(window, code) == GLFW_PRESS;
-    if (pressed && !previous && !timeline.dragging())
-      action();
-    previous = pressed;
-  };
-  key(GLFW_KEY_SPACE, spaceDown,
-      [&] { timeline.play(!timeline.playing(), real); });
-  key(GLFW_KEY_HOME, homeDown, [&] { timeline.seek(0, real); });
-  key(GLFW_KEY_LEFT, leftDown,
-      [&] { timeline.seek(timeline.fraction(real) - .001, real); });
-  key(GLFW_KEY_RIGHT, rightDown,
-      [&] { timeline.seek(timeline.fraction(real) + .001, real); });
-}
 void DebugOverlay::rectangle(DebugRect rect, float r, float g, float b,
                              float a) {
   Vertex tl{float(rect.x), float(rect.y), r, g, b, a};
@@ -170,41 +127,122 @@ void DebugOverlay::text(double x, double y, double scale,
     x += 6 * scale;
   }
 }
-void DebugOverlay::draw(int w, int h, int ww, int wh, double real) {
-  if (w <= 0 || h <= 0 || ww <= 0 || wh <= 0)
+void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
+                        float opacity) {
+  if (w <= 0 || h <= 0 || ww <= 0 || wh <= 0 || opacity <= 0 ||
+      (!menu.open() && !menu.promptVisible(real)))
     return;
+  if (!program)
+    initialize();
   DebugLayout layout(ww, wh);
+  auto &timeline = menu.timeline;
+  const auto day = menu.day, year = menu.year;
   vertices.clear();
-  rectangle(layout.panel, .018, .028, .043, .90);
-  std::array<std::string, 5> labels{timeline.playing() ? "PAUSE" : "PLAY",
-                                    "DAY", "3 DAYS", "YEAR", "RESET"};
-  for (int i = 0; i < 5; ++i) {
-    auto button = layout.button(i);
-    bool selected = (i == 1 && timeline.span() == day) ||
-                    (i == 2 && timeline.span() == travelPeriod) ||
-                    (i == 3 && timeline.span() == year);
-    rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
-              selected ? .38 : .13);
-    text(button.x + (button.width - labels[i].size() * 12 * layout.scale) / 2.,
-         button.y + 5 * layout.scale, 2 * layout.scale, labels[i]);
+  if (menu.open()) {
+    rectangle(layout.panel, .018, .028, .043, .90);
+    std::array<std::string, 5> labels{timeline.playing() ? "PAUSE" : "PLAY",
+                                      "DAY", "3 DAYS", "YEAR", "RESET"};
+    for (int i = 0; i < 5; ++i) {
+      auto button = layout.button(i);
+      bool selected = (i == 1 && timeline.span() == day) ||
+                      (i == 2 && timeline.span() == travelPeriod) ||
+                      (i == 3 && timeline.span() == year);
+      rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(button.x +
+               (button.width - labels[i].size() * 12 * layout.scale) / 2.,
+           button.y + 5 * layout.scale, 2 * layout.scale, labels[i]);
+    }
+    const auto target = timeline.target(real);
+    std::ostringstream label;
+    label << (timeline.dragging() ? "SEEK " : "TIME ") << std::fixed
+          << std::setprecision(1) << target << " S   RANGE "
+          << timeline.span() / 3600. << " H";
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 46 * layout.scale,
+         1.5 * layout.scale, label.str());
+    auto bar = layout.slider;
+    bar.y += 6 * layout.scale;
+    bar.height = 6 * layout.scale;
+    rectangle(bar, .12, .19, .24);
+    const double knob = layout.slider.x + timeline.fraction(real) * bar.width;
+    bar.width = knob - bar.x;
+    rectangle(bar, .18, .72, .90);
+    rectangle({knob - 4 * layout.scale, layout.slider.y, 8 * layout.scale,
+               layout.slider.height},
+              .8, .94, 1.);
+
+    rectangle(layout.close(), .18, .09, .12);
+    text(layout.close().x + 9 * layout.scale,
+         layout.close().y + 5 * layout.scale, 2 * layout.scale, "X");
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 102 * layout.scale,
+         1.5 * layout.scale, "WEATHER");
+    for (int i = 0; i < int(weatherPresetNames.size()); ++i) {
+      auto button = layout.weather(i);
+      bool selected = static_cast<int>(menu.weather()) == i;
+      rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(button.x + 8 * layout.scale, button.y + 6 * layout.scale,
+           2 * layout.scale, std::string(weatherPresetNames[i]));
+    }
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 196 * layout.scale,
+         1.5 * layout.scale, "AUTO RESTORES BIOME WEATHER");
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 226 * layout.scale,
+         1.5 * layout.scale, "METEOR SHOWERS");
+    const std::array<std::string, 3> modes{"AUTO", "PREVIEW NOW", "OFF"};
+    for (int i = 0; i < 3; ++i) {
+      const auto button = layout.meteorMode(i);
+      const bool selected = int(menu.meteorOptions.mode) == i;
+      rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(button.x + 8 * layout.scale, button.y + 6 * layout.scale,
+           1.5 * layout.scale, modes[i]);
+    }
+    if (menu.meteorOptions.mode != MeteorMode::Off) {
+      auto sliderControl = [&](DebugRect slider, double value, double maximum,
+                               const std::string &label) {
+        text(slider.x, slider.y - 23 * layout.scale, 1.5 * layout.scale, label);
+        auto bar = slider;
+        bar.y += 6 * layout.scale;
+        bar.height = 6 * layout.scale;
+        rectangle(bar, .12, .19, .24);
+        const double knob =
+            bar.x + std::log(value / .5) / std::log(maximum / .5) * bar.width;
+        bar.width = knob - bar.x;
+        rectangle(bar, .18, .72, .90);
+        rectangle({knob - 4 * layout.scale, slider.y, 8 * layout.scale,
+                   slider.height},
+                  .8, .94, 1.);
+      };
+      std::ostringstream gap, rate;
+      gap << std::fixed << std::setprecision(1) << "MEAN GAP "
+          << menu.meteorOptions.intervalHours << " H";
+      rate << std::fixed << std::setprecision(1) << "METEORS "
+           << menu.meteorOptions.rate << " PER MIN";
+      sliderControl(layout.meteorIntervalSlider(),
+                    menu.meteorOptions.intervalHours, 12, gap.str());
+      sliderControl(layout.meteorSlider(), menu.meteorOptions.rate,
+                    meteorMaxRate, rate.str());
+    }
+    std::ostringstream rarity;
+    rarity << std::fixed << std::setprecision(1) << "RANDOM GAP "
+           << menu.meteorOptions.intervalHours * 2. / 9. << " TO "
+           << menu.meteorOptions.intervalHours * 16. / 9. << " H";
+    const std::string status = menu.meteorOptions.mode == MeteorMode::Off
+                                   ? "SHOWERS DISABLED"
+                               : menu.meteorOptions.mode == MeteorMode::Preview
+                                   ? "MANUAL SHOWER - ALL SKIES"
+                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
+                                                  : rarity.str();
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
+         1.5 * layout.scale, status);
+  } else {
+    auto button = layout.prompt(ww);
+    rectangle(button, .018, .028, .043, .94);
+    text(button.x + 10 * layout.scale, button.y + 9 * layout.scale,
+         1.5 * layout.scale, "OPEN DEBUG MENU");
   }
-  const auto target = timeline.target(real);
-  std::ostringstream label;
-  label << (timeline.dragging() ? "SEEK " : "TIME ") << std::fixed
-        << std::setprecision(1) << target << " S   RANGE "
-        << timeline.span() / 3600. << " H";
-  text(layout.panel.x + 8 * layout.scale, layout.panel.y + 46 * layout.scale,
-       1.5 * layout.scale, label.str());
-  auto bar = layout.slider;
-  bar.y += 6 * layout.scale;
-  bar.height = 6 * layout.scale;
-  rectangle(bar, .12, .19, .24);
-  const double knob = layout.slider.x + timeline.fraction(real) * bar.width;
-  bar.width = knob - bar.x;
-  rectangle(bar, .18, .72, .90);
-  rectangle({knob - 4 * layout.scale, layout.slider.y, 8 * layout.scale,
-             layout.slider.height},
-            .8, .94, 1.);
+  for (auto &v : vertices)
+    v.a *= opacity;
 
   GLint oldProgram, oldVao, oldBuffer, viewport[4], srcRGB, dstRGB, srcA, dstA,
       eqRGB, eqA;

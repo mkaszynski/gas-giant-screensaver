@@ -161,6 +161,20 @@ int main() {
       require(continuity.peak <= 5 && continuity.mean < .02,
               "weather advances smoothly at epoch times");
       {
+        weather.setWeatherPreset(WeatherPreset::Clear);
+        auto clear = capture(weather, forest, 1790900000.);
+        weather.setWeatherPreset(WeatherPreset::Storm);
+        auto forced = capture(weather, forest, 1790900000.);
+        auto delta = difference(clear, forced);
+        require(delta.mean > 1 && delta.changed > width * height / 2,
+                "menu preset reaches the actual rendered atmosphere");
+        weather.setWeatherPreset(WeatherPreset::Auto);
+        auto restored = capture(weather, forest, 1790900000.);
+        require(
+            difference(a, restored).peak <= 1,
+            "Auto restores the exact natural atmosphere without stale caches");
+      }
+      {
         Fixture fallback;
         fallback.append("weather-filter-probe.frag", "color=vec4(1.);\n");
         Renderer floating(fallback.root.string(), {}, {true, 0, 162000});
@@ -203,11 +217,12 @@ int main() {
             auto view = travelScene(world, sky, route + elapsed);
             auto cached = capture(cachedSky, view, 1790900000. + elapsed, sky);
             auto traced = capture(exact, view, 1790900000. + elapsed, sky);
-            require(cachedSky.weatherSkyCacheResolution() ==
-                            std::array<int, 2>{(width + 2) / 3, (height + 1) / 2} &&
-                        exact.weatherSkyCacheResolution() ==
-                            std::array<int, 2>{0, 0},
-                    "cache allocation follows the selected rendering path");
+            require(
+                cachedSky.weatherSkyCacheResolution() ==
+                        std::array<int, 2>{(width + 2) / 3, (height + 1) / 2} &&
+                    exact.weatherSkyCacheResolution() ==
+                        std::array<int, 2>{0, 0},
+                "cache allocation follows the selected rendering path");
             auto error = difference(cached, traced);
             worstMean = std::max(worstMean, error.mean);
             worstPeak = std::max(worstPeak, error.peak);
@@ -471,8 +486,8 @@ int main() {
       }
       {
         Fixture reference;
-        reference.replace("weather.frag", "span/clamp(span/.15,12.,48.)",
-                          "span/48.");
+        reference.replace("weather.frag", "span/clamp(span/.15,12.,96.)",
+                          "span/96.");
         reference.replace("weather.frag",
                           "baseStep*(1.+2.*(1.-smoothstep(.02,.2,T)))",
                           "baseStep");

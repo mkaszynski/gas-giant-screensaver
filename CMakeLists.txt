@@ -3,7 +3,7 @@ project(gas_giant_screensaver VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(GNUInstallDirs)
-add_library(observatory src/system.cpp src/emissions.cpp src/sky_catalog.cpp src/sky_texture.cpp src/renderer.cpp src/surface.cpp src/surface_renderer.cpp)
+add_library(observatory src/system.cpp src/emissions.cpp src/sky_catalog.cpp src/sky_texture.cpp src/renderer.cpp src/meteor_renderer.cpp src/surface.cpp src/surface_renderer.cpp)
 target_include_directories(observatory PUBLIC src)
 target_compile_options(observatory PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(observatory PRIVATE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
@@ -16,6 +16,7 @@ if(EMSCRIPTEN)
   target_link_options(observatory-web PRIVATE
     -pthread -fexceptions -sUSE_LIBPNG=1
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sOFFSCREENCANVAS_SUPPORT=1
+    -sGL_PREINITIALIZED_CONTEXT=1
     -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
     -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
     -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
@@ -32,7 +33,24 @@ if(EMSCRIPTEN)
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/world/*")
   set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
     ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
-  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+  find_program(SPIRV_CROSS spirv-cross REQUIRED)
+  find_program(NODE_EXECUTABLE node REQUIRED)
+  set(OBSERVATORY_TWGSL_DIR "${CMAKE_CURRENT_BINARY_DIR}/shader-tools" CACHE PATH
+      "Checksum-pinned, build-only twgsl compiler cache")
+  add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_webgpu_shaders.py"
+      --glslang "${GLSLANG_VALIDATOR}" --spirv-cross "${SPIRV_CROSS}"
+      --node "${NODE_EXECUTABLE}"
+      --tools "${OBSERVATORY_TWGSL_DIR}" --download-tools
+      --output "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json"
+    DEPENDS ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/build_webgpu_shaders.py"
+    COMMENT "Compile the shared GLSL programs to offline WGSL" VERBATIM)
+  add_custom_target(observatory-webgpu-shaders ALL
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json")
+  add_dependencies(observatory-web observatory-webgpu-shaders)
+  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js graphics-data.js webgpu-context.js)
     configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
   endforeach()
   configure_file(LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE COPYONLY)
@@ -105,7 +123,7 @@ target_link_libraries(sky-render-tests PRIVATE observatory PkgConfig::GLFW)
 # Optional development benchmark. Production builds contain no profiling calls.
 option(OBSERVATORY_BUILD_SKY_BENCHMARK "Build the isolated sky GPU benchmark" OFF)
 if(OBSERVATORY_BUILD_SKY_BENCHMARK)
-  add_executable(sky-benchmark tests/sky_benchmark.cpp src/renderer.cpp src/sky_catalog.cpp src/sky_texture.cpp src/system.cpp src/emissions.cpp src/surface.cpp src/surface_renderer.cpp)
+  add_executable(sky-benchmark tests/sky_benchmark.cpp src/renderer.cpp src/meteor_renderer.cpp src/sky_catalog.cpp src/sky_texture.cpp src/system.cpp src/emissions.cpp src/surface.cpp src/surface_renderer.cpp)
   target_include_directories(sky-benchmark PRIVATE src)
   target_link_libraries(sky-benchmark PRIVATE PkgConfig::GLFW PkgConfig::GLES PNG::PNG)
   target_compile_definitions(sky-benchmark PRIVATE OBSERVATORY_SKY_PROFILE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
@@ -113,7 +131,7 @@ endif()
 
 option(OBSERVATORY_BUILD_WEATHER_BENCHMARK "Build the isolated weather GPU benchmark" OFF)
 if(OBSERVATORY_BUILD_WEATHER_BENCHMARK)
-  add_executable(weather-benchmark tests/weather_benchmark.cpp src/renderer.cpp src/sky_catalog.cpp src/sky_texture.cpp src/system.cpp src/emissions.cpp src/surface.cpp src/surface_renderer.cpp)
+  add_executable(weather-benchmark tests/weather_benchmark.cpp src/renderer.cpp src/meteor_renderer.cpp src/sky_catalog.cpp src/sky_texture.cpp src/system.cpp src/emissions.cpp src/surface.cpp src/surface_renderer.cpp)
   target_include_directories(weather-benchmark PRIVATE src)
   target_link_libraries(weather-benchmark PRIVATE PkgConfig::GLFW PkgConfig::GLES PNG::PNG)
   target_compile_definitions(weather-benchmark PRIVATE OBSERVATORY_WEATHER_PROFILE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
@@ -126,6 +144,9 @@ endif()
 add_executable(debug-timeline-tests tests/debug_timeline_tests.cpp)
 target_include_directories(debug-timeline-tests PRIVATE src)
 add_test(NAME debug-timeline-behavior COMMAND debug-timeline-tests)
+add_executable(debug-menu-tests tests/debug_menu_tests.cpp)
+target_include_directories(debug-menu-tests PRIVATE src)
+add_test(NAME debug-menu-behavior COMMAND debug-menu-tests)
 add_test(NAME cli-debug-help COMMAND gas-giant-screensaver --debug --help)
 foreach(mode IN ITEMS capture record benchmark)
   add_test(NAME cli-debug-${mode} COMMAND gas-giant-screensaver --debug --${mode} 1)
@@ -187,3 +208,19 @@ add_test(NAME cli-no-weather COMMAND gas-giant-screensaver --no-weather --help)
 add_test(NAME cli-no-weather-cache COMMAND gas-giant-screensaver --no-weather-cache --help)
 add_executable(weather-render-tests tests/weather_render_tests.cpp)
 target_link_libraries(weather-render-tests PRIVATE observatory PkgConfig::GLFW)
+add_executable(weather-sampling-tests tests/weather_sampling_tests.cpp)
+target_link_libraries(weather-sampling-tests PRIVATE observatory PkgConfig::GLFW)
+
+add_executable(meteor-tests tests/meteor_tests.cpp src/system.cpp)
+target_include_directories(meteor-tests PRIVATE src)
+add_test(NAME meteor-model COMMAND meteor-tests)
+add_executable(meteor-render-tests tests/meteor_render_tests.cpp)
+target_link_libraries(meteor-render-tests PRIVATE observatory PkgConfig::GLFW)
+add_executable(meteor-optics-tests tests/meteor_optics_tests.cpp)
+target_link_libraries(meteor-optics-tests PRIVATE observatory PkgConfig::GLFW)
+add_test(NAME cli-meteor-options COMMAND gas-giant-screensaver --meteor-mode preview --meteor-rate 1800 --meteor-interval 4.5 --meteor-preview-start 1200 --help)
+foreach(args IN ITEMS "--meteor-mode;invalid" "--meteor-rate;nan" "--meteor-rate;0" "--meteor-rate;1801" "--meteor-interval;0" "--meteor-interval;nan" "--meteor-interval;13" "--meteor-preview-start;-1")
+  string(MAKE_C_IDENTIFIER "${args}" name)
+  add_test(NAME cli-meteor-invalid-${name} COMMAND gas-giant-screensaver ${args})
+  set_tests_properties(cli-meteor-invalid-${name} PROPERTIES WILL_FAIL TRUE)
+endforeach()

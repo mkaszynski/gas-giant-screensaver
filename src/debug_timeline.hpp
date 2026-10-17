@@ -76,15 +76,50 @@ struct DebugLayout {
   double scale;
   DebugRect panel, slider;
   explicit DebugLayout(double width, double height) {
-    scale = std::min({1., width / 640., height / 180.});
+    scale = std::min({1., width / 640., height / 400.});
     panel = {16 * scale, 16 * scale, std::min(width - 32 * scale, 560 * scale),
-             96 * scale};
+             360 * scale};
     slider = {panel.x + 8 * scale, panel.y + 71 * scale,
               panel.width - 16 * scale, 18 * scale};
   }
   DebugRect button(int index) const {
     return {panel.x + (8 + index * 78) * scale, panel.y + 10 * scale,
             70 * scale, 24 * scale};
+  }
+  DebugRect close() const {
+    return {panel.x + panel.width - 38 * scale, panel.y + 10 * scale,
+            30 * scale, 24 * scale};
+  }
+  DebugRect weather(int index) const {
+    return {panel.x + (8 + (index % 3) * 181) * scale,
+            panel.y + (120 + (index / 3) * 34) * scale, 173 * scale,
+            26 * scale};
+  }
+  DebugRect meteorMode(int index) const {
+    return {panel.x + (8 + index * 181) * scale, panel.y + 244 * scale,
+            173 * scale, 26 * scale};
+  }
+  DebugRect meteorSlider() const {
+    return {panel.x + panel.width * .5 + 8 * scale, panel.y + 305 * scale,
+            (panel.width - 32 * scale) * .5, 18 * scale};
+  }
+  DebugRect meteorIntervalSlider() const {
+    return {panel.x + 8 * scale, panel.y + 305 * scale,
+            (panel.width - 32 * scale) * .5, 18 * scale};
+  }
+  double meteorIntervalFraction(double x) const {
+    const auto bar = meteorIntervalSlider();
+    return std::clamp((x - bar.x) / bar.width, 0., 1.);
+  }
+  double meteorFraction(double x) const {
+    const auto bar = meteorSlider();
+    return std::clamp((x - bar.x) / bar.width, 0., 1.);
+  }
+  DebugRect prompt(double width) const {
+    return {width - 236 * scale, 12 * scale, 224 * scale, 32 * scale};
+  }
+  DebugRect corner(double width) const {
+    return {width - 48 * scale, 0, 48 * scale, 48 * scale};
   }
   double fraction(double x) const {
     return std::clamp((x - slider.x) / slider.width, 0., 1.);
