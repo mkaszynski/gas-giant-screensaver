@@ -1,6 +1,12 @@
 // Cached periodic 3D noise, fixed in planetary geographic coordinates. The CPU
 // wraps offsets in double precision; local displacements keep Unix time stable.
+#ifdef OBSERVATORY_WEATHER_MODE
+// Cloud model selection is fixed at construction; discard the unused model
+// and its register footprint while preserving dynamic weather parameters.
+const bool uWeatherEnabled=OBSERVATORY_WEATHER_MODE!=0;
+#else
 uniform bool uWeatherEnabled;
+#endif
 uniform highp sampler3D uWeatherNoise;
 uniform mat3 uWeatherFrame;
 uniform vec3 uWeatherOffset,uWeatherRegionalOffset,uWeatherCirrusOffset;

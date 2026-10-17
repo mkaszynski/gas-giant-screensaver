@@ -8,7 +8,8 @@ namespace observatory {
 class SurfaceRenderer {
 public:
   explicit SurfaceRenderer(const std::string &root, bool reflections = false,
-                           bool culling = true, bool waterLod = true);
+                           bool culling = true, bool waterLod = true,
+                           bool weather = true);
   ~SurfaceRenderer();
   SurfaceRenderer(const SurfaceRenderer &) = delete;
   const SurfaceWorld &world() const { return terrain; }

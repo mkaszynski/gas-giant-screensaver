@@ -141,6 +141,14 @@ std::string Renderer::shader(const std::string &name) {
 GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
                          int giantAtmosphere) {
   auto fragmentSource = shader(fragment);
+  // Weather is a construction-time option. Remove its unreachable branches
+  // from the large composite shader instead of retaining a uniform branch.
+  if (fragment == "post.frag")
+    fragmentSource.insert(fragmentSource.find('\n') + 1,
+                          std::string("#define OBSERVATORY_WEATHER_MODE ") +
+                              (surfaceOptions.enabled && surfaceOptions.weather
+                                   ? "1\n"
+                                   : "0\n"));
   if (giantAtmosphere)
     fragmentSource.insert(
         fragmentSource.find('\n') + 1,
@@ -429,7 +437,7 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   if (surfaceOptions.enabled) {
     surface = std::make_unique<SurfaceRenderer>(
         root, surfaceOptions.reflections, surfaceOptions.culling,
-        surfaceOptions.waterLod);
+        surfaceOptions.waterLod, surfaceOptions.weather);
     if (surfaceOptions.weather) {
       weatherProgram = program("weather.frag");
       weatherLightProgram = program("weather-light.frag");

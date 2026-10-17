@@ -38,8 +38,11 @@ GLuint compile(GLenum type, const std::string &source) {
   return s;
 }
 GLuint link(const std::string &root, const char *vert, const char *frag,
-            bool reflection = false) {
+            bool reflection = false, bool weather = true) {
   auto fragment = shader(root, frag);
+  fragment.insert(fragment.find('\n') + 1,
+                  std::string("#define OBSERVATORY_WEATHER_MODE ") +
+                      (weather ? "1\n" : "0\n"));
   if (reflection)
     fragment.insert(fragment.find('\n') + 1, "#define SURFACE_REFLECTION\n");
   GLuint v = compile(GL_VERTEX_SHADER, shader(root, vert)),
@@ -132,13 +135,13 @@ void check() {
 }
 } // namespace
 SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
-                                 bool culling, bool waterLod)
+                                 bool culling, bool waterLod, bool weather)
     : terrain(root + "/assets/world/moon.ggworld"),
       reflectionsEnabled(reflections), cullingEnabled(culling),
       waterLodEnabled(waterLod) {
-  program = link(root, "surface.vert", "surface.frag");
+  program = link(root, "surface.vert", "surface.frag", false, weather);
   if (reflectionsEnabled) {
-    reflectionProgram = link(root, "surface.vert", "surface.frag", true);
+    reflectionProgram = link(root, "surface.vert", "surface.frag", true, weather);
     glGenBuffers(1, &reflectionIndices);
   }
   shadowProgram = link(root, "surface_shadow.vert", "surface_shadow.frag");
