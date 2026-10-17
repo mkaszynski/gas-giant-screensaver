@@ -156,6 +156,8 @@ add_test(NAME cli-no-weather COMMAND gas-giant-screensaver --no-weather --help)
 add_test(NAME cli-no-weather-cache COMMAND gas-giant-screensaver --no-weather-cache --help)
 add_executable(weather-render-tests tests/weather_render_tests.cpp)
 target_link_libraries(weather-render-tests PRIVATE observatory PkgConfig::GLFW)
+add_executable(weather-sampling-tests tests/weather_sampling_tests.cpp)
+target_link_libraries(weather-sampling-tests PRIVATE observatory PkgConfig::GLFW)
 
 add_executable(meteor-tests tests/meteor_tests.cpp src/system.cpp)
 target_include_directories(meteor-tests PRIVATE src)

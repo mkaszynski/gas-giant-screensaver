@@ -35,6 +35,9 @@ vec2 cloudSunTransmission(vec3 p,float density,float lod){
 
 // No per-frame dither or stochastic reprojection: bounded, stable quadrature
 // produces clean screenshots and avoids temporal trails on moons and ridges.
+float marchDensity(vec3 direction,float distance,float lod){
+ return weatherDensity(direction*distance,uObserverHeight,lod)*(1.-smoothstep(75.,100.,distance));
+}
 vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  vec2 outer=weatherShell(vec3(0.),d,uWeatherLayer.x+uWeatherLayer.y,uObserverHeight);
  vec2 inner=weatherShell(vec3(0.),d,uWeatherLayer.x,uObserverHeight);
@@ -44,9 +47,9 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  // Below the layer looking up: start on the far inner intersection.
  if(uObserverHeight<uWeatherLayer.x)start=max(start,inner.y);
  vec3 L=vec3(0.);float T=1.;
- // A short path does not need 48 intervals through the same smooth noise cells.
- // Bound the interval count to retain cloud edges and grazing-ray detail.
- float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,48.);
+ // Keep short paths inexpensive. Long grazing paths need more intervals:
+ // 48 midpoint samples alias the cloud field into horizontal bands.
+ float span=max(0.,finish-start),baseStep=span/clamp(span/.15,12.,96.);
  if(uWeatherSkyPass&&span<=0.)return vec4(0.,0.,0.,1.);
  vec3 viewSky=sky(d);
  bool reused=false;
@@ -59,17 +62,35 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
   WeatherLighting lightingTerms=weatherLighting(d);
   lightingTerms.ambient+=lightingTerms.planet;
   float position=start;
-  for(int i=0;i<48;++i){
+  for(int i=0;i<96;++i){
    if(position>=finish)break;
    // Preserve fine quadrature in transparent skins and silhouettes. Deep in
    // an opaque body, smoothly enlarge steps where little radiance can escape.
    float stepLength=min(finish-position,baseStep*(1.+2.*(1.-smoothstep(.02,.2,T))));
    float distance=position+stepLength*.5;
-   position+=stepLength;
    vec3 p=d*distance;
    float footprint=max(.001,distance*uTanFov*2./uWeatherResolution.y);
    float lod=clamp(log2(footprint*(64./14.)),-6.,3.);
-   float density=weatherDensity(p,uObserverHeight,lod)*(1.-smoothstep(75.,100.,distance));
+   float density;
+   // Two-point Gaussian quadrature resolves density between coarse march
+   // positions. Evaluate lighting once at the density-weighted centroid.
+   // Near-field steps already resolve the cloud cells and need only one tap.
+   if(stepLength>.18){
+    float a=position+stepLength*.2113248654,b=position+stepLength*.7886751346;
+    float da=marchDensity(d,a,lod),db=marchDensity(d,b,lod);
+    density=.5*(da+db);
+    float moment=.5*(a*da+b*db),weight=smoothstep(.18,.35,stepLength);
+    // Blend quadratures continuously; crossing a step-size threshold cannot
+    // draw another contour or make a cloud jump during slow camera motion.
+    if(weight<1.){
+     float middle=marchDensity(d,distance,lod);
+     density=mix(middle,density,weight);
+     moment=mix(distance*middle,moment,weight);
+    }
+    if(density>.00001)distance=moment/density;
+    p=d*distance;
+   }else density=marchDensity(d,distance,lod);
+   position+=stepLength;
    if(density>.001){
     float segmentT=exp(-density*stepLength);
     float extinction=1.-segmentT;
