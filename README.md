@@ -22,8 +22,10 @@ lasting 6–16 minutes. Some are hidden by daylight, the radiant's position or
 weather. **Mean gap** adjusts whole-shower recurrence from .5–12 hours; its
 4.5-hour default gives random gaps of 1–8 hours. **Meteors** separately adjusts
 .5–60 bright visible-field candidates per minute within a shower, default 3. Preview now starts a stream immediately, with its first
-meteor after about half a second, provided the sky is dark. Daytime previews show
-**Waiting for dark sky**. These are compressed fictional shower encounters, not
+meteor after about half a second. This manual trigger stays visible in daylight
+and through cloud cover; terrain still occludes it. The menu labels this override
+**Manual shower - all skies**. Auto remains night-only with physical cloud
+extinction. These are compressed fictional shower encounters, not
 Earth's annual shower calendar. Meteor motion is in real seconds, independent
 of the accelerated celestial rotation.
 
@@ -32,7 +34,9 @@ inertial radiant, and have exposure-integrated luminous heads, brief wakes and
 occasional weak wind-sheared ion trains. Color stays near white; brightness uses
 the catalog-star magnitude zero point. The modeled population is magnitude +2
 or brighter; the rate applies to that bright population, with faint dust omitted. The normal atmosphere, cloud extinction,
-terrain occlusion, HDR composition and water reflection paths apply. The model
+terrain occlusion, HDR composition and water reflection paths apply to automatic
+showers. Manual triggers use daytime contrast adaptation and add the cloud-blocked
+fraction with a second small streak draw into the existing weather buffers. The model
 importance samples the visible atmospheric field; it is a visual approximation,
 not an ablation-fluid simulation. Speeds, short durations, emission colors and
 ion-train behavior are informed by the [American Meteor Society's fireball
