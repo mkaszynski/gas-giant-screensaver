@@ -152,7 +152,14 @@ void main(){
 #if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
  weatherDistance=distance*.001;
 #endif
+ #ifdef SURFACE_DEEP_WATER
+ // Selected only for blocks whose vertices are all below -64 m and warm
+ // enough to be liquid. Linear interpolation preserves those bounds, so the
+ // general shader's water mask is exactly one over every such triangle.
+ const float water=1.;
+ #else
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
+ #endif
  vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
  vec4 foot=fwidth(phase);
  vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);

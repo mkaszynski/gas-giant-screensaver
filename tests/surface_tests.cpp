@@ -339,6 +339,19 @@ int main() {
             "open ocean skips unneeded terrain-shadow rendering");
     require(ocean.waterIndices.size() < ocean.indices.size() / 3,
             "deep water omits unneeded interior triangles");
+    size_t liquidBlocks = 0;
+    for (const auto &box : ocean.bounds) {
+      if (!box.deepWater)
+        continue;
+      ++liquidBlocks;
+      for (uint32_t i = box.waterFirstIndex;
+           i < box.waterFirstIndex + box.waterIndexCount; ++i) {
+        const auto &v = ocean.vertices.at(ocean.waterIndices.at(i));
+        require(v.ground <= -64 && v.temperature >= -1,
+                "specialized water triangles interpolate a pure liquid mask");
+      }
+    }
+    require(liquidBlocks > 100, "deep-water shader has substantial coverage");
     for (size_t block :
          {size_t(0), size_t(47), size_t(48), size_t(79), size_t(1700),
           size_t(3120), size_t(3167), size_t(3168), size_t(3199)}) {

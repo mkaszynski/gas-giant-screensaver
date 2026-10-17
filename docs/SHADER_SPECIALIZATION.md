@@ -23,13 +23,34 @@ intersection, so that profile still allocates and resolves them. Thin clouds
 avoid the extra multisample storage, shader output and resolve blit. Terrain
 depth and filtered radiance use their existing targets.
 
+## Deep-water material program
+
+Already-classified deep-water blocks use a second surface program with the
+water mask compiled to one. Every indexed vertex is below -64 m and at least
+-1 °C; interpolation therefore keeps the general shader's water mask exactly
+one across those triangles. The compiler can remove all land material,
+canopy and terrain-shadow code from that program. Coastlines, frozen water,
+land, shadow maps and the outer horizon band retain the general program.
+Draw ranges, geometry, wave filtering and water lighting stay unchanged.
+There is one additional cached program, no new texture or render target.
+
+Three alternating 90-frame hidden-preview comparisons against `f977724`, with
+the same first ten frames excluded from both versions, measured ocean medians
+11.792 → 10.692 ms (9.3% lower) and coast 14.746 → 14.265 ms (3.3% lower).
+All six optimized steady runs stayed below 33.33 ms; the general shader had
+one 44.53 ms coastal frame. These are optimization diagnostics, not acceptance
+against frozen Phase 1 or physical presentation. The [measurement report](landscape-water-specialization-benchmark.json)
+retains every run, binary identity and command, including that slow reference.
+
 ## Verification
 
 `weather-specialization-tests` renders against a temporary reference shader
 that restores the original uniform branch, with identical numerical assets.
 It compares complete images across ocean, coast, forest and snow at daylight,
 twilight and night phases, plus normal weather and the historic fixed view.
-Initial AMD hardware comparisons were pixel-identical across all fixtures.
+The reference fixture also retains the general interpolated water mask.
+CPU tests verify pure-liquid bounds for every specialized water triangle.
+AMD hardware comparisons were pixel-identical across all fixtures.
 CI runs the same comparison on Mesa, alongside the existing physical water,
 terrain, weather, shadow, silhouette and host-state regression suites.
 The distance-target check exercises both cloud profiles through a framebuffer

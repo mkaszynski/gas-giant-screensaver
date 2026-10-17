@@ -46,7 +46,7 @@ private:
   bool cullingEnabled = true;
   bool waterLodEnabled = true;
   bool weatherEnabled = true;
-  GLuint waterIndices = 0;
+  GLuint waterIndices = 0, waterProgram = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, distanceBuffer = 0,
          resolved = 0, texture = 0, distanceTextureId = 0;
   GLuint shadowFbo[4]{}, shadowTex[4]{};

@@ -14,11 +14,11 @@ void require(bool ok, const char *reason) {
   if (!ok)
     throw std::runtime_error(reason);
 }
-// Keep the old uniform branch in an independent shader fixture. Both paths
+// Keep the old uniform branches in an independent shader fixture. Both paths
 // consume identical assets and scene inputs, including the real coastal water.
-struct DynamicWeather {
+struct UniformBranches {
   std::filesystem::path path;
-  DynamicWeather() {
+  UniformBranches() {
     char name[] = "/tmp/observatory-weather-specialization-XXXXXX";
     path = mkdtemp(name);
     const auto root =
@@ -37,8 +37,18 @@ struct DynamicWeather {
     require(at != std::string::npos, "weather specialization fixture");
     source.replace(at, constant.size(), "uniform bool uWeatherEnabled;");
     std::ofstream(file) << source;
+    const auto surfaceFile = path / "shaders/surface.frag";
+    std::ifstream surfaceIn(surfaceFile);
+    std::ostringstream surfaceText;
+    surfaceText << surfaceIn.rdbuf();
+    source = surfaceText.str();
+    const std::string deepWater = "#ifdef SURFACE_DEEP_WATER";
+    const auto waterAt = source.find(deepWater);
+    require(waterAt != std::string::npos, "deep-water specialization fixture");
+    source.replace(waterAt, deepWater.size(), "#if 0");
+    std::ofstream(surfaceFile) << source;
   }
-  ~DynamicWeather() { std::filesystem::remove_all(path); }
+  ~UniformBranches() { std::filesystem::remove_all(path); }
 };
 std::vector<unsigned char> shot(Renderer &renderer, double time) {
   renderer.render(width, height, time);
@@ -56,7 +66,7 @@ void compare(const std::vector<unsigned char> &a,
     peak = std::max(peak, difference);
     sum += difference;
   }
-  std::cout << "Weather specialization mean=" << sum / a.size()
+  std::cout << "Surface specialization mean=" << sum / a.size()
             << " peak=" << peak << " codes\n";
   require(peak <= 2 && sum / a.size() < .003,
           "specialization preserves the complete rendered image");
@@ -116,7 +126,7 @@ int main() {
     glfwMakeContextCurrent(window);
     {
       distanceTarget(Renderer::defaultDataDirectory());
-      DynamicWeather original;
+      UniformBranches original;
       for (double route : {0., 5600.390625, 162000., 210600.}) {
         SurfaceOptions options{true, 0, route};
         options.weather = false;
@@ -129,10 +139,13 @@ int main() {
       }
       // Native/default weather stays available; specialization must not turn
       // off its actual clouds, transmission or reflected lighting.
-      SurfaceOptions options{true, 0, 5600.390625};
-      Renderer weather(Renderer::defaultDataDirectory(), {}, options);
-      Renderer dynamicWeather(original.path.string(), {}, options);
-      compare(shot(weather, 1740), shot(dynamicWeather, 1740));
+      for (double route : {0., 5600.390625}) {
+        SurfaceOptions options{true, 0, route};
+        Renderer weather(Renderer::defaultDataDirectory(), {}, options);
+        Renderer dynamicWeather(original.path.string(), {}, options);
+        for (double time : {510., 1180., 1740.})
+          compare(shot(weather, time), shot(dynamicWeather, time));
+      }
       // The historic fixed-view path has no weather program either.
       Renderer fixed(Renderer::defaultDataDirectory());
       Renderer dynamicFixed(original.path.string());
