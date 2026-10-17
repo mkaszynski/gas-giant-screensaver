@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install build and software-rendering dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libglfw3-dev libgles2-mesa-dev libpng-dev xvfb python3-venv
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libglfw3-dev libgles2-mesa-dev libpng-dev xvfb xdotool python3-venv
       - name: Build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOBSERVATORY_BUILD_WEATHER_BENCHMARK=ON && cmake --build build --parallel 2
       - name: Unit and CLI tests
@@ -47,6 +47,7 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_weather_benchmark.py
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 LP_NUM_THREADS=2 /tmp/sky-model-tests/bin/python tests/test_debug_interaction.py
       - name: Render daylight and twilight
         run: |
           mkdir -p captures

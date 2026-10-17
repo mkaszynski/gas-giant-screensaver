@@ -1,0 +1,31 @@
+--- a/src/renderer/widgets/IWidget.hpp
++++ b/src/renderer/widgets/IWidget.hpp
+@@ -29,6 +29,7 @@
+     };
+     virtual void onClick(uint32_t button, bool down, const Vector2D& pos) {}
+     virtual void onHover(const Vector2D& pos) {}
++    virtual bool wantsPointerRelease() const { return false; }
+     bool         containsPoint(const Vector2D& pos) const;
+ 
+     struct SFormatResult {
+--- a/src/core/hyprlock.cpp
++++ b/src/core/hyprlock.cpp
+@@ -722,9 +722,6 @@
+ }
+ 
+ void CHyprlock::onClick(uint32_t button, bool down, const Vector2D& pos) {
+-    if (!down)
+-        return;
+-
+     if (!m_focusedOutput.lock())
+         return;
+ 
+@@ -735,7 +732,7 @@
+     const auto SCALEDPOS = pos * m_focusedOutput->m_sessionLockSurface->fractionalScale;
+     const auto widgets   = g_pRenderer->getOrCreateWidgetsFor(*m_focusedOutput->m_sessionLockSurface);
+     for (const auto& widget : widgets) {
+-        if (widget->containsPoint(SCALEDPOS))
++        if (down ? widget->containsPoint(SCALEDPOS) : widget->wantsPointerRelease())
+             widget->onClick(button, down, pos);
+     }
+ }

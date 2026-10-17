@@ -35,6 +35,7 @@ public:
   std::array<int, 2> weatherSkyCacheResolution() const {
     return {skyWeatherCache.width, skyWeatherCache.height};
   }
+  void setWeatherPreset(WeatherPreset preset) { weatherPreset = preset; }
   bool floatingWeatherNoise() const { return floatingNoise; }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
@@ -72,6 +73,7 @@ private:
   TravelLocation surfaceLocation{};
   double lastAltitude = -1e30;
   WeatherState weatherState;
+  WeatherPreset weatherPreset = WeatherPreset::Auto;
   bool floatingNoise = false;
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
