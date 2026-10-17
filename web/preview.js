@@ -32,14 +32,17 @@ window.previewFrame = frame => {
   pause.disabled = time.disabled = false;
   pause.textContent = isPaused ? 'Resume' : 'Pause';
   if (document.activeElement !== time) time.value = ((frame.time % 1800) + 1800) % 1800;
-  if (frame.count % 15 === 0) {
+  if (frame.paused) {
+    performanceOutput.textContent = `Paused · ${frame.width} × ${frame.height} · 30 fps target`;
+  } else if (frame.count === 1 || frame.count % 15 === 0) {
     const recent = samples.slice(-30).filter(item => item.interval > 0);
-    const fps = recent.length * 1000 / recent.reduce((sum, item) => sum + item.interval, 0);
+    const fps = recent.length ? recent.length * 1000 / recent.reduce((sum, item) => sum + item.interval, 0) : 0;
     performanceOutput.textContent = `${fps.toFixed(1)} fps · ${frame.width} × ${frame.height} · 30 fps target`;
   }
 };
 function setPause(value) {
   isPaused = value;
+  previousFrame = 0;
   rendererWorker.postMessage({type: 'pause', value});
   pause.textContent = value ? 'Resume' : 'Pause';
 }

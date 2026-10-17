@@ -73,8 +73,8 @@ async function ready(page, frames = 1) {
   await smallCanvas();
   await ready(page);
   assert(await page.evaluate(() => crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined'));
-  assert.equal(await page.locator('#scene').getAttribute('width'), '320');
-  assert.equal(await page.locator('#scene').getAttribute('height'), '180');
+  await page.waitForFunction(() => window.previewMetrics.width === 320 && window.previewMetrics.height === 180);
+  // Transfer keeps the HTML canvas attributes; the worker owns bitmap size.
   const day = imageStats(await page.screenshot({ path: path.join(captureDir, 'web-day.png') }));
   const before = await page.evaluate(() => ({ ...window.previewMetrics, samples: undefined }));
   await page.waitForTimeout(250);
