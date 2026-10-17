@@ -33,17 +33,27 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 17)
+        self.assertEqual(len(programs), 18)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            17,
+            18,
         )
         for label, vertex, fragment in programs:
             self.assertNotIn("#include", vertex + fragment, label)
             self.assertIn("void main()", fragment, label)
         self.assertIn("SURFACE_REFLECTION", programs[-2][2])
+
+    def test_meteor_shader_uses_shared_optical_kernel_and_hdr_scaling(self):
+        _, vertex, fragment = next(
+            program for program in bake.programs() if program[0] == "meteors.frag"
+        )
+        self.assertEqual(vertex, bake.source("meteors.vert"))
+        self.assertIn("float crossPixel(", fragment)
+        self.assertIn("flat in vec4 endpoints,light;", fragment)
+        self.assertIn("uniform highp float uSceneScale;", fragment)
+        self.assertIn("color.rgb*uSceneScale", fragment)
 
     def test_sampler_function_calls_preserve_nested_arguments(self):
         source = """vec4 read(highp sampler2D image, vec2 point){return texture(image,point);}

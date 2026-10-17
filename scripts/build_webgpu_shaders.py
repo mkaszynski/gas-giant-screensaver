@@ -50,6 +50,7 @@ def programs():
         "stars.frag",
         "rings.frag",
         "emission.frag",
+        "meteors.frag",
     }
     for frag, vert, define in [
         *[
@@ -79,6 +80,7 @@ def programs():
         ),
         ("stars.frag", "stars.vert", ""),
         ("emission.frag", "emission.vert", ""),
+        ("meteors.frag", "meteors.vert", ""),
         ("surface.frag", "surface.vert", ""),
         ("surface.frag", "surface.vert", "#define SURFACE_REFLECTION\n"),
         ("surface_shadow.frag", "surface_shadow.vert", ""),

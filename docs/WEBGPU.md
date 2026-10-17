@@ -23,6 +23,8 @@ WGSL. The browser receives a roughly 0.7 MB manifest, **not a shader compiler**.
 Original source fingerprints identify each program; changed/unbaked source
 fails at linking instead of selecting stale shaders. Tests compare the Python
 and JavaScript fingerprints and validate every WGSL module in Chromium.
+The manifest includes the shared meteor optical kernel and its HDR scaling;
+integrating the native meteor renderer must also retain this shader variant.
 
 The build-only twgsl JS/WASM files are pinned to a Babylon.js commit with SHA-256
 checksums verified before use. CMake downloads missing tools into the build tree;
