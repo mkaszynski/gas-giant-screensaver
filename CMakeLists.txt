@@ -2,16 +2,48 @@ cmake_minimum_required(VERSION 3.20)
 project(gas_giant_screensaver VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(GNUInstallDirs)
+add_library(observatory src/system.cpp src/emissions.cpp src/sky_catalog.cpp src/sky_texture.cpp src/renderer.cpp src/meteor_renderer.cpp src/surface.cpp src/surface_renderer.cpp)
+target_include_directories(observatory PUBLIC src)
+target_compile_options(observatory PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(observatory PRIVATE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
+if(EMSCRIPTEN)
+  # The exact desktop renderer, including its terrain worker, runs in WASM.
+  target_compile_options(observatory PUBLIC -pthread -fexceptions -sUSE_LIBPNG=1)
+  add_executable(observatory-web src/web_main.cpp)
+  target_link_libraries(observatory-web PRIVATE observatory)
+  set_target_properties(observatory-web PROPERTIES OUTPUT_NAME observatory SUFFIX ".js")
+  target_link_options(observatory-web PRIVATE
+    -pthread -fexceptions -sUSE_LIBPNG=1
+    -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sOFFSCREENCANVAS_SUPPORT=1
+    -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
+    -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
+    -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
+    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility']"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png@/assets/giant.png"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain@/assets/terrain"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/sky@/assets/sky"
+    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/world@/assets/world")
+  file(GLOB_RECURSE web_data CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/sky/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/world/*")
+  set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
+    ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
+  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js)
+    configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
+  endforeach()
+  configure_file(LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE COPYONLY)
+  # Browser tests exercise the generated artifact, with no custom HTTP headers.
+  return()
+endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLFW REQUIRED IMPORTED_TARGET glfw3)
 pkg_check_modules(GLES REQUIRED IMPORTED_TARGET glesv2)
 find_package(PNG REQUIRED)
-include(GNUInstallDirs)
-add_library(observatory src/system.cpp src/emissions.cpp src/sky_catalog.cpp src/sky_texture.cpp src/renderer.cpp src/meteor_renderer.cpp src/surface.cpp src/surface_renderer.cpp)
-target_include_directories(observatory PUBLIC src)
 target_link_libraries(observatory PUBLIC PkgConfig::GLES PNG::PNG)
-target_compile_options(observatory PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(observatory PRIVATE OBSERVATORY_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gas-giant-screensaver")
 add_executable(gas-giant-screensaver src/main.cpp src/debug_overlay.cpp)
 target_link_libraries(gas-giant-screensaver PRIVATE observatory PkgConfig::GLFW)
 install(TARGETS gas-giant-screensaver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
