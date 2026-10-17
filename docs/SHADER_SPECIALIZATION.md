@@ -112,6 +112,20 @@ new handle in an existing process can escape boundary discovery. The helper's
 14 synthetic regressions pass; its real overhead still requires measurement
 on a clean host. This does not change the original rendering or acceptance gates.
 
+`scripts/hyprland_ipc.py` queries monitor state through Hyprland's read-only
+local socket, avoiding a `hyprctl` process launch during every active sample.
+It sends only `j/monitors`, bounds response size and wait time, and always closes
+the connection. Eight regressions cover chunked/Unicode responses, malformed
+JSON, unexpected shapes, timeout, response limits and missing environment.
+The caller still checks awake outputs and an unchanged layout.
+
+A 12-sample latency probe during software functional checks measured a maximum
+5.92 ms for the complete monitor query, aggregate CPU/cached GPU sample and
+hardware-state callback. It passed the unchanged 10 ms overhead limit in that
+probe. This establishes collector latency only: a clean-host interference
+control and fresh matched renderer trial remain necessary. Full boundary
+discovery stays outside active rendering, and no renderer frames are omitted.
+
 A coastal fixture using the original thin-cloud model:
 
 ```sh
