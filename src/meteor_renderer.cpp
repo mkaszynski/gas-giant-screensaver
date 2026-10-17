@@ -7,11 +7,13 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
       meteorFrame.options.mode == MeteorMode::Off)
     return;
   const bool preview = meteorFrame.options.mode == MeteorMode::Preview;
-  const auto window = meteorWindowAt(meteorFrame.seconds);
+  const auto window =
+      meteorWindowAt(meteorFrame.seconds, meteorFrame.options.intervalHours);
   if (!preview && (meteorFrame.seconds < window.start ||
                    meteorFrame.seconds > window.start + window.duration + 6))
     return;
   if (lastMeteorMode != meteorFrame.options.mode ||
+      (!preview && lastMeteorInterval != meteorFrame.options.intervalHours) ||
       (preview ? meteorFrame.options.previewStart != lastMeteorPreview
                : window.id != meteorWindowId)) {
     meteorField = s;
@@ -20,6 +22,7 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
       previewRadiant =
           meteor_detail::world(s, normalized(s.forward * .65 + Vec3{0, .8, 0}));
     lastMeteorPreview = meteorFrame.options.previewStart;
+    lastMeteorInterval = meteorFrame.options.intervalHours;
     meteorWindowId = window.id;
     lastMeteorMode = meteorFrame.options.mode;
   }

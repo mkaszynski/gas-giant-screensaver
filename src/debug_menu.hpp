@@ -58,6 +58,9 @@ public:
       else if (meteorOptions.mode != MeteorMode::Off &&
                layout.meteorSlider().contains(x, y))
         meteorDragging = true;
+      else if (meteorOptions.mode != MeteorMode::Off &&
+               layout.meteorIntervalSlider().contains(x, y))
+        meteorIntervalDragging = true;
       else
         for (int i = 0; i < int(weatherPresetNames.size()); ++i)
           if (layout.weather(i).contains(x, y))
@@ -75,13 +78,20 @@ public:
       if (!down)
         meteorDragging = false;
     }
+    if (meteorIntervalDragging) {
+      if (present)
+        meteorOptions.intervalHours =
+            .5 * std::pow(24., layout.meteorIntervalFraction(x));
+      if (!down)
+        meteorIntervalDragging = false;
+    }
     mouseDown = down;
   }
   // Preview shortcuts only. The lock screen keeps keyboard input for PAM.
   void keys(std::array<bool, 4> pressed, double real) {
     for (int i = 0; i < 4; ++i) {
       if (open_ && pressed[i] && !previousKeys[i] && !timeline.dragging() &&
-          !meteorDragging) {
+          !meteorDragging && !meteorIntervalDragging) {
         switch (i) {
         case 0:
           timeline.play(!timeline.playing(), real);
@@ -110,7 +120,8 @@ public:
   const double day, year, route;
 
 private:
-  bool open_, initialized, mouseDown = false, meteorDragging = false;
+  bool open_, initialized, mouseDown = false, meteorDragging = false,
+                           meteorIntervalDragging = false;
   double promptUntil = -1;
   WeatherPreset weather_ = WeatherPreset::Auto;
   std::array<bool, 4> previousKeys{};

@@ -6,11 +6,14 @@ rise/fall in the arrival rate. This cadence compresses shower encounters for a
 screensaver; it does not reproduce Earth's annual meteor calendar. A shower can
 be missed in daylight, beneath clouds or with its radiant below the horizon.
 
-The debug menu offers Auto, Preview now and Off. The frequency slider is
-logarithmic, from .5 to 60 bright visible-field candidates per minute; normal
-mode starts at 3. Preview now resets the stream epoch and gives its first
+The debug menu offers Auto, Preview now and Off. Two logarithmic sliders separate encounter frequency from activity inside a
+shower. **Mean gap** selects .5–12 hours, with the default 4.5-hour mean giving
+random gaps of 1–8 hours; the displayed random range scales with that setting.
+Very short debug intervals shorten encounters to avoid overlapping them.
+**Meteors** selects .5–60 bright visible-field candidates per minute within a
+shower, default 3. Preview now resets the stream epoch and gives its first
 candidate after .55 seconds. The night gate still applies and the menu says
-"Waiting for dark sky" when appropriate. The slider changes the event rate,
+"Waiting for dark sky" when appropriate. The controls change event rates,
 not the speed of individual meteors. A fresh launch restores defaults.
 
 ## Appearance and geometry
@@ -58,7 +61,7 @@ frame-rate-independent exposure energy, physical altitude and observer movement.
 GPU tests check visible night output, zero daytime output, optical stability
 under quarter-pixel camera shifts, restoration after disabling, the airborne
 HDR path and extinction by a deliberately opaque cloud volume. The actual
-preview interaction test selects meteor modes and drags the frequency slider;
+preview interaction test selects meteor modes and drags both frequency controls;
 CI also runs these tests with Mesa software rendering.
 
 For a repeatable night review:
@@ -73,7 +76,8 @@ A selected bright frame (the scene and event time must both advance):
 nix run . -- --capture /tmp/meteor.png --time 1254.9 --travel-time 162000 --weather-time 1790900000 --meteor-mode preview --meteor-preview-start 1254 --meteor-rate 30 --width 1920 --height 1080
 ```
 
-Use `--meteor-mode off` for its exact meteor-free comparison. The main benchmark
+Use `--meteor-mode off` for its exact meteor-free comparison.
+`--meteor-interval HOURS` sets the mean gap between natural encounters. The main benchmark
 supports the same options for matched complete-renderer measurements. Render
 completion time and native surface submission cadence are different metrics;
 neither a screenshot nor a hidden-window average proves physical presentation

@@ -19,8 +19,9 @@ restarts. The airborne weather path must be enabled (not `--fixed-view` or
 `--no-weather`). The meteor section offers **Auto**, **Preview now** and **Off**. Auto schedules
 short showers at deterministic random intervals of 1–8 real hours (mean 4.5),
 lasting 6–16 minutes. Some are hidden by daylight, the radiant's position or
-weather. The frequency slider sets .5–60 bright visible-field candidates per minute;
-its normal setting is 3. Preview now starts a stream immediately, with its first
+weather. **Mean gap** adjusts whole-shower recurrence from .5–12 hours; its
+4.5-hour default gives random gaps of 1–8 hours. **Meteors** separately adjusts
+.5–60 bright visible-field candidates per minute within a shower, default 3. Preview now starts a stream immediately, with its first
 meteor after about half a second, provided the sky is dark. Daytime previews show
 **Waiting for dark sky**. These are compressed fictional shower encounters, not
 Earth's annual shower calendar. Meteor motion is in real seconds, independent

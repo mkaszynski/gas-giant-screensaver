@@ -83,7 +83,7 @@ private:
   double meteorFieldAspect = 16. / 9.;
   uint64_t meteorWindowId = uint64_t(-1);
   MeteorMode lastMeteorMode = MeteorMode::Off;
-  double lastMeteorPreview = -1;
+  double lastMeteorPreview = -1, lastMeteorInterval = -1;
   bool meteorDark = false;
   GLuint meteorProgram = 0, meteorVao = 0, meteorBuffer = 0;
   std::vector<float> meteorVertices;

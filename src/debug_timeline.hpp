@@ -100,8 +100,16 @@ struct DebugLayout {
             173 * scale, 26 * scale};
   }
   DebugRect meteorSlider() const {
+    return {panel.x + panel.width * .5 + 8 * scale, panel.y + 305 * scale,
+            (panel.width - 32 * scale) * .5, 18 * scale};
+  }
+  DebugRect meteorIntervalSlider() const {
     return {panel.x + 8 * scale, panel.y + 305 * scale,
-            panel.width - 16 * scale, 18 * scale};
+            (panel.width - 32 * scale) * .5, 18 * scale};
+  }
+  double meteorIntervalFraction(double x) const {
+    const auto bar = meteorIntervalSlider();
+    return std::clamp((x - bar.x) / bar.width, 0., 1.);
   }
   double meteorFraction(double x) const {
     const auto bar = meteorSlider();

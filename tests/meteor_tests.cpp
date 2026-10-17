@@ -23,6 +23,22 @@ int main() {
     }
     require(std::abs(total / 10000 - 16200) < 5,
             "mean recurrence is four and a half hours");
+    for (double hours : {.5, 1., 4.5, 12.}) {
+      const double period = hours * 3600;
+      for (uint64_t i = 0; i < 1000; ++i) {
+        const double a = meteorShowerStart(i, hours),
+                     b = meteorShowerStart(i + 1, hours);
+        require(b - a >= period * 2. / 9. - 1.e-4 &&
+                    b - a <= period * 16. / 9. + 1.e-4,
+                "recurrence slider scales random shower gaps");
+        auto window = meteorWindowAt(a + .01, hours);
+        require(window.id == i && window.duration > 0 &&
+                    a + window.duration < b,
+                "adjusted recurrence remains queryable and non-overlapping");
+      }
+    }
+    require(meteorPeriod(0) == 0 && meteorPeriod(13) == 0,
+            "invalid encounter periods are rejected");
     for (int fps : {24, 30, 60}) {
       double energy = 0;
       constexpr double duration = .731;
@@ -69,6 +85,16 @@ int main() {
     frame.seconds = 1200.9;
     frame.options.rate = 60;
     const auto fixed = meteorsAt(frame, scene, 16. / 9., 1800, radiant, &scene);
+    auto independent = frame;
+    independent.options.intervalHours = 12;
+    const auto samePreview =
+        meteorsAt(independent, scene, 16. / 9., 1800, radiant, &scene);
+    require(samePreview.count == fixed.count,
+            "natural recurrence does not change an immediate preview");
+    for (size_t i = 0; i < fixed.count; ++i)
+      require(length(samePreview.segments[i].head - fixed.segments[i].head) <
+                  1.e-10,
+              "recurrence and preview geometry are independent");
     auto moved = sceneAt(
         1200, 1800, true,
         {scene.latitude + 1.e-5, scene.longitude, scene.altitudeMeters});

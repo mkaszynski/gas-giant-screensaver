@@ -79,6 +79,14 @@ int main() {
                    300024);
       near(menu.meteorOptions.rate, 60,
            "frequency slider clamps to its upper limit");
+      auto gap = layout.meteorIntervalSlider();
+      menu.pointer(w, h, gap.x, gap.y + 1, true, 300024);
+      menu.pointer(w, h, gap.x + gap.width + 100, gap.y + 1, true, 300024);
+      menu.pointer(w, h, gap.x + gap.width + 100, gap.y + 1, false, 300024);
+      near(menu.meteorOptions.intervalHours, 12,
+           "shower frequency slider controls the mean encounter gap");
+      near(menu.meteorOptions.rate, 60,
+           "encounter frequency is independent of meteor rate");
       click(layout.meteorMode(2), 300024);
       require(menu.meteorOptions.mode == MeteorMode::Off,
               "showers can be disabled");

@@ -63,15 +63,24 @@ inline Vec3 rotate(Vec3 p, Vec3 axis, double angle) {
 // A stratified renewal clock can be queried at any Unix time in O(1), without
 // replaying hours of events. Consecutive starts are 1..8 hours apart
 // (mean 4.5).
-inline double meteorShowerStart(uint64_t slot) {
-  return double(slot) * 16200. + meteor_detail::unit(slot ^ 0x478ab32) * 12600.;
+inline double meteorPeriod(double hours) {
+  return std::isfinite(hours) && hours >= .5 && hours <= 12 ? hours * 3600 : 0;
 }
-inline MeteorWindow meteorWindowAt(double seconds) {
-  if (!std::isfinite(seconds) || seconds < 0 || seconds > 1.e10)
+inline double meteorShowerStart(uint64_t slot, double intervalHours = 4.5) {
+  const double period = meteorPeriod(intervalHours);
+  return double(slot) * period +
+         meteor_detail::unit(slot ^ 0x478ab32) * (period * 7. / 9.);
+}
+inline MeteorWindow meteorWindowAt(double seconds, double intervalHours = 4.5) {
+  const double period = meteorPeriod(intervalHours);
+  if (!std::isfinite(seconds) || seconds < 0 || seconds > 1.e10 || period <= 0)
     return {};
-  const uint64_t id = uint64_t(std::floor(seconds / 16200.));
-  return {meteorShowerStart(id), 360 + 600 * meteor_detail::unit(id ^ 0x55aa),
-          id};
+  const uint64_t id = uint64_t(std::floor(seconds / period));
+  // Shorter debug intervals also shorten encounters, retaining a bounded,
+  // non-overlapping O(1) schedule. The default 6..16 minutes is unchanged.
+  const double duration =
+      std::min(360 + 600 * meteor_detail::unit(id ^ 0x55aa), period * .15);
+  return {meteorShowerStart(id, intervalHours), duration, id};
 }
 inline double meteorNight(const Scene &s) {
   // This effect is intentionally night-only, including when previewed. An
@@ -95,11 +104,13 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
   MeteorBatch batch;
   if (!std::isfinite(frame.seconds) || frame.seconds < 0 ||
       frame.seconds > 1.e10 || !std::isfinite(frame.exposure) ||
-      !std::isfinite(frame.options.rate) || !std::isfinite(aspect) ||
-      !std::isfinite(day) || day <= 0 || aspect <= 0 ||
-      frame.options.mode == MeteorMode::Off || meteorNight(s) <= 0)
+      !std::isfinite(frame.options.rate) ||
+      meteorPeriod(frame.options.intervalHours) <= 0 ||
+      !std::isfinite(aspect) || !std::isfinite(day) || day <= 0 ||
+      aspect <= 0 || frame.options.mode == MeteorMode::Off ||
+      meteorNight(s) <= 0)
     return batch;
-  auto window = meteorWindowAt(frame.seconds);
+  auto window = meteorWindowAt(frame.seconds, frame.options.intervalHours);
   const bool preview = frame.options.mode == MeteorMode::Preview;
   if (preview) {
     if (!std::isfinite(frame.options.previewStart) ||

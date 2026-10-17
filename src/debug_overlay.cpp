@@ -198,30 +198,41 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
            1.5 * layout.scale, modes[i]);
     }
     if (menu.meteorOptions.mode != MeteorMode::Off) {
-      std::ostringstream rate;
-      rate << std::fixed << std::setprecision(1) << "RATE "
-           << menu.meteorOptions.rate << " METEORS PER MIN";
-      text(layout.panel.x + 8 * layout.scale,
-           layout.panel.y + 282 * layout.scale, 1.5 * layout.scale, rate.str());
-      auto slider = layout.meteorSlider();
-      auto bar = slider;
-      bar.y += 6 * layout.scale;
-      bar.height = 6 * layout.scale;
-      rectangle(bar, .12, .19, .24);
-      const double knob = bar.x + std::log(menu.meteorOptions.rate / .5) /
-                                      std::log(120.) * bar.width;
-      bar.width = knob - bar.x;
-      rectangle(bar, .18, .72, .90);
-      rectangle(
-          {knob - 4 * layout.scale, slider.y, 8 * layout.scale, slider.height},
-          .8, .94, 1.);
+      auto sliderControl = [&](DebugRect slider, double value, double maximum,
+                               const std::string &label) {
+        text(slider.x, slider.y - 23 * layout.scale, 1.5 * layout.scale, label);
+        auto bar = slider;
+        bar.y += 6 * layout.scale;
+        bar.height = 6 * layout.scale;
+        rectangle(bar, .12, .19, .24);
+        const double knob =
+            bar.x + std::log(value / .5) / std::log(maximum / .5) * bar.width;
+        bar.width = knob - bar.x;
+        rectangle(bar, .18, .72, .90);
+        rectangle({knob - 4 * layout.scale, slider.y, 8 * layout.scale,
+                   slider.height},
+                  .8, .94, 1.);
+      };
+      std::ostringstream gap, rate;
+      gap << std::fixed << std::setprecision(1) << "MEAN GAP "
+          << menu.meteorOptions.intervalHours << " H";
+      rate << std::fixed << std::setprecision(1) << "METEORS "
+           << menu.meteorOptions.rate << " PER MIN";
+      sliderControl(layout.meteorIntervalSlider(),
+                    menu.meteorOptions.intervalHours, 12, gap.str());
+      sliderControl(layout.meteorSlider(), menu.meteorOptions.rate, 60,
+                    rate.str());
     }
+    std::ostringstream rarity;
+    rarity << std::fixed << std::setprecision(1) << "RANDOM GAP "
+           << menu.meteorOptions.intervalHours * 2. / 9. << " TO "
+           << menu.meteorOptions.intervalHours * 16. / 9. << " H";
     const std::string status = menu.meteorOptions.mode == MeteorMode::Off
                                    ? "SHOWERS DISABLED"
                                : !menu.meteorDark ? "WAITING FOR DARK SKY"
                                : menu.meteorOptions.mode == MeteorMode::Preview
                                    ? "PREVIEW SHOWER - NIGHT ONLY"
-                                   : "NATURAL SHOWERS EVERY 1 TO 8 H";
+                                   : rarity.str();
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
          1.5 * layout.scale, status);
   } else {

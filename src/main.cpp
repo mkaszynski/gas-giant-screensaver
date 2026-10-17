@@ -95,6 +95,8 @@ int main(int argc, char **argv) {
                "preview\n"
                "  --meteor-rate N         Shower rate, .5..60 meteors/min "
                "(default 3)\n"
+               "  --meteor-interval HOURS  Mean shower gap .5..12 (default "
+               "4.5)\n"
                "  --meteor-preview-start SECONDS  Fixed preview epoch for "
                "captures\n"
                "  --no-emissions         Disable giant lightning/auroras for "
@@ -191,6 +193,8 @@ int main(int argc, char **argv) {
           throw std::runtime_error("Invalid meteor mode: " + mode);
       } else if (a == "--meteor-rate")
         meteorOptions.rate = number(v, .5, 60);
+      else if (a == "--meteor-interval")
+        meteorOptions.intervalHours = number(v, .5, 12);
       else if (a == "--meteor-preview-start")
         meteorPreviewStart = number(v, 0, 1.e10);
       else if (a == "--weather-time")
