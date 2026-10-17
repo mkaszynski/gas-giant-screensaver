@@ -152,7 +152,7 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
   // far above display white; clamp it before half-float storage can overflow.
   if (fragment == "background.frag" || fragment == "body.frag" ||
       fragment == "stars.frag" || fragment == "rings.frag" ||
-      fragment == "emission.frag") {
+      fragment == "emission.frag" || fragment == "meteors.frag") {
     fragmentSource.insert(fragmentSource.find('\n') + 1,
                           "uniform highp float uSceneScale;\n");
     const auto main = fragmentSource.find("void main()");
@@ -615,6 +615,8 @@ Renderer::~Renderer() {
     glDeleteProgram(p);
   for (auto t : textures)
     glDeleteTextures(1, &t);
+  glDeleteBuffers(1, &meteorBuffer);
+  glDeleteVertexArrays(1, &meteorVao);
   glDeleteBuffers(1, &starBuffer);
   glDeleteBuffers(1, &emissionBuffer);
   glDeleteVertexArrays(1, &emissionVao);
@@ -745,8 +747,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     double clock = weatherSeconds >= 0
                        ? weatherSeconds
                        : (emission.seconds >= 0 ? emission.seconds : seconds);
-    weatherState = weatherAt(weatherClimate(surface->world(), surfaceLocation),
-                             surfaceLocation, clock, emission.exposure);
+    weatherState =
+        weatherAt(weatherClimate(surface->world(), surfaceLocation),
+                  surfaceLocation, clock, emission.exposure, weatherPreset);
   }
   const GLState state;
   WEATHER_PROFILE_STAGE(0);
@@ -922,6 +925,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDisable(GL_DEPTH_TEST);
   if (drawBodies && emission.seconds >= 0)
     emissions(s, w, h, emission, drawRings, day);
+  drawMeteors(s, w, h, day);
   GLuint surfaceTexture = 0;
   WEATHER_PROFILE_STAGE(2);
   if (surface)
@@ -981,6 +985,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     quad(weatherProgram);
+    revealMeteors(s, w, h, surfaceTexture);
   }
   WEATHER_PROFILE_STAGE(6);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
