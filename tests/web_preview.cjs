@@ -24,7 +24,7 @@ function imageStats(buffer) {
   assert(max > 30 && max - min > 20, 'Rendered scene must contain visible detail');
   return sum;
 }
-async function ready(page, frames = 3) {
+async function ready(page, frames = 1) {
   await page.waitForFunction(n => window.previewMetrics?.frames >= n || document.querySelector('h2')?.textContent === 'Preview unavailable', frames, { timeout: 240000 });
   const failure = await page.locator('h2').textContent();
   assert.notEqual(failure, 'Preview unavailable', await page.locator('#status').textContent());
@@ -77,11 +77,13 @@ async function ready(page, frames = 3) {
   assert.equal(await page.locator('#scene').getAttribute('height'), '180');
   const day = imageStats(await page.screenshot({ path: path.join(captureDir, 'web-day.png') }));
   const before = await page.evaluate(() => ({ ...window.previewMetrics, samples: undefined }));
-  await ready(page, before.frames + 3);
+  await page.waitForTimeout(250);
+  assert.equal(await page.evaluate(() => window.previewMetrics.frames), before.frames, 'Pause must stop GPU redraws');
   assert.equal(await page.evaluate(() => window.previewMetrics.time), before.time, 'Paused timeline must stay fixed');
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await page.waitForFunction(time => window.previewMetrics.time > time, before.time);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.waitForFunction(() => window.previewMetrics.paused, null, { timeout: 120000 });
   await page.evaluate(() => { const select = document.querySelector('#resolution'); select.add(new Option('CI resize', '270')); });
   await page.locator('#resolution').selectOption('270');
   await page.waitForFunction(() => window.previewMetrics.width === 480 && window.previewMetrics.height === 270);
@@ -91,23 +93,23 @@ async function ready(page, frames = 3) {
   const dusk = imageStats(await page.screenshot({ path: path.join(captureDir, 'web-dusk.png') }));
   assert(Math.abs(day - dusk) / day > .02, 'Seeking must visibly change the shared scene');
   // Force a terrain rebase and a worker build during moving flight.
-  await page.goto(url + '?time=510&travel=162000&speed=50');
+  await page.goto(url + '?time=510&travel=162000&speed=1');
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
-  await page.waitForFunction(() => window.previewMetrics.builds >= 2, null, { timeout: 240000 });
+  await page.waitForFunction(() => window.previewMetrics.samples.some(frame => frame.pending), null, { timeout: 240000 });
   const builds = await page.evaluate(() => window.previewMetrics.builds);
   await page.waitForFunction(n => window.previewMetrics.frames > n, await page.evaluate(() => window.previewMetrics.frames) + 3, { timeout: 120000 });
   assert(builds >= 2, 'Moving terrain must continue streaming in WASM');
   // A second visit uses the established service worker without another reload.
-  await page.reload();
+  await page.getByRole('button', { name: 'Stop preview' }).click();
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
   assert(await page.evaluate(() => crossOriginIsolated));
   assert.deepEqual(errors, []);
   fs.writeFileSync(path.join(captureDir, 'web-validation.json'), JSON.stringify({ url, day, dusk, builds, metrics: await page.evaluate(() => window.previewMetrics) }, null, 2));
-  console.log('Static WASM preview: isolation, rendering, pause/resume, seek, HiDPI pixel budget, resize, terrain worker and reload passed');
+  console.log('Static WASM preview: isolation, rendering, pause/resume, seek, HiDPI pixel budget, resize, terrain worker and stop/relaunch passed');
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));

@@ -10,42 +10,42 @@ using namespace observatory;
 namespace {
 std::unique_ptr<Renderer> renderer;
 double scene = 510, weather = 1790900000, lastTick = 0, lastRender = -1e6;
-bool paused = false, synchronize = false;
+bool paused = false, synchronize = false, hidden = false, redraw = true;
+int drawnWidth = 0, drawnHeight = 0;
 int frames = 0;
 
 EM_JS(double, option, (const char *name, double fallback, double low, double high), {
-  const text = new URLSearchParams(location.search).get(UTF8ToString(name));
+  const text = Module.previewOptions[UTF8ToString(name)] ?? null;
   const value = text === null || text.trim() === "" ? NaN : Number(text);
   return Number.isFinite(value) && value >= low && value <= high ? value : fallback;
 });
 EM_JS(void, reportError, (const char *message), {
-  window.previewError(UTF8ToString(message));
+  globalThis.previewError(UTF8ToString(message));
 });
 EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height,
-                         int builds, int pending), {
-  window.previewFrame({count, time, cost, width, height, builds, pending: !!pending});
+                         int builds, int pending, int paused), {
+  globalThis.previewFrame({count, time, cost, width, height, builds, pending: !!pending, paused: !!paused});
 });
-EM_BOOL visibilityChanged(int, const EmscriptenVisibilityChangeEvent *, void *) {
-  lastTick = emscripten_get_now();
-  return EM_FALSE;
-}
 void frame() {
   try {
     const double now = emscripten_get_now();
     const double elapsed = std::max(0., (now - lastTick) / 1000.);
     lastTick = now;
-    if (emscripten_run_script_int("document.hidden"))
+    if (hidden)
       return;
     if (!paused) {
       scene += elapsed;
       weather += elapsed;
     }
+    int width, height;
+    emscripten_get_canvas_element_size("#scene", &width, &height);
+    // A paused scene needs no repeated GPU work, but seeking/resizing redraws.
+    if (paused && !redraw && width == drawnWidth && height == drawnHeight)
+      return;
     // rAF follows the display; cap work at the desktop's 30 fps without drift.
     if (now + .1 < lastRender + 1000. / 30)
       return;
     lastRender = now - std::fmod(std::max(0., now - lastRender), 1000. / 30);
-    int width, height;
-    emscripten_get_canvas_element_size("#scene", &width, &height);
     if (synchronize)
       glFinish();
     const double start = emscripten_get_now();
@@ -56,8 +56,11 @@ void frame() {
     const auto error = glGetError();
     if (error != GL_NO_ERROR)
       throw std::runtime_error("WebGL error " + std::to_string(error));
+    redraw = false;
+    drawnWidth = width;
+    drawnHeight = height;
     reportFrame(++frames, scene, emscripten_get_now() - start, width, height,
-                renderer->surfaceBuildsStarted(), renderer->surfaceBuildPending());
+                renderer->surfaceBuildsStarted(), renderer->surfaceBuildPending(), paused);
   } catch (const std::exception &error) {
     emscripten_cancel_main_loop();
     reportError(error.what());
@@ -65,11 +68,16 @@ void frame() {
 }
 } // namespace
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void preview_pause(int value) { paused = value != 0; }
+EMSCRIPTEN_KEEPALIVE void preview_pause(int value) { paused = value != 0; redraw = true; }
+EMSCRIPTEN_KEEPALIVE void preview_visibility(int value) {
+  hidden = value != 0;
+  lastTick = emscripten_get_now();
+}
 EMSCRIPTEN_KEEPALIVE void preview_seek(double seconds) {
   if (std::isfinite(seconds) && seconds >= 0 && seconds <= 1e10) {
     weather += seconds - scene;
     scene = seconds;
+    redraw = true;
   }
 }
 }
@@ -97,7 +105,6 @@ int main() {
     surface.offset = option("travel", 162000, 0, 1e10) - scene * surface.speed;
     renderer = std::make_unique<Renderer>("/", StarfieldOptions{}, surface);
     lastTick = emscripten_get_now();
-    emscripten_set_visibilitychange_callback(nullptr, false, visibilityChanged);
     emscripten_set_main_loop(frame, 0, false);
     return 0;
   } catch (const std::exception &error) {

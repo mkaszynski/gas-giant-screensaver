@@ -15,11 +15,11 @@ if(EMSCRIPTEN)
   set_target_properties(observatory-web PROPERTIES OUTPUT_NAME observatory SUFFIX ".js")
   target_link_options(observatory-web PRIVATE
     -pthread -fexceptions -sUSE_LIBPNG=1
-    -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
+    -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sOFFSCREENCANVAS_SUPPORT=1
     -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
     -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
     -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
-    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek']"
+    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility']"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png@/assets/giant.png"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain@/assets/terrain"
@@ -32,7 +32,7 @@ if(EMSCRIPTEN)
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/world/*")
   set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
     ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
-  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js)
+  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js)
     configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
   endforeach()
   configure_file(LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE COPYONLY)

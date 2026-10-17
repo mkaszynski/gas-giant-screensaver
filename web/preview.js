@@ -7,8 +7,10 @@ const time = document.querySelector('#time');
 const performanceOutput = document.querySelector('#performance');
 let isPaused = new URLSearchParams(location.search).get('paused') === '1';
 let failed = false;
+let rendererWorker;
 window.previewError = message => {
   failed = true;
+  rendererWorker?.terminate();
   document.querySelector('#launch').hidden = true;
   pause.disabled = time.disabled = true;
   loading.hidden = false;
@@ -38,13 +40,13 @@ window.previewFrame = frame => {
 };
 function setPause(value) {
   isPaused = value;
-  window.Module._preview_pause(value ? 1 : 0);
+  rendererWorker.postMessage({type: 'pause', value});
   pause.textContent = value ? 'Resume' : 'Pause';
 }
 pause.addEventListener('click', () => setPause(!isPaused));
 time.addEventListener('change', () => {
   const current = window.previewMetrics.time;
-  window.Module._preview_seek(current - current % 1800 + Number(time.value));
+  rendererWorker.postMessage({type: 'seek', value: current - current % 1800 + Number(time.value)});
 });
 document.addEventListener('keydown', event => {
   if (event.code === 'Space' && event.target === document.body && !pause.disabled) {
@@ -61,14 +63,18 @@ document.querySelector('#fullscreen').addEventListener('click', async () => {
 function resize() {
   // Explicit pixel budget: HiDPI/fullscreen never silently multiplies GPU work.
   const height = Number(document.querySelector('#resolution').value);
-  canvas.width = Math.round(height * 16 / 9);
-  canvas.height = height;
+  const width = Math.round(height * 16 / 9);
+  if (rendererWorker) rendererWorker.postMessage({type: 'resize', width, height});
+  else { canvas.width = width; canvas.height = height; }
 }
 document.querySelector('#resolution').addEventListener('change', resize);
 resize();
-canvas.addEventListener('webglcontextlost', event => {
-  event.preventDefault();
-  window.previewError('The graphics context was lost. Reload to restart the preview.');
+document.addEventListener('visibilitychange', () => {
+  rendererWorker?.postMessage({type: 'visibility', value: document.hidden});
+});
+document.querySelector('#stop').addEventListener('click', () => {
+  rendererWorker?.terminate();
+  location.reload();
 });
 async function start() {
   try {
@@ -95,16 +101,21 @@ async function start() {
     launch.addEventListener('click', () => {
       launch.hidden = true;
       status.textContent = 'Downloading the observatory…';
-      window.Module = {
-        canvas,
-        setStatus(message) { if (message && !failed) status.textContent = message; },
-        printErr(message) { console.error(message); },
-        onAbort(message) { window.previewError(String(message)); }
+      if (!canvas.transferControlToOffscreen) {
+        window.previewError('This preview requires OffscreenCanvas support.');
+        return;
+      }
+      rendererWorker = new Worker('render-worker.js');
+      rendererWorker.onerror = event => window.previewError(event.message || 'The renderer worker stopped.');
+      rendererWorker.onmessage = ({data}) => {
+        if (data.type === 'frame') window.previewFrame(data.frame);
+        else if (data.type === 'error') window.previewError(data.message);
+        else if (data.type === 'status' && !failed) status.textContent = data.message;
       };
-      const script = document.createElement('script');
-      script.src = 'observatory.js';
-      script.onerror = () => window.previewError('Could not download the renderer. Reload to retry.');
-      document.body.append(script);
+      const offscreen = canvas.transferControlToOffscreen();
+      rendererWorker.postMessage({type: 'start', canvas: offscreen,
+        options: Object.fromEntries(new URLSearchParams(location.search)), hidden: document.hidden}, [offscreen]);
+      document.querySelector('#stop').hidden = false;
     }, { once: true });
   } catch (error) { window.previewError(error.message); }
 }
