@@ -39,16 +39,20 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
     glGenBuffers(1, &meteorBuffer);
     glBindVertexArray(meteorVao);
     glBindBuffer(GL_ARRAY_BUFFER, meteorBuffer);
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 4; ++i) {
       glEnableVertexAttribArray(i);
-      glVertexAttribPointer(i, i == 0 ? 2 : 4, GL_FLOAT, GL_FALSE,
-                            10 * sizeof(float),
+      glVertexAttribPointer(i,
+                            i == 0   ? 2
+                            : i == 3 ? 1
+                                     : 4,
+                            GL_FLOAT, GL_FALSE, 11 * sizeof(float),
                             reinterpret_cast<void *>(size_t(i == 0   ? 0
                                                             : i == 1 ? 2
-                                                                     : 6) *
+                                                            : i == 2 ? 6
+                                                                     : 10) *
                                                      sizeof(float)));
     }
-    meteorVertices.reserve(batch.segments.size() * 6 * 10);
+    meteorVertices.reserve(batch.segments.size() * 6 * 11);
   }
   struct Pixel {
     double x, y;
@@ -72,20 +76,22 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
                             ? Pixel{(b.x - a.x) / length, (b.y - a.y) / length}
                             : Pixel{1, 0};
     const Pixel across{-along.y, along.x};
+    const double sigma = std::max(.035, segment.sigma * height / 1080.);
+    const double padding = 1 + 5.5 * sigma;
     auto corner = [&](Pixel p, double end, double side) {
-      return Pixel{p.x + 8 * (end * along.x + side * across.x),
-                   p.y + 8 * (end * along.y + side * across.y)};
+      return Pixel{p.x + padding * (end * along.x + side * across.x),
+                   p.y + padding * (end * along.y + side * across.y)};
     };
     const auto tl = corner(a, -1, 1), bl = corner(a, -1, -1),
                tr = corner(b, 1, 1), br = corner(b, 1, -1);
     const Vec3 flux =
         segment.color * (segment.flux * .8 * std::pow(height / 1080., 2));
     for (auto p : {tl, bl, tr, tr, bl, br})
-      meteorVertices.insert(
-          meteorVertices.end(),
-          {float(p.x), float(p.y), float(a.x), float(a.y), float(b.x),
-           float(b.y), float(flux.x), float(flux.y), float(flux.z),
-           float(std::max(.4, segment.sigma * height / 1080.))});
+      meteorVertices.insert(meteorVertices.end(),
+                            {float(p.x), float(p.y), float(a.x), float(a.y),
+                             float(b.x), float(b.y), float(flux.x),
+                             float(flux.y), float(flux.z), float(sigma),
+                             float(segment.taper)});
   }
   if (meteorVertices.empty())
     return;
@@ -99,7 +105,7 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
   glBindBuffer(GL_ARRAY_BUFFER, meteorBuffer);
   glBufferData(GL_ARRAY_BUFFER, meteorVertices.size() * sizeof(float),
                meteorVertices.data(), GL_STREAM_DRAW);
-  glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 10);
+  glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 11);
   glDisable(GL_BLEND);
 }
 void Renderer::revealMeteors(const Scene &s, int width, int height,
@@ -122,7 +128,7 @@ void Renderer::revealMeteors(const Scene &s, int width, int height,
                       GL_ONE);
   glBindVertexArray(meteorVao);
   glBindBuffer(GL_ARRAY_BUFFER, meteorBuffer);
-  glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 10);
+  glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 11);
   glDisable(GL_BLEND);
 }
 } // namespace observatory

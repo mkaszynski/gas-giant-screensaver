@@ -41,13 +41,15 @@ int main() {
     require(meteorPeriod(0) == 0 && meteorPeriod(13) == 0,
             "invalid encounter periods are rejected");
     for (int fps : {24, 30, 60}) {
-      double energy = 0;
-      constexpr double duration = .731;
-      for (int i = -2; i < fps * 2; ++i)
-        energy +=
-            meteorLightIntegral(i / double(fps), (i + 1.) / fps, duration);
-      require(std::abs(energy - duration * .5) < 1.e-12,
-              "sub-frame meteor energy is frame-rate independent");
+      for (double peakFraction : {.32, .5, .7}) {
+        double energy = 0;
+        constexpr double duration = .731;
+        for (int i = -2; i < fps * 2; ++i)
+          energy += meteorLightIntegral(i / double(fps), (i + 1.) / fps,
+                                        duration, peakFraction);
+        require(std::abs(energy - duration * .5) < 1.e-12,
+                "sub-frame meteor energy is frame-rate independent");
+      }
     }
     auto scene = sceneAt(1200);
     scene.sunLocal.y = -.4;
@@ -108,6 +110,24 @@ int main() {
               "1800/min produces the requested increase in event density");
       require(MeteorBatch{}.segments.size() >= 955,
               "capacity covers the worst-case candidate and train population");
+    }
+    {
+      double minimumRed = 2, maximumRed = 0;
+      for (uint64_t seed = 0; seed < 2048; ++seed) {
+        for (bool wake : {false, true}) {
+          const auto faint = meteor_detail::emissionColor(seed, 60, 2, wake),
+                     bright = meteor_detail::emissionColor(seed, 60, -3, wake);
+          require(std::abs(dot(bright, {.2126, .7152, .0722}) - 1) < 1.e-12,
+                  "emission color does not change the magnitude calibration");
+          require(std::abs(faint.x - 1) < .02 && std::abs(faint.y - 1) < .02 &&
+                      std::abs(faint.z - 1) < .02,
+                  "faint meteors stay nearly achromatic");
+          minimumRed = std::min(minimumRed, bright.x);
+          maximumRed = std::max(maximumRed, bright.x);
+        }
+      }
+      require(maximumRed - minimumRed > .03,
+              "composition varies color even at a shared entry speed");
     }
     {
       std::vector<double> powers, wakes;

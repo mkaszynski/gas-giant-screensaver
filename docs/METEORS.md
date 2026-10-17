@@ -27,28 +27,41 @@ moving the meteors with the screen. The observer's altitude, the moon's spin
 since birth and the changing local basis enter that transform. This is a visual
 ablation model, not a gas-dynamics simulation.
 
-The modeled bright population has magnitudes +2 to -4, using the existing
-catalog-star flux zero point and contrast adaptation. Event brightness also controls ablation depth and wake persistence: faint short strokes and brighter long tails coexist, with modest seeded variation. Their cores remain optically unresolved. The rate describes those
-bright candidates; fainter dust is omitted. Most heads are close to white with
-weak speed-dependent emission color. Atmospheric extinction reddens grazing
-streaks, and the nearby sunlit giant can wash out automatic showers. Manual review bypasses that contrast suppression. A selected brighter
-meteor is useful for reviewing the geometry; a typical frame is much quieter.
+The modeled bright population has magnitudes +2 to -4, using the catalog-star
+flux zero point. Larger ablation events penetrate farther and leave longer
+wakes; they do not become resolved rocks or thick heads. Seeded asymmetric
+light curves vary the rise and fall while retaining the same integrated energy
+at 24, 30 and 60 fps. A normalized, low-saturation linear-RGB approximation to
+Fe/Mg/Na and excited-air emission replaces the old binary speed palette. Faint
+meteors stay nearly white; brighter events reveal subtle composition differences.
+Wakes have a separate subdued color. This is an appearance model, not a spectral
+or gas-dynamics simulation.
 
-Heads use an exact exposure integral of their ablation envelope and a
-motion-blurred optical profile. A short wake fades behind them. Some bright
-meteors leave a weak ion train in the deposited air, with differential wind
-shear. These features use real seconds despite the accelerated celestial sky.
-They are not permanent glowing lines or a fullscreen flash. The [American
-Meteor Society's fireball FAQ](https://www.amsmeteors.org/fireballs/faqf/) informs
-the speed range, emission colors, short luminous lifetime and ion-train behavior.
+Physical head widths of 5–20 m project through the actual atmospheric distance.
+An optical sigma of .16 pixels at 1080p scales with resolution; there is no
+fixed minimum pixel width. The PSF is integrated over a square pixel rather than
+widening every streak to hide aliasing. Long strokes use an analytic projected
+pixel footprint, and short heads use six bounded quadrature samples. A linear
+light profile tapers the wake toward its older end. Ordinary strokes have no
+broad halo. Occasional bright, fast events can leave a much weaker stationary
+train, with wind shear and physical diffusion. These features use real seconds
+despite the accelerated celestial sky.
+
+The reference is a short exposure or direct view, rather than a stacked shower
+photograph. [CAMO measurements](https://academic.oup.com/mnras/article/433/2/962/1747090)
+separate instrumental bloom from true trail widths, including broad faint trails
+at high altitude. [Wake observations and modelling](https://academic.oup.com/mnras/article/447/2/1580/2593771)
+show substantial variation in width and length; the short-lived wake and residual
+train should not be one uniform luminous tube. The [AMS fireball FAQ](https://www.amsmeteors.org/fireballs/faqf/)
+explains why bright events reveal emission colors more readily than faint ones,
+and why trains differ from daylight smoke trails.
 
 Streaks enter the HDR scene ahead of the terrain/weather composite, so normal
 atmospheric transmission, cloud extinction, opaque terrain and water reflection
 apply to automatic showers. Manual triggers also draw the cloud-blocked fraction
 into the existing weather buffers using destination transmission; this adds one
 small streak draw, no target or fullscreen pass. Partial terrain silhouettes
-retain their sky coverage. They are in front of the distant giant, moons and rings. Gaussian line
-convolution, a pixel-footprint term and exposure integration avoid hard-edged,
+retain their sky coverage. They are in front of the distant giant, moons and rings. Pixel-integrated optical filtering and exposure integration avoid hard-edged,
 frame-dependent streaks. The tails are not photographic textures or noisy
 particle clouds.
 
@@ -57,11 +70,13 @@ particle clouds.
 The natural encounter clock is an O(1) query at arbitrary Unix timestamps;
 consecutive jittered starts have a proven 1–8 hour separation. At most 191 recent
 candidates are inspected, even at 1800/min and the longest supported exposure. Work and storage are bounded to 1024 line segments
-(240 KiB of reusable vertex storage); no extra render target, fullscreen pass or
+(264 KiB of reusable vertex storage); no extra render target, fullscreen pass or
 texture is added. An inactive effect issues no GPU work. The first active batch
 lazily creates its shader and buffer, and later batches reuse them.
 
-CPU tests cover scheduling, bounds, automatic night gating, manual daylight triggers, rate changes,
+Direct HDR optical tests check unit flux across trail lengths, orientations and
+subpixel positions, a centered unresolved core confined to one pixel row, absence
+of a broad halo, and wake taper. CPU tests cover scheduling, bounds, automatic night gating, manual daylight triggers, rate changes,
 frame-rate-independent exposure energy, physical altitude, observer movement, maximum-rate capacity, size/brightness diversity and forward/backward/endpoint seeks.
 GPU tests check visible manual output in night and daylight, zero automatic daytime output, optical stability
 under quarter-pixel camera shifts, restoration after disabling, the airborne

@@ -16,7 +16,7 @@ struct MeteorWindow {
 };
 struct MeteorSegment {
   Vec3 tail, head, color;
-  double flux = 0, sigma = .55;
+  double flux = 0, sigma = .16, taper = 0;
 };
 struct MeteorBatch {
   // At most ((6 + .25) * 30 + 3) candidates, with five segments each.
@@ -34,7 +34,8 @@ inline uint64_t hash(uint64_t x) {
 }
 inline double unit(uint64_t x) { return (hash(x) >> 11) * 0x1.0p-53; }
 struct Appearance {
-  double magnitude, flux, endHeight, wakeSeconds, wakeFade;
+  double magnitude, flux, endHeight, wakeSeconds, wakeFade, peakFraction,
+      widthMeters;
 };
 inline Appearance appearance(uint64_t seed) {
   // Keep the naked-eye population calibration. Brighter, larger ablation
@@ -43,9 +44,37 @@ inline Appearance appearance(uint64_t seed) {
   const double magnitude = std::clamp(
       2 + std::log(std::max(1.e-7, unit(seed + 6))) / std::log(2.5), -4., 2.);
   const double size = (2 - magnitude) / 6.;
-  return {magnitude, std::pow(10., -.4 * magnitude),
+  return {magnitude,
+          std::pow(10., -.4 * magnitude),
           94 - 10 * size - 3 * unit(seed + 8),
-          .06 + .19 * size + .045 * unit(seed + 9), .06 + .12 * size};
+          .012 + .065 * size + .014 * unit(seed + 9),
+          .018 + .035 * size,
+          .32 + .38 * unit(seed + 10),
+          5 + 15 * unit(seed + 11)};
+}
+inline Vec3 emissionColor(uint64_t seed, double speed, double magnitude,
+                          bool wake = false) {
+  // A low-saturation display approximation to Fe/Mg/Na emission and excited
+  // air, not a blackbody or a palette picked solely from entry speed. Color
+  // becomes more apparent in brighter meteors; faint events stay nearly white.
+  const double sodium = .25 + unit(seed + 31), magnesium = .4 + unit(seed + 32),
+               iron = .8 + unit(seed + 33),
+               air = std::clamp((speed - 30) / 38., 0., 1.);
+  Vec3 spectrum = Vec3{1.12, .98, .78} * iron +
+                  Vec3{.57, 1.04, .88} * magnesium +
+                  Vec3{1.78, .82, .14} * sodium + Vec3{.72, .98, 1.35} * air;
+  if (wake)
+    spectrum = spectrum + Vec3{.65, 1.12, .72} * (.4 + air);
+  spectrum = spectrum / dot(spectrum, Vec3{.2126, .7152, .0722});
+  const double chroma = .025 + .19 * std::clamp((1.5 - magnitude) / 4., 0., 1.);
+  return Vec3{1, 1, 1} * (1 - chroma) + spectrum * chroma;
+}
+inline double lightAt(double t, double duration, double peakFraction) {
+  if (t <= 0 || t >= duration)
+    return 0;
+  const double rise = duration * peakFraction;
+  return t < rise ? .5 * (1 - std::cos(pi * t / rise))
+                  : .5 * (1 + std::cos(pi * (t - rise) / (duration - rise)));
 }
 inline double smooth(double a, double b, double x) {
   x = std::clamp((x - a) / (b - a), 0., 1.);
@@ -106,10 +135,14 @@ inline double meteorNight(const Scene &s) {
 }
 // Exact integral of a sin-squared ablation pulse. A sub-frame meteor retains
 // its optical energy at 24/30/60 Hz instead of flashing on for a whole frame.
-inline double meteorLightIntegral(double begin, double end, double duration) {
-  auto primitive = [duration](double t) {
+inline double meteorLightIntegral(double begin, double end, double duration,
+                                  double peakFraction = .5) {
+  auto primitive = [duration, peakFraction](double t) {
     t = std::clamp(t, 0., duration);
-    return .5 * t - duration / (4 * pi) * std::sin(2 * pi * t / duration);
+    const double rise = duration * peakFraction, fall = duration - rise;
+    return t <= rise
+               ? .5 * t - rise / (2 * pi) * std::sin(pi * t / rise)
+               : .5 * t + fall / (2 * pi) * std::sin(pi * (t - rise) / fall);
   };
   return std::max(0., primitive(end) - primitive(begin));
 }
@@ -163,11 +196,19 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
   const Scene &reference = fieldScene ? *fieldScene : s;
   const MoonFrame current(s), field(reference);
   const Vec3 eye = field.eye;
-  auto add = [&](Vec3 tail, Vec3 head, Vec3 color, double flux, double sigma) {
+  auto add = [&](Vec3 tail, Vec3 head, Vec3 color, double flux,
+                 double widthMeters, double taper) {
+    const double distance = length((tail + head) * .5 - current.eye);
+    const double physicalSigma = 1080. / (2 * std::tan(29 * pi / 180)) *
+                                 widthMeters /
+                                 (1000. * std::max(1., distance) * 2.35482);
     if (flux > 1.e-9 && batch.count < batch.segments.size())
-      batch.segments[batch.count++] = {
-          current.local(tail - current.eye), current.local(head - current.eye),
-          color, flux * (preview ? 1. : meteorNight(s)), sigma};
+      batch.segments[batch.count++] = {current.local(tail - current.eye),
+                                       current.local(head - current.eye),
+                                       color,
+                                       flux * (preview ? 1. : meteorNight(s)),
+                                       std::hypot(.16, physicalSigma),
+                                       taper};
   };
   for (int64_t i = first; i <= last; ++i) {
     const uint64_t seed = hash(window.id ^ (uint64_t(i) * 0x718aa7));
@@ -216,28 +257,34 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
     // Sample the bright, naked-eye population (+2 or brighter). The rate
     // describes these events; unresolved faint dust needs no rendering work.
     const double magnitude = look.magnitude, flux = look.flux;
-    const double tint = .35 * std::clamp((1.5 - magnitude) / 4., 0., 1.);
-    const Vec3 baseColor = speed > 46 ? Vec3{.80, .92, 1.} : Vec3{1., .88, .73};
-    const Vec3 color = Vec3{.94, .97, 1.} * (1 - tint) + baseColor * tint;
+    const Vec3 color = emissionColor(seed, speed, magnitude);
     const double headFlux =
-        flux * meteorLightIntegral(age, age + exposure, duration) / exposure;
+        flux *
+        meteorLightIntegral(age, age + exposure, duration, look.peakFraction) /
+        exposure;
     if (headFlux > 0) {
+      const double before = lightAt(age, duration, look.peakFraction),
+                   after = lightAt(age + exposure, duration, look.peakFraction);
+      const double taper = std::clamp(
+          (after - before) / std::max(1.e-9, after + before), -.9, .9);
       add(start + velocity * std::clamp(age, 0., duration),
           start + velocity * std::clamp(age + exposure, 0., duration), color,
-          headFlux, .55);
+          headFlux, look.widthMeters, taper);
     }
     const double wakeEnd = std::clamp(age, 0., duration);
     const double wakeStart = std::max(0., wakeEnd - look.wakeSeconds);
     const double wakeFlux =
-        .24 * flux * meteorLightIntegral(wakeStart, wakeEnd, duration) /
+        .10 * flux *
+        meteorLightIntegral(wakeStart, wakeEnd, duration, look.peakFraction) /
         look.wakeSeconds *
         std::exp(-std::max(0., age - duration) / look.wakeFade);
     if (age > 0 && age < duration + .8)
-      add(start + velocity * wakeStart, start + velocity * wakeEnd, color,
-          wakeFlux, .65);
+      add(start + velocity * wakeStart, start + velocity * wakeEnd,
+          emissionColor(seed, speed, magnitude, true), wakeFlux,
+          look.widthMeters * 1.6, .88);
     // A few bright meteors leave a weak stationary ion train. Wind shears the
     // deposited air; it does not remain attached to the moving head.
-    if (magnitude < .5 && unit(seed + 7) < .25 && age > .2 &&
+    if (magnitude < -.5 && speed > 44 && unit(seed + 7) < .18 && age > .2 &&
         age < duration + 3.5) {
       for (int part = 0; part < 3; ++part) {
         const double a = duration * part / 3,
@@ -253,10 +300,12 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
             smooth(.20, .35, age) *
             (1 - smooth(duration + 2.8, duration + 3.5, age));
         const double deposited =
-            meteorLightIntegral(a, b, duration) / (.5 * duration);
-        const double glow = .035 * flux * trainFade * deposited *
+            meteorLightIntegral(a, b, duration, look.peakFraction) /
+            (.5 * duration);
+        const double glow = .014 * flux * trainFade * deposited *
                             std::exp(-std::max(0., age - (a + b) * .5) / 1.2);
-        add(deposit(a), deposit(b), {.87, .93, 1.}, glow, .9);
+        add(deposit(a), deposit(b), {.96, 1.015, .98}, glow,
+            std::hypot(look.widthMeters * 2., 45 * std::sqrt(age)), .35);
       }
     }
   }
