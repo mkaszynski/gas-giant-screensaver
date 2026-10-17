@@ -810,6 +810,7 @@
     "amd_complete_images": "pixel-identical across ocean/coast/forest/snow with both cloud models, day/twilight/night and historic fixed view",
     "mesa_complete_images": "passed unchanged two-code peak tolerance",
     "mesa_water_shadow": "passed existing physical-water and continuous-shadow gates",
-    "full_release_gate": "pending"
+    "full_release_gate": "Correctness/packaging passed on e0fe4ae:46CPU/CLI,offline,all15GPU suites onAMD andMesa,benchmark/profiler,Nixapp/native/config,all5CIchecks. Performance acceptance remains open; runtime probes rejected the sleeping/locked host before collecting samples.",
+    "fhd_parity": "All6exact1920x1080 comparisons against58cd2bc (forest/snow/coast, both cloud models) have zero differing channels."
   }
 }

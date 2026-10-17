@@ -14,6 +14,40 @@ import tempfile
 import time
 
 
+def parent_output_state(env):
+    monitors = json.loads(
+        subprocess.check_output(
+            ["hyprctl", "monitors", "-j"], env=env, stderr=subprocess.DEVNULL
+        )
+    )
+    return [
+        {k: m[k] for k in ("width", "height", "refreshRate", "dpmsStatus")}
+        for m in monitors
+    ]
+
+
+def require_benchmark_host(outputs, proc_root=Path("/proc"), excluded=()):
+    if not outputs or not all(m.get("dpmsStatus") is True for m in outputs):
+        raise ValueError("Native timing requires an awake Hyprland desktop")
+    competing = []
+    for process in proc_root.iterdir():
+        if not process.name.isdigit() or int(process.name) in excluded:
+            continue
+        try:
+            # Linux truncates comm to 15 bytes. Nix wrappers can also start
+            # with a dot, including .hyprlock-wrapp and .gas-giant-scre.
+            name = (process / "comm").read_text().strip().lstrip(".")
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        if name.startswith(("hyprlock", "gas-giant-scr")):
+            competing.append(process.name)
+    if competing:
+        raise ValueError(
+            f"Another observatory is running (PID {', '.join(competing)}); "
+            "unlock the desktop and close other previews before timing"
+        )
+
+
 def submission_report(log):
     surfaces = collections.defaultdict(list)
     for stamp, surface in re.findall(
@@ -55,18 +89,12 @@ def main():
         parser.error("refresh must be 30..240 Hz")
     root = Path(__file__).resolve().parents[1]
     env = {k: v for k, v in os.environ.items() if k != "LD_LIBRARY_PATH"}
+    parent_env = dict(env)
     try:
-        monitors = json.loads(
-            subprocess.check_output(
-                ["hyprctl", "monitors", "-j"], env=env, stderr=subprocess.DEVNULL
-            )
-        )
-        parent_outputs = [
-            {k: m[k] for k in ("width", "height", "refreshRate", "dpmsStatus")}
-            for m in monitors
-        ]
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
-        parent_outputs = None
+        parent_outputs = parent_output_state(parent_env)
+        require_benchmark_host(parent_outputs)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+        parser.error("Cannot establish a clean timing host: " + str(error))
     # Preserve the renderer donor connection through an absolute socket path,
     # while keeping the child compositor's IPC/surfaces in a private runtime.
     if not env.get("WAYLAND_DISPLAY") or not env.get("XDG_RUNTIME_DIR"):
@@ -184,6 +212,8 @@ def main():
                     raise RuntimeError(
                         "Native observatory fell back to an opaque rectangle"
                     )
+                parent_outputs_after = parent_output_state(parent_env)
+                require_benchmark_host(parent_outputs_after, excluded={lock.pid})
                 report = submission_report(raw[first:last].decode(errors="replace"))
                 report.update(
                     {
@@ -194,6 +224,7 @@ def main():
                         "presentation_measured": False,
                         "uses_running_wayland_parent": True,
                         "parent_output_state": parent_outputs,
+                        "parent_output_state_after": parent_outputs_after,
                         "data_directory": str(args.data_dir.resolve()),
                         "package": str(args.package.resolve()),
                     }
