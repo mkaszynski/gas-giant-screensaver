@@ -93,6 +93,11 @@ within 1.30 times that reference, and rendering within the 33.33 ms deadline at
 separate verification. Keep prior failed measurements and contaminated runs.
 A locked desktop rendering another observatory is unsuitable for acceptance.
 
+The [retained inland runtime trial](landscape-inland-runtime/README.md) failed
+the cost and deadline gates. It includes every measured run, longer memory
+probes, native submission intervals and rejected physical timestamps. Possible
+collector interference is being tested separately; no slow frames are omitted.
+
 A coastal fixture using the original thin-cloud model:
 
 ```sh

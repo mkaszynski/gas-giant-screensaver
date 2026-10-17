@@ -1,0 +1,216 @@
+{
+  "kind": "Exploratory correlation only; no frame exclusion or acceptance claim, all failed runs retained",
+  "clock_alignment": "C++steady_clock and Pythonmonotonic CLOCK_MONOTONIC seconds; no compositor presentation conversions used",
+  "summary": {
+    "0": {
+      "overlap_frames": 603,
+      "overlap_misses": 213,
+      "other_frames": 1437,
+      "other_misses": 1,
+      "overlap_miss_rate": 0.35323383084577115,
+      "other_miss_rate": 0.0006958942240779402
+    },
+    "0.05": {
+      "overlap_frames": 919,
+      "overlap_misses": 213,
+      "other_frames": 1121,
+      "other_misses": 1,
+      "overlap_miss_rate": 0.23177366702937977,
+      "other_miss_rate": 0.0008920606601248885
+    }
+  },
+  "records": [
+    {
+      "case": "coast-1-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 64,
+      "overlap_misses": 19,
+      "other_frames": 106,
+      "other_misses": 0
+    },
+    {
+      "case": "coast-1-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 83,
+      "overlap_misses": 19,
+      "other_frames": 87,
+      "other_misses": 0
+    },
+    {
+      "case": "coast-2-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 62,
+      "overlap_misses": 19,
+      "other_frames": 108,
+      "other_misses": 0
+    },
+    {
+      "case": "coast-2-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 85,
+      "overlap_misses": 19,
+      "other_frames": 85,
+      "other_misses": 0
+    },
+    {
+      "case": "coast-3-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 63,
+      "overlap_misses": 26,
+      "other_frames": 107,
+      "other_misses": 0
+    },
+    {
+      "case": "coast-3-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 85,
+      "overlap_misses": 26,
+      "other_frames": 85,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-1-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 46,
+      "overlap_misses": 16,
+      "other_frames": 124,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-1-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 75,
+      "overlap_misses": 16,
+      "other_frames": 95,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-2-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 52,
+      "overlap_misses": 16,
+      "other_frames": 118,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-2-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 77,
+      "overlap_misses": 16,
+      "other_frames": 93,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-3-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 49,
+      "overlap_misses": 18,
+      "other_frames": 121,
+      "other_misses": 0
+    },
+    {
+      "case": "forest-3-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 78,
+      "overlap_misses": 18,
+      "other_frames": 92,
+      "other_misses": 0
+    },
+    {
+      "case": "ocean-1-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 40,
+      "overlap_misses": 17,
+      "other_frames": 130,
+      "other_misses": 0
+    },
+    {
+      "case": "ocean-1-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 71,
+      "overlap_misses": 17,
+      "other_frames": 99,
+      "other_misses": 0
+    },
+    {
+      "case": "ocean-2-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 46,
+      "overlap_misses": 18,
+      "other_frames": 124,
+      "other_misses": 0
+    },
+    {
+      "case": "ocean-2-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 74,
+      "overlap_misses": 18,
+      "other_frames": 96,
+      "other_misses": 0
+    },
+    {
+      "case": "ocean-3-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 46,
+      "overlap_misses": 15,
+      "other_frames": 124,
+      "other_misses": 1
+    },
+    {
+      "case": "ocean-3-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 73,
+      "overlap_misses": 15,
+      "other_frames": 97,
+      "other_misses": 1
+    },
+    {
+      "case": "snow-1-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 42,
+      "overlap_misses": 17,
+      "other_frames": 128,
+      "other_misses": 0
+    },
+    {
+      "case": "snow-1-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 70,
+      "overlap_misses": 17,
+      "other_frames": 100,
+      "other_misses": 0
+    },
+    {
+      "case": "snow-2-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 45,
+      "overlap_misses": 16,
+      "other_frames": 125,
+      "other_misses": 0
+    },
+    {
+      "case": "snow-2-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 73,
+      "overlap_misses": 16,
+      "other_frames": 97,
+      "other_misses": 0
+    },
+    {
+      "case": "snow-3-candidate",
+      "lag_seconds": 0,
+      "overlap_frames": 48,
+      "overlap_misses": 16,
+      "other_frames": 122,
+      "other_misses": 0
+    },
+    {
+      "case": "snow-3-candidate",
+      "lag_seconds": 0.05,
+      "overlap_frames": 75,
+      "overlap_misses": 16,
+      "other_frames": 95,
+      "other_misses": 0
+    }
+  ]
+}
