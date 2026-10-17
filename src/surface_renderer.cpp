@@ -37,17 +37,20 @@ GLuint compile(GLenum type, const std::string &source) {
   }
   return s;
 }
+enum class SurfaceMaterial { general, deepWater, pureLand };
 GLuint link(const std::string &root, const char *vert, const char *frag,
             bool reflection = false, bool weather = true,
-            bool deepWater = false) {
+            SurfaceMaterial material = SurfaceMaterial::general) {
   auto fragment = shader(root, frag);
   fragment.insert(fragment.find('\n') + 1,
                   std::string("#define OBSERVATORY_WEATHER_MODE ") +
                       (weather ? "1\n" : "0\n"));
   if (reflection)
     fragment.insert(fragment.find('\n') + 1, "#define SURFACE_REFLECTION\n");
-  if (deepWater)
+  if (material == SurfaceMaterial::deepWater)
     fragment.insert(fragment.find('\n') + 1, "#define SURFACE_DEEP_WATER\n");
+  if (material == SurfaceMaterial::pureLand)
+    fragment.insert(fragment.find('\n') + 1, "#define SURFACE_PURE_LAND\n");
   GLuint v = compile(GL_VERTEX_SHADER, shader(root, vert)),
          f = compile(GL_FRAGMENT_SHADER, fragment), p = glCreateProgram();
   glAttachShader(p, v);
@@ -143,9 +146,12 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
       reflectionsEnabled(reflections), cullingEnabled(culling),
       waterLodEnabled(waterLod), weatherEnabled(weather) {
   program = link(root, "surface.vert", "surface.frag", false, weather);
-  if (waterLodEnabled)
+  if (waterLodEnabled) {
     waterProgram = link(root, "surface.vert", "surface.frag", false, weather,
-                        true);
+                        SurfaceMaterial::deepWater);
+    landProgram = link(root, "surface.vert", "surface.frag", false, weather,
+                       SurfaceMaterial::pureLand);
+  }
   if (reflectionsEnabled) {
     reflectionProgram = link(root, "surface.vert", "surface.frag", true, weather);
     glGenBuffers(1, &reflectionIndices);
@@ -284,6 +290,7 @@ SurfaceRenderer::~SurfaceRenderer() {
   glDeleteRenderbuffers(1, &reflectionDepth);
   glDeleteBuffers(1, &reflectionIndices);
   glDeleteProgram(waterProgram);
+  glDeleteProgram(landProgram);
   glDeleteProgram(program);
   glDeleteProgram(shadowProgram);
   glDeleteBuffers(1, &vertices);
@@ -497,13 +504,16 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
   // per-triangle CPU work occurs as the aircraft moves.
   std::array<SurfacePlane, 6> unrestricted{};
   bool waterBuffer = false;
+  const GLuint dryProgram = waterLod && mesh.pureLand ? landProgram : program;
+  if (waterLod && dryProgram != program)
+    glUseProgram(dryProgram);
   for (auto range : surfaceDrawRanges(
            mesh, cullingEnabled ? planes : unrestricted, waterLod)) {
     if (range.water != waterBuffer) {
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
                    range.water ? waterIndices : indices);
       if (waterLod)
-        glUseProgram(range.water ? waterProgram : program);
+        glUseProgram(range.water ? waterProgram : dryProgram);
       waterBuffer = range.water;
     }
     glDrawElements(
@@ -511,7 +521,7 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
         reinterpret_cast<void *>(size_t(range.firstIndex) * sizeof(uint32_t)));
   }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
-  if (waterLod && waterBuffer)
+  if (waterLod && (waterBuffer || dryProgram != program))
     glUseProgram(program);
 }
 void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
@@ -846,7 +856,10 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   };
   if (waterProgram && mesh.hasWater)
     surfaceUniforms(waterProgram);
-  surfaceUniforms(program);
+  if (landProgram && mesh.pureLand)
+    surfaceUniforms(landProgram);
+  else
+    surfaceUniforms(program);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   auto meshDirection = [&](Vec3 v) {
     return Vec3{frame[0] * v.x + frame[1] * v.y + frame[2] * v.z,

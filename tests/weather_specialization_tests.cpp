@@ -46,6 +46,10 @@ struct UniformBranches {
     const auto waterAt = source.find(deepWater);
     require(waterAt != std::string::npos, "deep-water specialization fixture");
     source.replace(waterAt, deepWater.size(), "#if 0");
+    const std::string pureLand = "#ifdef SURFACE_PURE_LAND";
+    const auto landAt = source.find(pureLand);
+    require(landAt != std::string::npos, "pure-land specialization fixture");
+    source.replace(landAt, pureLand.size(), "#if 0");
     std::ofstream(surfaceFile) << source;
   }
   ~UniformBranches() { std::filesystem::remove_all(path); }
@@ -139,7 +143,7 @@ int main() {
       }
       // Native/default weather stays available; specialization must not turn
       // off its actual clouds, transmission or reflected lighting.
-      for (double route : {0., 5600.390625}) {
+      for (double route : {0., 5600.390625, 162000., 210600.}) {
         SurfaceOptions options{true, 0, route};
         Renderer weather(Renderer::defaultDataDirectory(), {}, options);
         Renderer dynamicWeather(original.path.string(), {}, options);

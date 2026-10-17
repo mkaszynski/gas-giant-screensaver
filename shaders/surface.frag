@@ -160,6 +160,14 @@ void main(){
  #else
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
  #endif
+ #ifdef SURFACE_PURE_LAND
+ // All mesh vertices are above the shoreline blend, not only this block.
+ // Keep the early water branch for helper lanes and remove the final blend
+ // after land derivatives. Mixed coastal meshes retain the general shader.
+ const float shorelineBlend=0.;
+ #else
+ float shorelineBlend=water;
+ #endif
  vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
  vec4 foot=fwidth(phase);
  vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
@@ -261,7 +269,7 @@ void main(){
  roughness=mix(roughness,.28,wetness);
  float spec=dielectricSpecular(N,-d,uSun,max(.28,roughness),.04);
  land+=irradiance*NoL*spec*mix(1.,.35,forest);
- if(water>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude),water);
+ if(shorelineBlend>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude),shorelineBlend);
  vec3 T=aerialTransmission(distance);
  land=land*T+sky(d)*(1.-T);
  color=vec4(min(land*uSceneScale,vec3(60000.)),1.);

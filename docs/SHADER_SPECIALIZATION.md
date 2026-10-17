@@ -42,6 +42,34 @@ one 44.53 ms coastal frame. These are optimization diagnostics, not acceptance
 against frozen Phase 1 or physical presentation. The [measurement report](landscape-water-specialization-benchmark.json)
 retains every run, binary identity and command, including that slow reference.
 
+## Whole-mesh inland material program
+
+Meshes whose vertices are all at least 1 m above sea level use a cached land
+program. The shoreline mask is zero throughout these triangles; only the final
+zero-weight ocean blend is compiled out. The early water branch is retained so
+fragment helper lanes and derivatives follow the general program. Every vertex
+in the entire mesh must qualify. Mixed coastal meshes, ocean, shadow maps and
+optional reflected terrain retain their existing programs and draw batches.
+The classification is computed during the existing mesh build and swaps with
+that mesh. It adds one program and one boolean, with no new texture, render
+target, geometry, upload or per-frame terrain sampling.
+
+A per-block variant failed the unchanged image gate at the coast (9 display
+codes peak versus the allowed 2) and was discarded. Moving the classification
+to the entire mesh preserves the general shader at the shoreline. Complete AMD
+images are now pixel-identical for all four fixtures with both cloud models;
+Mesa passes the same existing tolerance. CPU checks cover inland vertices,
+mixed coasts, ocean rejection and cooperative mesh construction.
+
+Three alternating 90-frame diagnostics against `58cd2bc`, excluding the same
+first ten frames from each version, measured forest medians 14.149 → 12.511 ms
+(11.6% lower), snow 12.357 → 11.992 ms, coast 17.397 → 17.529 ms and ocean
+11.802 → 11.610 ms. This shared-desktop diagnostic does not establish a coastal
+gain or final budget acceptance. It retained 10 reference and 11 optimized snow
+deadline misses, plus 25 reference ocean misses. The [full report](landscape-inland-specialization-benchmark.json)
+retains every run and binary identity. The original Phase 1 acceptance target
+below remains unchanged.
+
 ## Verification
 
 `weather-specialization-tests` renders against a temporary reference shader
