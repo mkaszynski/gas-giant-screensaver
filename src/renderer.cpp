@@ -738,8 +738,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     double clock = weatherSeconds >= 0
                        ? weatherSeconds
                        : (emission.seconds >= 0 ? emission.seconds : seconds);
-    weatherState = weatherAt(weatherClimate(surface->world(), surfaceLocation),
-                             surfaceLocation, clock, emission.exposure);
+    weatherState =
+        weatherAt(weatherClimate(surface->world(), surfaceLocation),
+                  surfaceLocation, clock, emission.exposure, weatherPreset);
   }
   const GLState state;
   WEATHER_PROFILE_STAGE(0);

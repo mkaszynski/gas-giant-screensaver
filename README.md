@@ -2,9 +2,23 @@
 
 A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
 
-For interactive review, add `--debug` to the preview command. A time slider
-offers day, three-day flight and year ranges; drag and release to fast-forward
-the whole scene. Space pauses/resumes. The native lock screen has no debug UI.
+Move the cursor into the upper-right corner to reveal **Open debug menu**,
+then click it. This works in the standalone preview and the native lock screen.
+Use **X** to close the menu, or launch the preview with `--debug` to open it
+immediately. The time slider offers day, three-day flight and year ranges; drag
+and release to fast-forward the whole scene. In the preview, Space pauses/resumes,
+Home resets the range, and Left/Right step time. On the lock screen, keyboard
+input remains exclusively for authentication; use the menu's mouse controls.
+
+**Weather** offers Auto, Clear, Fair, Overcast, Fog and Storm. Auto restores the
+current biome's evolving weather. Overrides preserve wind and cloud motion and
+feed the same cloud, ground-shadow, reflection, precipitation and lightning
+rendering. Fog is usually below the aircraft; storms can obscure the giant.
+These are temporary, per-window/output controls, reset when the screensaver
+restarts. The airborne weather path must be enabled (not `--fixed-view` or
+`--no-weather`). Hidden menus issue no extra GPU draws or allocations. Native
+pointer controls require `general:hide_cursor = false`, as in the shipped config.
+
 A large gas giant hangs above the mountains while twenty eccentric moons move
 through a shared 3D system. Slender, translucent ice rings share the giant’s
 tilted equator. Sunlight, phases and eclipse shadows follow that

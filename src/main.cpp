@@ -4,6 +4,7 @@
 #include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
@@ -34,6 +35,17 @@ int integerArgument(const char *text, int low, int high) {
     throw std::runtime_error("Expected an integer: " + std::string(text));
   return static_cast<int>(n);
 }
+// Preserve each button edge and its cursor position between rendered frames.
+// Polling only the final sticky state loses consecutive clicks on a slow GPU.
+struct PreviewPointerInput {
+  struct Event {
+    double x, y;
+    bool down;
+  };
+  std::array<Event, 64> events{};
+  size_t count = 0;
+  double x = 0, y = 0;
+};
 } // namespace
 int main(int argc, char **argv) {
   try {
@@ -91,9 +103,11 @@ int main(int argc, char **argv) {
                "comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
-               "  --debug                 Time slider: day, flight or year; "
-               "release to seek\n"
+               "  --debug                 Open time and weather controls at "
+               "launch; "
+               "release slider to seek\n"
                "Space pauses; Home resets the slider; Left/Right step time.\n"
+               "Move to the upper-right corner to reveal OPEN DEBUG MENU.\n"
                "Escape or Q closes the preview. This preview does "
                "not lock your session.\n";
         return 0;
@@ -222,9 +236,27 @@ int main(int argc, char **argv) {
         glfwCreateWindow(w, h, "Gas Giant Observatory", monitor, nullptr);
     if (!window)
       throw std::runtime_error("Cannot create GLES 3 window");
-    if (debug) {
-      // Retain short clicks/key presses between capped render frames.
-      glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, GLFW_TRUE);
+    const bool interactive = capture.empty() && record.empty() && !benchmark;
+    PreviewPointerInput pointerInput;
+    if (interactive) {
+      glfwSetWindowUserPointer(window, &pointerInput);
+      glfwGetCursorPos(window, &pointerInput.x, &pointerInput.y);
+      glfwSetCursorPosCallback(window, [](GLFWwindow *win, double x, double y) {
+        auto &input =
+            *static_cast<PreviewPointerInput *>(glfwGetWindowUserPointer(win));
+        input.x = x;
+        input.y = y;
+      });
+      glfwSetMouseButtonCallback(window, [](GLFWwindow *win, int button,
+                                            int action, int) {
+        if (button != GLFW_MOUSE_BUTTON_LEFT)
+          return;
+        auto &input =
+            *static_cast<PreviewPointerInput *>(glfwGetWindowUserPointer(win));
+        if (input.count < input.events.size())
+          input.events[input.count++] = {input.x, input.y,
+                                         action == GLFW_PRESS};
+      });
       glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
     }
     glfwMakeContextCurrent(window);
@@ -255,8 +287,8 @@ int main(int argc, char **argv) {
       if (weatherTime < 0)
         weatherTime = time;
       std::unique_ptr<DebugOverlay> controls;
-      if (debug)
-        controls = std::make_unique<DebugOverlay>(time, day);
+      if (interactive)
+        controls = std::make_unique<DebugOverlay>(time, day, debug);
       // Shader/asset loading is not part of the interactive timeline.
       start = Clock::now();
       std::ofstream frameLog;
@@ -278,8 +310,36 @@ int main(int argc, char **argv) {
         if (timeout > 0 && elapsed >= timeout)
           break;
         glfwPollEvents();
-        if (controls)
-          controls->input(window, elapsed);
+        if (controls) {
+          int ww, wh;
+          double x, y;
+          glfwGetWindowSize(window, &ww, &wh);
+          glfwGetCursorPos(window, &x, &y);
+          // Poll only while the pointer belongs to this window. A lost focus
+          // still releases a drag; stale cursor coordinates cannot reveal UI.
+          bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED);
+          bool hovered = glfwGetWindowAttrib(window, GLFW_HOVERED);
+          bool down =
+              glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+          if (ww > 0 && wh > 0) {
+            for (size_t i = 0; i < pointerInput.count; ++i) {
+              auto event = pointerInput.events[i];
+              controls->menu.pointer(ww, wh, event.x, event.y, event.down,
+                                     elapsed, focused);
+            }
+            controls->menu.pointer(
+                ww, wh, x, y, focused && down, elapsed,
+                focused && (hovered || controls->menu.timeline.dragging()));
+          }
+          pointerInput.count = 0;
+          controls->menu.keys(
+              {focused && glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS,
+               focused && glfwGetKey(window, GLFW_KEY_HOME) == GLFW_PRESS,
+               focused && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS,
+               focused && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS},
+              elapsed);
+          renderer.setWeatherPreset(controls->menu.weather());
+        }
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
           break;
