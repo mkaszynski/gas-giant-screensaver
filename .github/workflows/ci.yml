@@ -18,6 +18,7 @@ jobs:
           ctest --test-dir build --output-on-failure
           python3 tests/test_native_benchmark.py
           python3 scripts/tests/test_benchmark_native_guard.py
+          python3 scripts/tests/test_workload_sampler.py
       - name: Offline galaxy model behavior
         run: |
           python3 -m venv /tmp/sky-model-tests

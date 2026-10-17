@@ -98,6 +98,20 @@ the cost and deadline gates. It includes every measured run, longer memory
 probes, native submission intervals and rejected physical timestamps. Possible
 collector interference is being tested separately; no slow frames are omitted.
 
+`scripts/workload_sampler.py` provides the next collector's read-only counters.
+It uses aggregate Linux CPU busy time instead of repeatedly reading every
+process's CPU metadata. Interrupt and steal time remain included; observed
+renderer, collector and compositor process time is subtracted, with compositor
+load also reported separately. Unobserved renderer CPU time at exit stays in
+the background estimate, making the estimate conservative. GPU handles are
+deduplicated per device/client and cached between full boundary discoveries;
+new processes are checked during a run. Callers must reject changed GPU client
+sets, a sleeping/competing-renderer host and active samples exceeding 10 ms.
+As with any sampled telemetry, this is not an exhaustive GPU trace: a transient
+new handle in an existing process can escape boundary discovery. The helper's
+14 synthetic regressions pass; its real overhead still requires measurement
+on a clean host. This does not change the original rendering or acceptance gates.
+
 A coastal fixture using the original thin-cloud model:
 
 ```sh
