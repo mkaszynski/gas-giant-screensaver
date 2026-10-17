@@ -13,6 +13,12 @@ double scene = 510, weather = 1790900000, lastTick = 0, lastRender = -1e6;
 bool paused = false, synchronize = false, hidden = false, redraw = true;
 int drawnWidth = 0, drawnHeight = 0;
 int frames = 0;
+GLsync submitted = nullptr;
+struct SubmittedFrame {
+  int count, width, height, builds;
+  double time, cost;
+  bool pending, paused;
+} completed{};
 
 EM_JS(double, option, (const char *name, double fallback, double low, double high), {
   const text = Module.previewOptions[UTF8ToString(name)] ?? null;
@@ -30,9 +36,25 @@ void frame() {
   try {
     const double now = emscripten_get_now();
     const double elapsed = std::max(0., (now - lastTick) / 1000.);
-    lastTick = now;
-    if (hidden)
+    if (hidden) {
+      lastTick = now;
       return;
+    }
+    // Keep at most one GPU frame outstanding. Never busy-wait on a slow GPU
+    // or let rAF submissions accumulate behind shader compilation/rendering.
+    if (submitted) {
+      const GLenum state = glClientWaitSync(submitted, 0, 0);
+      if (state == GL_WAIT_FAILED)
+        throw std::runtime_error("Cannot track GPU frame completion.");
+      if (state == GL_TIMEOUT_EXPIRED)
+        return;
+      glDeleteSync(submitted);
+      submitted = nullptr;
+      reportFrame(completed.count, completed.time, completed.cost,
+                  completed.width, completed.height, completed.builds,
+                  completed.pending, completed.paused);
+    }
+    lastTick = now;
     if (!paused) {
       scene += elapsed;
       weather += elapsed;
@@ -59,8 +81,14 @@ void frame() {
     redraw = false;
     drawnWidth = width;
     drawnHeight = height;
-    reportFrame(++frames, scene, emscripten_get_now() - start, width, height,
-                renderer->surfaceBuildsStarted(), renderer->surfaceBuildPending(), paused);
+    completed = {++frames, width, height,
+                 static_cast<int>(renderer->surfaceBuildsStarted()), scene,
+                 emscripten_get_now() - start, renderer->surfaceBuildPending(), paused};
+    submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!submitted)
+      throw std::runtime_error("Cannot track the rendered GPU frame.");
+    glFlush();
+
   } catch (const std::exception &error) {
     emscripten_cancel_main_loop();
     reportError(error.what());
