@@ -94,8 +94,31 @@ int main() {
       day.sunLocal.y = .3;
       auto dayOff = shot(renderer, day, .9, MeteorMode::Off),
            dayOn = shot(renderer, day, .9, MeteorMode::Preview);
-      require(difference(dayOff, dayOn).peak == 0,
-              "daytime adds no meteor pixels");
+      require(difference(dayOff, dayOn).peak > 5,
+              "manual trigger visibly renders in daylight");
+      std::cout << "Manual daylight peak=" << difference(dayOff, dayOn).peak
+                << '\n';
+      auto dayAuto = shot(renderer, day, .9, MeteorMode::Auto);
+      require(difference(dayOff, dayAuto).peak == 0,
+              "automatic daytime rendering adds no meteor pixels");
+      {
+        auto glare = day;
+        const auto radiant = meteor_detail::world(
+            glare, normalized(glare.forward * .65 + Vec3{0, .8, 0}));
+        const auto batch = meteorsAt({1200.9, 1. / 30,
+                                      {MeteorMode::Preview, 60, 1200}},
+                                     glare, 16. / 9., 1800, radiant, &glare);
+        require(batch.count > 0, "solar-overlap meteor fixture");
+        glare.sunLocal = normalized(batch.segments[0].head);
+        glare.sun = meteor_detail::world(glare, glare.sunLocal);
+        glare.sunVisibility = 1;
+        const auto bright = shot(renderer, glare, .9, MeteorMode::Off),
+                   stroke = shot(renderer, glare, .9, MeteorMode::Preview);
+        for (size_t i = 0; i < bright.size(); ++i)
+          if (i % 4 != 3)
+            require(int(stroke[i]) >= int(bright[i]) - 1,
+                    "daylight strokes cannot overflow HDR or darken the sky");
+      }
       auto disabled = shot(renderer, s, .8, MeteorMode::Off);
       require(difference(reference, disabled).peak == 0,
               "disabling restores exact scene and GL state");
@@ -146,8 +169,10 @@ int main() {
           overcast.setWeatherPreset(WeatherPreset::Storm);
           auto off = shot(overcast, view, .9, MeteorMode::Off);
           auto on = shot(overcast, view, .9, MeteorMode::Preview);
-          require(difference(off, on).peak <= 1,
-                  "opaque real cloud volume hides meteors above it");
+          require(difference(off, on).peak > 5,
+                  "manual trigger remains visible through opaque clouds");
+          std::cout << "Manual opaque-cloud peak=" << difference(off, on).peak
+                    << '\n';
           std::filesystem::remove_all(fixture);
         } catch (...) {
           std::filesystem::remove_all(fixture);

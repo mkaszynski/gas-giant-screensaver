@@ -120,6 +120,7 @@ private:
   void rings(GLuint, const Scene &, bool enabled);
   void quad(GLuint);
   void drawMeteors(const Scene &, int, int, double daySeconds);
+  void revealMeteors(const Scene &, int, int, GLuint surfaceTexture);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,
                  double daySeconds);
 };

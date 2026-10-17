@@ -3,7 +3,7 @@
 Natural mode schedules fictional encounters with cometary debris every 1–8
 real hours, averaging 4.5 hours. Each encounter lasts 6–16 minutes with a soft
 rise/fall in the arrival rate. This cadence compresses shower encounters for a
-screensaver; it does not reproduce Earth's annual meteor calendar. A shower can
+screensaver; it does not reproduce Earth's annual meteor calendar. An automatic shower can
 be missed in daylight, beneath clouds or with its radiant below the horizon.
 
 The debug menu offers Auto, Preview now and Off. Two logarithmic sliders separate encounter frequency from activity inside a
@@ -12,8 +12,10 @@ random gaps of 1–8 hours; the displayed random range scales with that setting.
 Very short debug intervals shorten encounters to avoid overlapping them.
 **Meteors** selects .5–60 bright visible-field candidates per minute within a
 shower, default 3. Preview now resets the stream epoch and gives its first
-candidate after .55 seconds. The night gate still applies and the menu says
-"Waiting for dark sky" when appropriate. The controls change event rates,
+candidate after .55 seconds. An explicit trigger is a debug visibility override:
+it renders in daylight and through cloud cover, with daytime contrast adaptation.
+Terrain remains opaque. Auto retains its night gate and physical cloud extinction.
+The menu labels the manual override "Manual shower - all skies". The controls change event rates,
 not the speed of individual meteors. A fresh launch restores defaults.
 
 ## Appearance and geometry
@@ -42,7 +44,10 @@ the speed range, emission colors, short luminous lifetime and ion-train behavior
 
 Streaks enter the HDR scene ahead of the terrain/weather composite, so normal
 atmospheric transmission, cloud extinction, opaque terrain and water reflection
-apply. They are in front of the distant giant, moons and rings. Gaussian line
+apply to automatic showers. Manual triggers also draw the cloud-blocked fraction
+into the existing weather buffers using destination transmission; this adds one
+small streak draw, no target or fullscreen pass. Partial terrain silhouettes
+retain their sky coverage. They are in front of the distant giant, moons and rings. Gaussian line
 convolution, a pixel-footprint term and exposure integration avoid hard-edged,
 frame-dependent streaks. The tails are not photographic textures or noisy
 particle clouds.
@@ -56,11 +61,11 @@ candidates are inspected. Work and storage are bounded to 96 line segments
 texture is added. An inactive effect issues no GPU work. The first active batch
 lazily creates its shader and buffer, and later batches reuse them.
 
-CPU tests cover scheduling, bounds, night-only behavior, rate changes,
+CPU tests cover scheduling, bounds, automatic night gating, manual daylight triggers, rate changes,
 frame-rate-independent exposure energy, physical altitude and observer movement.
-GPU tests check visible night output, zero daytime output, optical stability
+GPU tests check visible manual output in night and daylight, zero automatic daytime output, optical stability
 under quarter-pixel camera shifts, restoration after disabling, the airborne
-HDR path and extinction by a deliberately opaque cloud volume. The actual
+HDR path and manual visibility through a deliberately opaque cloud volume. The actual
 preview interaction test selects meteor modes and drags both frequency controls;
 CI also runs these tests with Mesa software rendering.
 

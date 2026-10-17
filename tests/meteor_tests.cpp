@@ -143,8 +143,13 @@ int main() {
     }
     auto daylight = scene;
     daylight.sunLocal.y = .1;
+    require(meteorsAt(frame, daylight, 16. / 9., 1800, radiant).count ==
+                fixed.count,
+            "manual trigger retains its meteor stream in daylight");
+    frame.options.mode = MeteorMode::Auto;
+    frame.seconds = meteorShowerStart(0) + 200;
     require(!meteorsAt(frame, daylight, 16. / 9., 1800, radiant).count,
-            "preview never bypasses daylight gate");
+            "automatic encounters remain night-only inside their window");
     frame.options.mode = MeteorMode::Off;
     require(!meteorsAt(frame, scene, 16. / 9., 1800, radiant).count,
             "off disables all events");

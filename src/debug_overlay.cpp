@@ -229,9 +229,9 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
            << menu.meteorOptions.intervalHours * 16. / 9. << " H";
     const std::string status = menu.meteorOptions.mode == MeteorMode::Off
                                    ? "SHOWERS DISABLED"
-                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
                                : menu.meteorOptions.mode == MeteorMode::Preview
-                                   ? "PREVIEW SHOWER - NIGHT ONLY"
+                                   ? "MANUAL SHOWER - ALL SKIES"
+                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
                                    : rarity.str();
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
          1.5 * layout.scale, status);

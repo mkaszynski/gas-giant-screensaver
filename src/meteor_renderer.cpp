@@ -2,11 +2,12 @@
 #include <algorithm>
 namespace observatory {
 void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
+  meteorVertices.clear();
   meteorDark = meteorNight(s) > .01;
-  if (!meteorDark || meteorFrame.seconds < 0 ||
+  const bool preview = meteorFrame.options.mode == MeteorMode::Preview;
+  if ((!preview && !meteorDark) || meteorFrame.seconds < 0 ||
       meteorFrame.options.mode == MeteorMode::Off)
     return;
-  const bool preview = meteorFrame.options.mode == MeteorMode::Preview;
   const auto window =
       meteorWindowAt(meteorFrame.seconds, meteorFrame.options.intervalHours);
   if (!preview && (meteorFrame.seconds < window.start ||
@@ -47,7 +48,6 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
     }
     meteorVertices.reserve(batch.segments.size() * 6 * 10);
   }
-  meteorVertices.clear();
   struct Pixel {
     double x, y;
   };
@@ -88,13 +88,38 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
   if (meteorVertices.empty())
     return;
   common(meteorProgram, s, width, height);
+  glUniform1i(glGetUniformLocation(meteorProgram, "uMeteorManual"), preview);
+  glUniform1i(glGetUniformLocation(meteorProgram, "uMeteorReveal"), false);
   glDisable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
-  glBlendFunc(GL_ONE, GL_ONE);
+  glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
   glBindVertexArray(meteorVao);
   glBindBuffer(GL_ARRAY_BUFFER, meteorBuffer);
   glBufferData(GL_ARRAY_BUFFER, meteorVertices.size() * sizeof(float),
                meteorVertices.data(), GL_STREAM_DRAW);
+  glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 10);
+  glDisable(GL_BLEND);
+}
+void Renderer::revealMeteors(const Scene &s, int width, int height,
+                           GLuint surfaceTexture) {
+  if (meteorFrame.options.mode != MeteorMode::Preview || meteorVertices.empty())
+    return;
+  // The manual trigger is a visibility override. The scene already contains
+  // the meteor: add only its cloud-blocked fraction to the weather radiance.
+  // Destination alpha is transmission, so blending provides (1-T) without
+  // sampling a framebuffer attachment or allocating another render target.
+  common(meteorProgram, s, width, height);
+  glUniform1i(glGetUniformLocation(meteorProgram, "uMeteorManual"), true);
+  glUniform1i(glGetUniformLocation(meteorProgram, "uMeteorReveal"), true);
+  bind(meteorProgram, 15, "uMeteorSurface", surfaceTexture);
+  glUniform1f(glGetUniformLocation(meteorProgram, "uMeteorSurfaceFraction"),
+              surface->coverageFraction());
+  glDisable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFuncSeparate(GL_ONE_MINUS_DST_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO,
+                      GL_ONE);
+  glBindVertexArray(meteorVao);
+  glBindBuffer(GL_ARRAY_BUFFER, meteorBuffer);
   glDrawArrays(GL_TRIANGLES, 0, meteorVertices.size() / 10);
   glDisable(GL_BLEND);
 }

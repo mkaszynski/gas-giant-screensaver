@@ -83,8 +83,8 @@ inline MeteorWindow meteorWindowAt(double seconds, double intervalHours = 4.5) {
   return {meteorShowerStart(id, intervalHours), duration, id};
 }
 inline double meteorNight(const Scene &s) {
-  // This effect is intentionally night-only, including when previewed. An
-  // eclipse with the Sun above the horizon does not bypass the night gate.
+  // Natural encounters are night-only. An explicit manual trigger bypasses
+  // this gate; an eclipse alone does not change the automatic night schedule.
   return 1 - meteor_detail::smooth(-.24, -.10, s.sunLocal.y);
 }
 // Exact integral of a sin-squared ablation pulse. A sub-frame meteor retains
@@ -102,16 +102,16 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
                              const Scene *fieldScene = nullptr) {
   using namespace meteor_detail;
   MeteorBatch batch;
+  const bool preview = frame.options.mode == MeteorMode::Preview;
   if (!std::isfinite(frame.seconds) || frame.seconds < 0 ||
       frame.seconds > 1.e10 || !std::isfinite(frame.exposure) ||
       !std::isfinite(frame.options.rate) ||
       meteorPeriod(frame.options.intervalHours) <= 0 ||
       !std::isfinite(aspect) || !std::isfinite(day) || day <= 0 ||
       aspect <= 0 || frame.options.mode == MeteorMode::Off ||
-      meteorNight(s) <= 0)
+      (!preview && meteorNight(s) <= 0))
     return batch;
   auto window = meteorWindowAt(frame.seconds, frame.options.intervalHours);
-  const bool preview = frame.options.mode == MeteorMode::Preview;
   if (preview) {
     if (!std::isfinite(frame.options.previewStart) ||
         frame.options.previewStart < 0 || frame.options.previewStart > 1.e10)
@@ -146,7 +146,8 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
     if (flux > 1.e-9 && batch.count < batch.segments.size())
       batch.segments[batch.count++] = {current.local(tail - current.eye),
                                        current.local(head - current.eye), color,
-                                       flux * meteorNight(s), sigma};
+                                       flux * (preview ? 1. : meteorNight(s)),
+                                       sigma};
   };
   for (int64_t i = first; i <= last; ++i) {
     const uint64_t seed = hash(window.id ^ (uint64_t(i) * 0x718aa7));

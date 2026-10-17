@@ -978,6 +978,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     quad(weatherProgram);
+    revealMeteors(s, w, h, surfaceTexture);
   }
   WEATHER_PROFILE_STAGE(6);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
