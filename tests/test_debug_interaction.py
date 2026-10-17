@@ -114,7 +114,7 @@ def run():
                 x("mouseup", 1)
                 time.sleep(.3)
                 click(60, 38)
-                time.sleep(.9)
+                time.sleep(1.8)  # Build a population beyond the initial .55s lead.
                 click(60, 38)
                 time.sleep(.25)
                 click(553, 38)
