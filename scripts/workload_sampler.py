@@ -103,7 +103,10 @@ class WorkloadSampler:
         background = (busy - own - compositor - self.excluded_ticks) / self.ticks
         cpu = {"aggregate": background}
         engines, compositor_engines, seen = {}, {}, set()
-        pids = {p.name for p in self.proc.iterdir() if p.name.isdigit()}
+        # Only names are needed for membership and new-process discovery.
+        # Path.iterdir creates/parses a Path for every host process on every
+        # sample, even when all GPU descriptors are already cached.
+        pids = {name for name in os.listdir(self.proc) if name.isdigit()}
         for pid in sorted(pids, key=lambda p: p != self.compositor):
             if pid in {self.own, str(exclude)}:
                 continue

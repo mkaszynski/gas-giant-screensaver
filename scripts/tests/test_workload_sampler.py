@@ -88,6 +88,29 @@ class WorkloadSamplerTests(unittest.TestCase):
         self.fd(102, 12)
         self.assertIn("0000:01:00.0:12", self.sampler.snapshot()["engines"])
 
+    def test_large_cached_process_set_keeps_metadata_reads_bounded(self):
+        # A busy desktop can have hundreds of non-GPU processes. Cached
+        # samples must still discover a new GPU client without rereading
+        # metadata for all of those already-known processes.
+        for pid in range(2000, 3000):
+            self.process(pid, "worker", 0)
+        (self.proc / "non-process-entry").mkdir()
+        self.sampler.snapshot(refresh=True)
+        self.process(3000, "new-client", 10)
+        self.fd(3000, 12)
+        reads = []
+        original = Path.read_text
+
+        def track(path, *args, **kwargs):
+            reads.append(path)
+            return original(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", track):
+            state = self.sampler.snapshot()
+        self.assertIn("0000:01:00.0:12", state["engines"])
+        self.assertLessEqual(len(reads), 8)
+        self.assertNotIn("non-process-entry", self.sampler.known)
+
     def test_new_handle_on_existing_process_is_found_at_boundary(self):
         before = self.sampler.snapshot(refresh=True)
         self.fd(101, 12, fd=8)

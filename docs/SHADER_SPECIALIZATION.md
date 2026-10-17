@@ -109,7 +109,7 @@ new processes are checked during a run. Callers must reject changed GPU client
 sets, a sleeping/competing-renderer host and active samples exceeding 10 ms.
 As with any sampled telemetry, this is not an exhaustive GPU trace: a transient
 new handle in an existing process can escape boundary discovery. The helper's
-14 synthetic regressions pass; its real overhead still requires measurement
+15 synthetic regressions pass; its real overhead still requires measurement
 on a clean host. This does not change the original rendering or acceptance gates.
 
 `scripts/hyprland_ipc.py` queries monitor state through Hyprland's read-only
@@ -125,6 +125,19 @@ hardware-state callback. It passed the unchanged 10 ms overhead limit in that
 probe. This establishes collector latency only: a clean-host interference
 control and fresh matched renderer trial remain necessary. Full boundary
 discovery stays outside active rendering, and no renderer frames are omitted.
+
+A subsequent hardware control exposed remaining process-enumeration overhead:
+active cycles reached 17.31 ms, failing the same limit. Profiling found repeated
+`Path` creation for all process IDs. Enumerating plain directory names preserves
+new-process discovery while avoiding those allocations. In twelve alternating
+idle pairs, median complete cycles decreased from 5.87 to 3.11 ms. The two new
+hardware control runs peaked at 7.42 and 9.47 ms. The overall control still
+failed: background GPU activity reached 9.36%, above the unchanged 5% limit,
+and background CPU load also exceeded its limit. These runs certify neither
+renderer non-interference nor the frame budget. The [diagnostic report](landscape-collector-latency.json)
+retains both failed controls, summaries and raw-artifact hashes. A regression
+with 1,000 cached processes checks bounded metadata reads while discovering a
+new GPU client. The renderer and NixOS pin are unchanged.
 
 A coastal fixture using the original thin-cloud model:
 
