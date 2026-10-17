@@ -25,6 +25,10 @@ EM_JS(void, reportFrame, (int count, double time, double cost, int width, int he
                          int builds, int pending), {
   window.previewFrame({count, time, cost, width, height, builds, pending: !!pending});
 });
+EM_BOOL visibilityChanged(int, const EmscriptenVisibilityChangeEvent *, void *) {
+  lastTick = emscripten_get_now();
+  return EM_FALSE;
+}
 void frame() {
   try {
     const double now = emscripten_get_now();
@@ -93,6 +97,7 @@ int main() {
     surface.offset = option("travel", 162000, 0, 1e10) - scene * surface.speed;
     renderer = std::make_unique<Renderer>("/", StarfieldOptions{}, surface);
     lastTick = emscripten_get_now();
+    emscripten_set_visibilitychange_callback(nullptr, false, visibilityChanged);
     emscripten_set_main_loop(frame, 0, false);
     return 0;
   } catch (const std::exception &error) {

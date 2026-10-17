@@ -25,6 +25,13 @@ if(EMSCRIPTEN)
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain@/assets/terrain"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/sky@/assets/sky"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/world@/assets/world")
+  file(GLOB_RECURSE web_data CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/sky/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/world/*")
+  set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
+    ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
   foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js)
     configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
   endforeach()

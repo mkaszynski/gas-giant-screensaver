@@ -9,6 +9,8 @@ let isPaused = new URLSearchParams(location.search).get('paused') === '1';
 let failed = false;
 window.previewError = message => {
   failed = true;
+  document.querySelector('#launch').hidden = true;
+  pause.disabled = time.disabled = true;
   loading.hidden = false;
   loading.querySelector('h2').textContent = 'Preview unavailable';
   status.textContent = message;
@@ -91,18 +93,18 @@ async function start() {
     const launch = document.querySelector('#launch');
     launch.disabled = false;
     launch.addEventListener('click', () => {
-    launch.hidden = true;
-    status.textContent = 'Downloading the observatory…';
-    window.Module = {
-      canvas,
-      setStatus(message) { if (message && !failed) status.textContent = message; },
-      printErr(message) { console.error(message); },
-      onAbort(message) { window.previewError(String(message)); }
-    };
-    const script = document.createElement('script');
-    script.src = 'observatory.js';
-    script.onerror = () => window.previewError('Could not download the renderer. Reload to retry.');
-    document.body.append(script);
+      launch.hidden = true;
+      status.textContent = 'Downloading the observatory…';
+      window.Module = {
+        canvas,
+        setStatus(message) { if (message && !failed) status.textContent = message; },
+        printErr(message) { console.error(message); },
+        onAbort(message) { window.previewError(String(message)); }
+      };
+      const script = document.createElement('script');
+      script.src = 'observatory.js';
+      script.onerror = () => window.previewError('Could not download the renderer. Reload to retry.');
+      document.body.append(script);
     }, { once: true });
   } catch (error) { window.previewError(error.message); }
 }
