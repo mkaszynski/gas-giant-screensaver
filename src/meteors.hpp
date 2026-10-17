@@ -219,7 +219,9 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
         const double trainFade =
             smooth(.20, .35, age) *
             (1 - smooth(duration + 2.8, duration + 3.5, age));
-        const double glow = .035 * flux * trainFade *
+        const double deposited =
+            meteorLightIntegral(a, b, duration) / (.5 * duration);
+        const double glow = .035 * flux * trainFade * deposited *
                             std::exp(-std::max(0., age - (a + b) * .5) / 1.2);
         add(deposit(a), deposit(b), {.87, .93, 1.}, glow, .9);
       }

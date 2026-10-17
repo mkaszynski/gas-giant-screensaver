@@ -84,11 +84,15 @@ int main() {
       require(length(a - b) < 1.e-6,
               "meteors remain anchored in moon coordinates, not the camera");
     }
-    auto trainPower = [&](double phase) {
+    auto trainBatch = [&](double phase) {
       auto f = frame;
       f.options.previewStart = 1254;
       f.seconds = 1254 + phase;
-      auto batch = meteorsAt(f, scene, 16. / 9., 1800, radiant, &scene);
+      f.options.rate = .5;
+      return meteorsAt(f, scene, 16. / 9., 1800, radiant, &scene);
+    };
+    auto trainPower = [&](double phase) {
+      auto batch = trainBatch(phase);
       double sum = 0;
       for (size_t i = 0; i < batch.count; ++i)
         sum += batch.segments[i].flux;
@@ -96,6 +100,21 @@ int main() {
     };
     require(std::abs(trainPower(.750001) - trainPower(.749999)) < .01,
             "persistent train emerges continuously instead of popping on");
+    for (double phase = .57; phase < 2.5; phase += .02) {
+      const auto count = trainBatch(phase - .02).count;
+      if (trainBatch(phase).count <= count)
+        continue;
+      double lo = phase - .02, hi = phase;
+      for (int step = 0; step < 40; ++step) {
+        const double mid = (lo + hi) * .5;
+        if (trainBatch(mid).count > count)
+          hi = mid;
+        else
+          lo = mid;
+      }
+      require(std::abs(trainPower(hi + 1.e-6) - trainPower(lo - 1.e-6)) < .01,
+              "new train sections deposit energy continuously");
+    }
     auto daylight = scene;
     daylight.sunLocal.y = .1;
     require(!meteorsAt(frame, daylight, 16. / 9., 1800, radiant).count,
