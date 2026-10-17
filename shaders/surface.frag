@@ -2,7 +2,9 @@
 precision highp float;
 in vec3 vPosition,vNormal,vProperties,vMesh;
 layout(location=0)out vec4 color;
+#if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
 layout(location=1)out float weatherDistance;
+#endif
 #include "atmosphere.glsl"
 #include "scene.glsl"
 #include "clouds.glsl"
@@ -147,7 +149,9 @@ void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,fl
 }
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);
+#if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
  weatherDistance=distance*.001;
+#endif
  float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
  vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
  vec4 foot=fwidth(phase);

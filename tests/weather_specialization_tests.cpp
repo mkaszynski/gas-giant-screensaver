@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_ES3
 #include "renderer.hpp"
+#include "surface_renderer.hpp"
 #include <GLFW/glfw3.h>
 #include <filesystem>
 #include <fstream>
@@ -60,6 +61,47 @@ void compare(const std::vector<unsigned char> &a,
   require(peak <= 2 && sum / a.size() < .003,
           "specialization preserves the complete rendered image");
 }
+void distanceTarget(const std::string &root) {
+  GLuint noise = 0;
+  glGenTextures(1, &noise);
+  glActiveTexture(GL_TEXTURE15);
+  glBindTexture(GL_TEXTURE_3D, noise);
+  const unsigned char empty = 0;
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, 1, 1, 1, 0, GL_RED,
+                GL_UNSIGNED_BYTE, &empty);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  for (bool weather : {false, true}) {
+    SurfaceRenderer surface(root, false, true, true, weather);
+    const auto scene = travelScene(surface.world(), 1740, 5600.390625);
+    for (int size : {64, 80}) {
+      surface.render(scene, {scene.latitude, scene.longitude}, size, size / 2,
+                     1740, 1800, 0, [&](GLuint program) {
+                       glUseProgram(program);
+                       glUniform1i(glGetUniformLocation(program, "uWeatherNoise"),
+                                   15);
+                       glActiveTexture(GL_TEXTURE15);
+                       glBindTexture(GL_TEXTURE_3D, noise);
+                       glUniform4f(glGetUniformLocation(program, "uWeatherLayer"),
+                                   1, 2, 0, 1);
+                     });
+      GLint attachment = 0;
+      glGetFramebufferAttachmentParameteriv(
+          GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+          GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &attachment);
+      require(weather ? attachment == GL_TEXTURE : attachment == GL_NONE,
+              "only volumetric weather requests a distance target after resize");
+      require(weather ? glIsTexture(surface.distanceTexture())
+                      : surface.distanceTexture() == 0,
+              "distance texture availability follows the selected cloud model");
+      require(glGetError() == GL_NO_ERROR, "single/double target resolve");
+    }
+    glUseProgram(0);
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  }
+  glDeleteTextures(1, &noise);
+}
 } // namespace
 int main() {
   GLFWwindow *window = nullptr;
@@ -73,6 +115,7 @@ int main() {
     require(window, "GLES context");
     glfwMakeContextCurrent(window);
     {
+      distanceTarget(Renderer::defaultDataDirectory());
       DynamicWeather original;
       for (double route : {0., 5600.390625, 162000., 210600.}) {
         SurfaceOptions options{true, 0, route};

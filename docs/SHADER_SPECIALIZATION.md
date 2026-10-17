@@ -9,13 +9,19 @@ The surface and composite programs now define `OBSERVATORY_WEATHER_MODE` as
 0 or 1 before shader compilation. The shared weather include makes the model
 selection constant, letting the compiler discard the unused model. Weather
 parameters (coverage, storms, fog, precipitation, wind and lighting) remain
-uniforms and continue to change normally. No numerical fields, geometry,
-material resolution, filtering, samples or render targets are reduced.
+uniforms and continue to change normally. Numerical fields, geometry,
+material resolution, filtering and coverage samples are preserved.
 
 Normal airborne rendering selects volumetric weather. `--no-weather` retains
 the original thin clouds and their shadows/reflections, matching Landscape
 Phase 2's original scope. Fixed-view rendering also uses thin clouds. The
 optional terrain-reflection program receives the same selection as terrain.
+
+The thin-cloud profile also omits the unused R16F distance attachment and its
+resolved texture. These exist only for volumetric weather's atmosphere/terrain
+intersection, so that profile still allocates and resolves them. Thin clouds
+avoid the extra multisample storage, shader output and resolve blit. Terrain
+depth and filtered radiance use their existing targets.
 
 ## Verification
 
@@ -26,6 +32,9 @@ twilight and night phases, plus normal weather and the historic fixed view.
 Initial AMD hardware comparisons were pixel-identical across all fixtures.
 CI runs the same comparison on Mesa, alongside the existing physical water,
 terrain, weather, shadow, silhouette and host-state regression suites.
+The distance-target check exercises both cloud profiles through a framebuffer
+resize, verifying that the optional texture and attachment follow the selected
+profile and that both resolve paths report no GL errors.
 
 This is a candidate optimization, not completed performance acceptance. The
 original frozen Phase 1 reference remains `f882d4d701308b06c25be0a2118871dc244f9794`.

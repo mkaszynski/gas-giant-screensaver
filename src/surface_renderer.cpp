@@ -138,7 +138,7 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
                                  bool culling, bool waterLod, bool weather)
     : terrain(root + "/assets/world/moon.ggworld"),
       reflectionsEnabled(reflections), cullingEnabled(culling),
-      waterLodEnabled(waterLod) {
+      waterLodEnabled(waterLod), weatherEnabled(weather) {
   program = link(root, "surface.vert", "surface.frag", false, weather);
   if (reflectionsEnabled) {
     reflectionProgram = link(root, "surface.vert", "surface.frag", true, weather);
@@ -312,13 +312,15 @@ void SurfaceRenderer::resize(int w, int h) {
                                    GL_DEPTH_COMPONENT24, w, h);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                             GL_RENDERBUFFER, depthBuffer);
-  glGenRenderbuffers(1, &distanceBuffer);
-  glBindRenderbuffer(GL_RENDERBUFFER, distanceBuffer);
-  glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_R16F, w, h);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
-                            GL_RENDERBUFFER, distanceBuffer);
+  if (weatherEnabled) {
+    glGenRenderbuffers(1, &distanceBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, distanceBuffer);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_R16F, w, h);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+                              GL_RENDERBUFFER, distanceBuffer);
+  }
   const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, outputs);
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   check();
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -332,17 +334,19 @@ void SurfaceRenderer::resize(int w, int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, resolved);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          texture, 0);
-  glGenTextures(1, &distanceTextureId);
-  glBindTexture(GL_TEXTURE_2D, distanceTextureId);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, w, h, 0, GL_RED, GL_HALF_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         distanceTextureId, 0);
-  glDrawBuffers(2, outputs);
+  if (weatherEnabled) {
+    glGenTextures(1, &distanceTextureId);
+    glBindTexture(GL_TEXTURE_2D, distanceTextureId);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, w, h, 0, GL_RED, GL_HALF_FLOAT,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                           distanceTextureId, 0);
+  }
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   check();
 }
 void SurfaceRenderer::resizeReflection(int w, int h) {
@@ -858,14 +862,16 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glReadBuffer(GL_COLOR_ATTACHMENT0);
   glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
                     GL_NEAREST);
-  const GLenum distanceOnly[] = {GL_NONE, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, distanceOnly);
-  glReadBuffer(GL_COLOR_ATTACHMENT1);
-  glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
-                    GL_NEAREST);
-  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  if (weatherEnabled) {
+    const GLenum distanceOnly[] = {GL_NONE, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, distanceOnly);
+    glReadBuffer(GL_COLOR_ATTACHMENT1);
+    glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+  }
   const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, outputs);
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   return texture;
 }
 } // namespace observatory
