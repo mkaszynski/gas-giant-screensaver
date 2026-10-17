@@ -186,6 +186,55 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
     }
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 196 * layout.scale,
          1.5 * layout.scale, "AUTO RESTORES BIOME WEATHER");
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 226 * layout.scale,
+         1.5 * layout.scale, "METEOR SHOWERS");
+    const std::array<std::string, 3> modes{"AUTO", "PREVIEW NOW", "OFF"};
+    for (int i = 0; i < 3; ++i) {
+      const auto button = layout.meteorMode(i);
+      const bool selected = int(menu.meteorOptions.mode) == i;
+      rectangle(button, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(button.x + 8 * layout.scale, button.y + 6 * layout.scale,
+           1.5 * layout.scale, modes[i]);
+    }
+    if (menu.meteorOptions.mode != MeteorMode::Off) {
+      auto sliderControl = [&](DebugRect slider, double value, double maximum,
+                               const std::string &label) {
+        text(slider.x, slider.y - 23 * layout.scale, 1.5 * layout.scale, label);
+        auto bar = slider;
+        bar.y += 6 * layout.scale;
+        bar.height = 6 * layout.scale;
+        rectangle(bar, .12, .19, .24);
+        const double knob =
+            bar.x + std::log(value / .5) / std::log(maximum / .5) * bar.width;
+        bar.width = knob - bar.x;
+        rectangle(bar, .18, .72, .90);
+        rectangle({knob - 4 * layout.scale, slider.y, 8 * layout.scale,
+                   slider.height},
+                  .8, .94, 1.);
+      };
+      std::ostringstream gap, rate;
+      gap << std::fixed << std::setprecision(1) << "MEAN GAP "
+          << menu.meteorOptions.intervalHours << " H";
+      rate << std::fixed << std::setprecision(1) << "METEORS "
+           << menu.meteorOptions.rate << " PER MIN";
+      sliderControl(layout.meteorIntervalSlider(),
+                    menu.meteorOptions.intervalHours, 12, gap.str());
+      sliderControl(layout.meteorSlider(), menu.meteorOptions.rate,
+                    meteorMaxRate, rate.str());
+    }
+    std::ostringstream rarity;
+    rarity << std::fixed << std::setprecision(1) << "RANDOM GAP "
+           << menu.meteorOptions.intervalHours * 2. / 9. << " TO "
+           << menu.meteorOptions.intervalHours * 16. / 9. << " H";
+    const std::string status = menu.meteorOptions.mode == MeteorMode::Off
+                                   ? "SHOWERS DISABLED"
+                               : menu.meteorOptions.mode == MeteorMode::Preview
+                                   ? "MANUAL SHOWER - ALL SKIES"
+                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
+                                                  : rarity.str();
+    text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
+         1.5 * layout.scale, status);
   } else {
     auto button = layout.prompt(ww);
     rectangle(button, .018, .028, .043, .94);

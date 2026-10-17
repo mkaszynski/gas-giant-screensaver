@@ -16,7 +16,40 @@ feed the same cloud, ground-shadow, reflection, precipitation and lightning
 rendering. Fog is usually below the aircraft; storms can obscure the giant.
 These are temporary, per-window/output controls, reset when the screensaver
 restarts. The airborne weather path must be enabled (not `--fixed-view` or
-`--no-weather`). Hidden menus issue no extra GPU draws or allocations. Native
+`--no-weather`). The meteor section offers **Auto**, **Preview now** and **Off**. Auto schedules
+short showers at deterministic random intervals of 1–8 real hours (mean 4.5),
+lasting 6–16 minutes. Some are hidden by daylight, the radiant's position or
+weather. **Mean gap** adjusts whole-shower recurrence from .5–12 hours; its
+4.5-hour default gives random gaps of 1–8 hours. **Meteors** separately adjusts
+.5–1800 bright visible-field candidates per minute within a shower, default 3. Preview now starts a stream immediately, with its first
+meteor after about half a second. This manual trigger stays visible in daylight
+and through cloud cover; terrain still occludes it. The menu labels this override
+**Manual shower - all skies**. Auto remains night-only with physical cloud
+extinction. These are compressed fictional shower encounters, not
+Earth's annual shower calendar. Meteor motion is in real seconds, independent
+of the accelerated celestial rotation.
+
+Meteors occupy a 105–115 km ablation shell, move at 26–68 km/s with a shared
+inertial radiant, and have exposure-integrated luminous heads, brief wakes and
+occasional weak wind-sheared ion trains. Color stays near white; brightness uses
+the catalog-star magnitude zero point. The modeled population is magnitude +2
+or brighter; the rate applies to that bright population, with faint dust omitted. The normal atmosphere, cloud extinction,
+terrain occlusion, HDR composition and water reflection paths apply to automatic
+showers. Manual triggers use daytime contrast adaptation and add the cloud-blocked
+fraction with a second small streak draw into the existing weather buffers. The model
+importance samples the visible atmospheric field; it is a visual approximation,
+not an ablation-fluid simulation. Speeds, short durations, emission colors and
+ion-train behavior are informed by the [American Meteor Society's fireball
+FAQ](https://www.amsmeteors.org/fireballs/faqf/). No photos, particle textures,
+fullscreen effect pass or additional render target are needed. Inactive effects issue no GPU work; a small shader and vertex buffer are created
+lazily for the first active batch and then reused. See [meteor rendering and
+review commands](docs/METEORS.md).
+
+For a reproducible preview, use `--meteor-mode preview --meteor-rate 30`.
+`--meteor-preview-start SECONDS` fixes the stream epoch for captures/recordings;
+`--meteor-mode off` restores a meteor-free reference.
+
+Hidden menus issue no extra GPU draws or allocations. Native
 pointer controls require `general:hide_cursor = false`, as in the shipped config.
 
 A large gas giant hangs above the mountains while twenty eccentric moons move

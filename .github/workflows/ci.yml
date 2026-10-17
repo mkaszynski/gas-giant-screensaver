@@ -45,6 +45,9 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-sampling-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-optics-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_weather_benchmark.py
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 LP_NUM_THREADS=2 /tmp/sky-model-tests/bin/python tests/test_debug_interaction.py
@@ -55,6 +58,7 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/twilight.png --time 1180 --travel-time 0 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-storm.png --time 510 --travel-time 162000 --weather-time 1260 --width 960 --height 540
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/weather-lightning.png --time 1200 --travel-time 162000 --weather-time 1512.8 --width 960 --height 540
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/meteor-night.png --time 1254.9 --travel-time 162000 --weather-time 1790900000 --meteor-mode preview --meteor-preview-start 1254 --meteor-rate 30 --width 1920 --height 1080
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/gas-giant-screensaver --capture captures/galaxy-eclipse.png --fixed-view --time 437625 --width 1920 --height 1080
       - uses: actions/upload-artifact@v4
         with:

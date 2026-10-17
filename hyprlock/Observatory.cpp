@@ -94,10 +94,16 @@ bool CObservatory::draw(const SRenderData &data) {
       const double seconds =
           controls->time(realElapsed) + elapsed - realElapsed;
       renderer->setWeatherPreset(controls->menu.weather());
+      renderer->setMeteorFrame(
+          {controls->menu.meteorOptions.mode == observatory::MeteorMode::Preview
+               ? controls->menu.meteorTime(realElapsed)
+               : seconds,
+           1. / fps, controls->menu.meteorOptions});
       renderer->render(viewport.x, viewport.y, seconds, day, data.opacity, true,
                        true,
                        {seconds, std::max(.001, double(data.motionScale) / fps),
                         true, true, lightningBrightness, auroraBrightness});
+      controls->menu.meteorDark = renderer->meteorDarkEnough();
       controls->draw(viewport.x, viewport.y, viewport.x / scale,
                      viewport.y / scale, realElapsed, data.opacity);
     } catch (const std::exception &e) {

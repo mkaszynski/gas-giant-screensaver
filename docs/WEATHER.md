@@ -33,8 +33,13 @@ advances weather along with the selected scene time; pausing freezes both.
   Thin high clouds, fog and precipitation remain at display resolution. The cache
   adds about 2.64 MiB at 1080p; it has no temporal history or delayed lighting.
   `--no-weather-cache` traces every ray for comparison. Both paths use
-  12–48 deterministic samples according to the distance through the layer
-  (a 150 m target interval, bounded by that range). Detail lookups are skipped
+  12–96 deterministic intervals according to the distance through the layer
+  (a 150 m target interval, bounded by that range). Long grazing paths use
+  two-point Gaussian density quadrature within wide intervals, with lighting
+  evaluated at their density-weighted centroid. A smooth transition from the
+  near-field midpoint rule avoids another sampling contour. This removes the
+  horizontal banding from undersampled fair-weather cloud columns without
+  adding random grain or temporal blur. Detail lookups are skipped
   only where the density upper bound proves both the body and anvil are empty.
   Skylight and direction-dependent lighting terms are prepared once per ray;
   only solar transmission and local extinction vary along it. This retains the
