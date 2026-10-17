@@ -199,6 +199,12 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
   physicalAlbedo = materialArray(root, "albedo");
   physicalNormal = materialArray(root, "normal");
   crownShadows = materialArray(root, "", true);
+#ifdef __EMSCRIPTEN__
+  // WebGL exposes SAMPLES directly, but not GLES NUM_SAMPLE_COUNTS.
+  std::array<GLint, 4> available{};
+  glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_SAMPLES,
+                        available.size(), available.data());
+#else
   GLint counts = 0;
   glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_NUM_SAMPLE_COUNTS, 1,
                         &counts);
@@ -206,6 +212,7 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
   if (counts)
     glGetInternalformativ(GL_RENDERBUFFER, GL_RGBA16F, GL_SAMPLES, counts,
                           available.data());
+#endif
   for (auto v : available)
     if (v <= 4)
       samples = std::max(samples, int(v));

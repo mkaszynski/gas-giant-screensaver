@@ -11,6 +11,60 @@ tilted equator. Sunlight, phases and eclipse shadows follow that
 geometry. The sky changes through a 30-minute solar day, with biome-dependent drifting
 cloud banks, occasional storms, and stars emerging at dusk.
 
+## Live browser preview
+
+[Launch the observatory](https://mkaszynski.github.io/gas-giant-screensaver/).
+The static GitHub Pages demo compiles the **same `observatory` C++ library**
+into WebAssembly, using the existing shaders, sky, materials, weather and
+background terrain worker. Rendering runs in an OffscreenCanvas worker to keep
+page controls responsive during shader compilation and slow frames. JavaScript only handles page controls, loading and
+browser isolation. There is no application server or lock-screen integration.
+The live renderer starts only after **Launch preview**; the initial asset
+bundle is about 100 MB. Use Pause, Stop preview, the time-of-day slider, 720p/1080p or
+Fullscreen. Rendering suspends in a hidden tab. The default render budget is
+**30 fps at 1920×1080**, independent of browser size and device pixel ratio;
+720p is an explicit option, with no automatic fidelity reduction.
+
+A current browser with WebAssembly threads, service workers, OffscreenCanvas, WebGL 2 and
+floating-point color attachments is required. HTTPS is required except on
+localhost. A scoped static service worker adds COOP/COEP to same-origin
+responses because Pages cannot configure these headers. The first visit
+reloads once to enable browser threads. No external runtime CDN or asset
+service is used; reloading fetches the current deployment without an offline
+asset cache. Hosting under the repository subpath is covered by browser tests.
+
+Build with Emscripten **4.0.12**, CMake and Ninja:
+
+```sh
+emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build-web --parallel 2
+python3 -m http.server 8000 --directory build-web
+# Open http://localhost:8000/ and select Launch preview.
+npm ci --prefix web
+npx --prefix web playwright install chromium
+npm test --prefix web
+```
+
+On Nix, use `nix shell nixpkgs#emscripten nixpkgs#cmake nixpkgs#ninja` and
+writable `EM_CACHE` / `EM_PORTS` directories outside the Nix store. The Pages
+workflow builds and runs browser behavior checks on PRs, then publishes and checks the live site. It deploys only
+HTML, CSS, JavaScript, WASM, the asset bundle and license from `main`.
+Heavy browser/software-renderer tests should run on CI, especially on machines
+with little free memory. Run native and browser performance checks sequentially.
+
+For repeatable review, URL parameters accept `time` (scene seconds), `travel`
+(route seconds), `weather` (independent seconds), `speed`, and `paused=1`.
+Defaults are `time=510&travel=162000&weather=1790900000&speed=1`.
+`benchmark=1` enables synchronized GPU+CPU timing with `glFinish`, matching
+the native `--benchmark` measurement method. Normal playback never calls
+`glFinish`. Bounded timing samples are available in `window.previewMetrics`;
+`cost` is submission time in normal playback and complete render time in
+benchmark mode, while `interval` measures callback cadence. Exclude startup
+and warm-up frames when comparing median/p95 and 33.33 ms deadline misses
+against a native build with identical dimensions, scene and weather. Software
+CI validates behavior; it does not establish hardware 1080p performance parity.
+
+
 ## Biome weather beta
 
 `feat/weather-integration` combines altitude-aware cloud banks, high cloud, valley fog,
