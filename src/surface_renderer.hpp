@@ -30,6 +30,7 @@ public:
 private:
   SurfaceWorld terrain;
   SurfaceMesh mesh, recycled;
+  SurfaceBuildWorkspace buildWorkspace;
   std::future<SurfaceMesh> pending;
   std::optional<SurfaceMesh> staged;
   size_t stagedBytes = 0, lastUploadBytes = 0;

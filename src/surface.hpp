@@ -87,11 +87,17 @@ struct SurfaceMesh {
   std::vector<uint32_t> waterIndices;
   std::vector<Bounds> bounds;
 };
+// One exclusively owned workspace per active builder. Retain temporary
+// positions instead of allocating and unmapping them for every mesh.
+struct SurfaceBuildWorkspace {
+  std::vector<Vec3> basePositions;
+};
 // Optional cooperative checkpoints let the streaming worker share CPU/APU
 // resources without changing the mesh. Offline and initial builds run directly.
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation,
                              const std::function<void()> &checkpoint = {},
-                             SurfaceMesh reusable = {});
+                             SurfaceMesh reusable = {},
+                             SurfaceBuildWorkspace *workspace = nullptr);
 struct SurfacePlane {
   Vec3 normal;
   double offset;

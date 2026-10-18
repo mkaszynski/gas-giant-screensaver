@@ -277,6 +277,8 @@ int main() {
       });
       require(checkpoints > 0,
               "streaming mesh construction cooperates with its scheduler");
+      require(checkpoints >= mesh.vertices.size() / 64 + mesh.bounds.size(),
+              "vertex and block work expose frequent scheduling checkpoints");
       sameMesh(sliced);
       const std::array<const void *, 4> storage{
           sliced.vertices.data(), sliced.indices.data(),
@@ -299,6 +301,21 @@ int main() {
                                                      reused.waterIndices.data(),
                                                      reused.bounds.data()},
               "all four large CPU buffers are reused without reallocation");
+      SurfaceBuildWorkspace workspace;
+      auto warmed =
+          buildSurfaceMesh(w, center, {}, std::move(reused), &workspace);
+      sameMesh(warmed);
+      const auto *scratchStorage = workspace.basePositions.data();
+      require(workspace.basePositions.size() == mesh.vertices.size(),
+              "workspace retains all temporary normal positions");
+      workspace.basePositions.front().x =
+          std::numeric_limits<double>::quiet_NaN();
+      workspace.basePositions.back().z =
+          std::numeric_limits<double>::quiet_NaN();
+      warmed = buildSurfaceMesh(w, center, {}, std::move(warmed), &workspace);
+      sameMesh(warmed);
+      require(workspace.basePositions.data() == scratchStorage,
+              "normal-position scratch is reused without reallocation");
     }
     require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");

@@ -34,3 +34,28 @@ all recycled/fresh comparisons there measured zero differences. A preceding
 one-thread software run exhausted the existing 20-second functional stream
 guard and remains recorded as failed. No timeout or pixel threshold was changed.
 AMD water-preparation, fidelity and 41 compute/fragment comparisons passed too.
+
+## Follow-up: retain build scratch and shorten work batches
+
+The renderer also retains one exclusively owned normal-position workspace
+across builds, avoiding allocation and release of about 12 MiB of temporary
+positions for each replacement. The workspace is never shared by simultaneous
+builders: a forced seek waits for the existing worker, and destruction waits
+before releasing the workspace. The maximum number of meshes and GPU resources
+does not change; the scratch allocation now remains resident between builds.
+
+Vertex generation exposes a scheduling checkpoint every 64 columns; index
+generation checks after each bounded block; normal passes check every 1,024
+triangles or vertices. The worker retains its existing 1 ms work / 4 ms sleep
+schedule. More frequent checks limit batch overshoot without changing terrain
+sampling or doing catch-up work after a delayed sleep.
+
+All 60 CPU/CLI tests pass. New tests poison the retained positions, rebuild,
+and require byte-identical meshes and the same scratch storage address. The AMD
+streaming/seek test passes with its original thresholds and upload limits.
+Its largest recycled/fresh mean difference is 0.006632 codes (out of 255),
+with the other five comparisons exactly equal. These asynchronous renderer
+comparisons include shadow-cache timing; CPU terrain is compared exactly.
+Mesa/llvmpipe with two threads also passed the unchanged streaming and seek
+guards; its largest recycled/fresh mean difference was 0.006598 codes, with
+the remaining five comparisons exactly equal.

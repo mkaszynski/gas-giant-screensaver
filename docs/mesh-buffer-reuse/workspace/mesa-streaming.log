@@ -1,0 +1,14 @@
+Cloud shadow changed 3011 terrain channels, peak 68 codes
+Periodic image maximum 0 codes
+Mesh refresh (weather=0) mean 0.39441 codes
+Streaming delta mean 0.00883102 codes
+Recycled mesh (weather=0, time=530) mean 0.00659722 codes
+Recycled mesh (weather=0, time=660) mean 0 codes
+Recycled mesh (weather=0, time=800) mean 0 codes
+Mesh refresh (weather=1) mean 0.0840046 codes
+Streaming delta mean 0 codes
+Recycled mesh (weather=1, time=530) mean 0 codes
+Recycled mesh (weather=1, time=660) mean 0 codes
+Recycled mesh (weather=1, time=800) mean 0 codes
+Ocean cloud reflections changed 1172 channels
+Surface: 40228 opaque, 481 antialiased pixels; opacity, route closure and streaming passed

@@ -343,7 +343,8 @@ Scene travelScene(const SurfaceWorld &world, double seconds,
 }
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
                              const std::function<void()> &checkpoint,
-                             SurfaceMesh mesh) {
+                             SurfaceMesh mesh,
+                             SurfaceBuildWorkspace *workspace) {
   // A bounded radial mesh. Fine rings near the camera, progressively larger
   // triangles past the visible horizon. One immutable CPU result per stream
   // job.
@@ -364,7 +365,9 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   mesh.pureLand = true;
   mesh.center = center;
   mesh.vertices.reserve((radial + 1) * angular);
-  std::vector<Vec3> basePositions;
+  std::vector<Vec3> localPositions;
+  auto &basePositions = workspace ? workspace->basePositions : localPositions;
+  basePositions.clear();
   basePositions.reserve((radial + 1) * angular);
   Vec3 origin = geographicUp(center), east = geographicEast(center),
        north = geographicNorth(center);
@@ -400,6 +403,8 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
         -(r * r) /
         (surfaceRadius + std::sqrt(surfaceRadius * surfaceRadius - r * r));
     for (int i = 0; i < angular; ++i) {
+      if (checkpoint && i % 64 == 0)
+        checkpoint();
       double x = r * directions[i][0], z = r * directions[i][1];
       Vec3 direction = origin * sphere + east * (x / surfaceRadius) +
                        north * (z / surfaceRadius);
@@ -506,6 +511,8 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
       }
       b.waterIndexCount = mesh.waterIndices.size() - b.waterFirstIndex;
       mesh.bounds.push_back(b);
+      if (checkpoint)
+        checkpoint();
       i += columns;
     }
     if (checkpoint)
@@ -516,7 +523,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   // in the fragment shader, independently of the geometry's distance LOD.
   // Reuse the sampled heights; no extra procedural height queries are needed.
   for (size_t i = 0; i < mesh.indices.size(); i += 3) {
-    if (checkpoint && i % (4096 * 3) == 0)
+    if (checkpoint && i % (1024 * 3) == 0)
       checkpoint();
     auto point = [&](uint32_t index) { return basePositions[index]; };
     auto a = mesh.indices[i], b = mesh.indices[i + 1], c = mesh.indices[i + 2];
@@ -529,7 +536,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
     }
   }
   for (size_t i = 0; i < mesh.vertices.size(); ++i) {
-    if (checkpoint && i % 4096 == 0)
+    if (checkpoint && i % 1024 == 0)
       checkpoint();
     auto &v = mesh.vertices[i];
     Vec3 n{v.nx, v.ny, v.nz};

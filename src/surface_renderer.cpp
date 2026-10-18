@@ -636,7 +636,8 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   };
   if (mesh.vertices.empty()) {
     ++buildStarts;
-    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled)));
+    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled),
+                            &buildWorkspace));
   }
   if (pending.valid() &&
       pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
@@ -655,7 +656,8 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
     if (pending.valid())
       recycled = pending.get();
     ++buildStarts;
-    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled)));
+    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled),
+                            &buildWorkspace));
     eye = delta(mesh.center);
   } else if (length(eye) > 750. && !pending.valid() && !staged) {
     ++buildStarts;
@@ -677,7 +679,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
                   activeUntil = Clock::now() + std::chrono::milliseconds(1);
                 }
               },
-              std::move(reusable));
+              std::move(reusable), &buildWorkspace);
         });
   }
   double altitude = s.altitudeMeters;
