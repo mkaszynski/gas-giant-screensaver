@@ -3,7 +3,7 @@
 #include <chrono>
 #include <stdexcept>
 namespace observatory {
-// Keep native timers on steady-clock deadlines across compositor callbacks.
+// Share steady-clock deadlines between native timers and standalone previews.
 // Account for CPU work and timer delivery delays without accumulating drift.
 // The widget retains one pending timer per output, including on DPMS.
 class FramePacer {
@@ -16,8 +16,8 @@ public:
         std::chrono::duration<double>(1. / fps));
   }
 
-  std::chrono::milliseconds delay(Clock::time_point start,
-                                  Clock::time_point now) {
+  // Use directly with sleep_until; native event-loop timers use delay below.
+  Clock::time_point deadline(Clock::time_point start, Clock::time_point now) {
     now = std::max(start, now);
     // Keep fractional milliseconds and compensate for previous timer wakeup
     // delays instead of restarting the cadence at every actual draw.
@@ -29,11 +29,16 @@ public:
     if (next <= now) {
       // A slow frame should retry promptly, without queuing missed frames.
       next = now;
-      return std::chrono::milliseconds(1);
+      return now;
     }
-    return std::max(
-        std::chrono::duration_cast<std::chrono::milliseconds>(next - now),
-        std::chrono::milliseconds(1));
+    return next;
+  }
+
+  std::chrono::milliseconds delay(Clock::time_point start,
+                                  Clock::time_point now) {
+    return std::max(std::chrono::duration_cast<std::chrono::milliseconds>(
+                        deadline(start, now) - std::max(start, now)),
+                    std::chrono::milliseconds(1));
   }
 
 private:

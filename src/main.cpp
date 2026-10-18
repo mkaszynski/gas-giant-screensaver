@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
+#include "frame_pacing.hpp"
 #include "preview_statistics.hpp"
 #include "renderer.hpp"
 #include <GLES2/gl2ext.h>
@@ -342,6 +343,7 @@ int main(int argc, char **argv) {
       }
       int frames = 0;
       PreviewFrameRate frameRate;
+      FramePacer framePacer(fps);
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
         double elapsed =
@@ -519,8 +521,8 @@ int main(int argc, char **argv) {
                       << '\n';
           break;
         }
-        std::this_thread::sleep_until(frameStart +
-                                      std::chrono::microseconds(1000000 / fps));
+        std::this_thread::sleep_until(
+            framePacer.deadline(frameStart, Clock::now()));
       }
       if (query)
         glDeleteQueries(1, &query);
