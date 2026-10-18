@@ -147,6 +147,15 @@ void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,fl
   roughness+=w*a.a;cavity+=w*n.b;
  }
 }
+vec4 wavePhase(){return vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));}
+vec3 preparedOcean(vec3 d,vec4 foot){
+ vec4 phase=wavePhase();
+ vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
+ if(uWeatherEnabled)amplitude*=1.+.7*uWeatherKind.y;
+ // Sphere normal avoids coastal land slopes tilting the sea reflection.
+ vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
+ return oceanRadiance(d,waterNormal,phase,amplitude);
+}
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);
 #if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
@@ -168,12 +177,9 @@ void main(){
  #else
  float shorelineBlend=water;
  #endif
- vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
- vec4 foot=fwidth(phase);
- vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
- if(uWeatherEnabled)amplitude*=1.+.7*uWeatherKind.y;
- // Sphere normal avoids coastal land slopes tilting the sea reflection.
- vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
+ // Derivatives stay outside divergent shoreline branches. Prepare the other
+ // water values only at their use, without keeping them live across land PBR.
+ vec4 foot=fwidth(wavePhase());
  // Pure water avoids land's shadow/normal/material work. Mixed shore pixels
  // use explicit gradients below so divergent branches cannot alias textures.
  vec2 material=(vMaterial+uMaterialOffset)/24.,broadUV=(vMaterial+uMaterialOffset)/310.;
@@ -185,7 +191,7 @@ void main(){
  if(water>.001)discard;
  #endif
  if(water>=1.){
-  vec3 L=oceanRadiance(d,waterNormal,phase,amplitude),T=aerialTransmission(distance);
+  vec3 L=preparedOcean(d,foot),T=aerialTransmission(distance);
   color=vec4(min((L*T+sky(d)*(1.-T))*uSceneScale,vec3(60000.)),1.);return;
  }
  vec3 N=normalize(vNormal);
@@ -269,7 +275,7 @@ void main(){
  roughness=mix(roughness,.28,wetness);
  float spec=dielectricSpecular(N,-d,uSun,max(.28,roughness),.04);
  land+=irradiance*NoL*spec*mix(1.,.35,forest);
- if(shorelineBlend>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude),shorelineBlend);
+ if(shorelineBlend>0.)land=mix(land,preparedOcean(d,foot),shorelineBlend);
  vec3 T=aerialTransmission(distance);
  land=land*T+sky(d)*(1.-T);
  color=vec4(min(land*uSceneScale,vec3(60000.)),1.);

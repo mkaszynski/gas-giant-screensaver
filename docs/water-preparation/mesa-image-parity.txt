@@ -1,0 +1,30 @@
+Renderer: llvmpipe (LLVM 21.1.7, 256 bits)
+Water preparation 1920x1080 time=510 weather=1.7909e+09 peak=0 mean=0
+Water preparation 1920x1080 time=1200 weather=1512.8 peak=0 mean=0
+Water preparation 1920x1080 time=1180 weather=1260 peak=0 mean=0
+Water preparation 1920x1080 time=1740 weather=1.7909e+09 peak=0 mean=0
+Water preparation 1920x1080 time=1200 weather=1512.8 peak=0 mean=0
+Water preparation 1920x1080 time=1180 weather=1260 peak=0 mean=0
+Water preparation 641x359 time=1740 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.02 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.03 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.05 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.07 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.08 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.1 weather=1.7909e+09 peak=0 mean=0
+Water preparation 641x359 time=1740.12 weather=1.7909e+09 peak=0 mean=0
+Water preparation 1920x1080 time=360 weather=1.7909e+09 peak=0 mean=0
+Water preparation 1920x1080 time=1200 weather=1512.8 peak=0 mean=0
+Water preparation 1920x1080 time=1180 weather=1260 peak=0 mean=0
+Water preparation 1920x1080 time=1740 weather=1.7909e+09 peak=0 mean=0
+Water preparation 1920x1080 time=1200 weather=1512.8 peak=0 mean=0
+Water preparation 1920x1080 time=1180 weather=1260 peak=0 mean=0
+Water preparation 640x360 time=510 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=1180 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=1740 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=510 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=1180 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=1740 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=510 weather=1.7909e+09 peak=0 mean=0
+Water preparation 640x360 time=1200 weather=1.7909e+09 peak=0 mean=0
+Water preparation preserves reference images PASS

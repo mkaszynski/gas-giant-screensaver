@@ -203,6 +203,8 @@ target_link_libraries(fidelity-render-tests PRIVATE observatory PkgConfig::GLFW)
 
 add_executable(water-render-tests tests/water_render_tests.cpp)
 target_link_libraries(water-render-tests PRIVATE observatory PkgConfig::GLFW)
+add_executable(water-preparation-tests tests/water_preparation_tests.cpp)
+target_link_libraries(water-preparation-tests PRIVATE observatory PkgConfig::GLFW)
 add_executable(weather-specialization-tests tests/weather_specialization_tests.cpp)
 target_link_libraries(weather-specialization-tests PRIVATE observatory PkgConfig::GLFW)
 add_test(NAME cli-no-terrain-reflections COMMAND gas-giant-screensaver --no-terrain-reflections --help)
