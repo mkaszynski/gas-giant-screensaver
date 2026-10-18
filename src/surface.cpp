@@ -342,7 +342,8 @@ Scene travelScene(const SurfaceWorld &world, double seconds,
   return s;
 }
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
-                             const std::function<void()> &checkpoint) {
+                             const std::function<void()> &checkpoint,
+                             SurfaceMesh mesh) {
   // A bounded radial mesh. Fine rings near the camera, progressively larger
   // triangles past the visible horizon. One immutable CPU result per stream
   // job.
@@ -353,7 +354,13 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
                 angular = surfaceAngularSamples, radial = surfaceRadialSamples;
   constexpr double far = 145000.;
   constexpr int inner = 32, detailEnd = 576;
-  SurfaceMesh mesh;
+  // Refill the retired CPU storage on the worker. Publishing a replacement
+  // must not unmap the previous mesh's large vectors on the render thread.
+  mesh.vertices.clear();
+  mesh.indices.clear();
+  mesh.waterIndices.clear();
+  mesh.bounds.clear();
+  mesh.hasLand = mesh.hasWater = false;
   mesh.pureLand = true;
   mesh.center = center;
   mesh.vertices.reserve((radial + 1) * angular);

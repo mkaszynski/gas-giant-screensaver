@@ -1,0 +1,5 @@
+Renderer: AMD Radeon Graphics (radeonsi, renoir, ACO, DRM 3.64, 6.18.6)
+STREAMTRACE prepared=0 revision=1 compare_ms=0.00025 move_ms=0.001202 gpu_setup_ms=12.0789 total_ms=12.0804
+Frame trace backend=60003, completed swaps, no scanout claim
+STREAMTRACE prepared=1 revision=2 compare_ms=1.41552 move_ms=0.003807 gpu_setup_ms=0.007804 total_ms=1.42714
+STREAMTRACE prepared=1 revision=3 compare_ms=1.36283 move_ms=0.003046 gpu_setup_ms=0.006412 total_ms=1.37228

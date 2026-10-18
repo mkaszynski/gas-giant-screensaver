@@ -90,7 +90,8 @@ struct SurfaceMesh {
 // Optional cooperative checkpoints let the streaming worker share CPU/APU
 // resources without changing the mesh. Offline and initial builds run directly.
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation,
-                             const std::function<void()> &checkpoint = {});
+                             const std::function<void()> &checkpoint = {},
+                             SurfaceMesh reusable = {});
 struct SurfacePlane {
   Vec3 normal;
   double offset;

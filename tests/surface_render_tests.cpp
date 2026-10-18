@@ -241,6 +241,71 @@ int main() {
         double seamMean = double(seam) / (w * h / 4 * 3);
         std::cout << "Streaming delta mean " << seamMean << " codes\n";
         require(seamMean < 3., "streaming and fresh geometry agree visually");
+        // A second publication consumes the retired CPU buffers, exercising
+        // ownership across the worker, staging buffer and current mesh.
+        auto awaitReplacement = [&](double instant) {
+          const auto previous = moving.surfaceMeshRevision();
+          moving.render(w, h, instant);
+          const auto until =
+              std::chrono::steady_clock::now() + std::chrono::seconds(20);
+          while (moving.surfaceMeshRevision() == previous &&
+                 std::chrono::steady_clock::now() < until) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            moving.render(w, h, instant);
+            require(moving.surfaceUploadBytes() <= 2 * 1024 * 1024,
+                    "recycled streaming retains the normal upload budget");
+          }
+          require(moving.surfaceMeshRevision() > previous &&
+                      !moving.surfaceBuildPending(),
+                  "recycled worker result is published successfully");
+        };
+        auto agreesWithFresh = [&](double instant) {
+          auto actual = pixels(w, h);
+          Renderer fresh(
+              Renderer::defaultDataDirectory(), {},
+              {true, 1, 162000 - 510, false, true, true, weatherEnabled});
+          fresh.render(w, h, instant);
+          const auto expected = pixels(w, h);
+          long difference = 0;
+          for (int i = 0; i < w * h / 4; ++i)
+            for (int c = 0; c < 3; ++c)
+              difference +=
+                  std::abs(int(actual[i * 4 + c]) - int(expected[i * 4 + c]));
+          const double mean = double(difference) / (w * h / 4 * 3);
+          std::cout << "Recycled mesh (weather=" << weatherEnabled
+                    << ", time=" << instant << ") mean " << mean << " codes\n";
+          require(mean < 3., "reused and fresh terrain agree visually");
+        };
+        awaitReplacement(530);
+        require(moving.surfaceBuildsStarted() == 3,
+                "second stream actually reuses a retired mesh");
+        agreesWithFresh(530);
+        // A debug seek may interrupt either a running worker or a partially
+        // uploaded replacement. Both paths must keep ownership and geography.
+        moving.render(w, h, 540);
+        moving.render(w, h, 660);
+        require(moving.surfaceBuildsStarted() == 5 &&
+                    !moving.surfaceBuildPending(),
+                "seek safely reuses an interrupted worker's storage");
+        agreesWithFresh(660);
+        moving.render(w, h, 670);
+        const auto beforeStaging = moving.surfaceMeshRevision();
+        const auto ready =
+            std::chrono::steady_clock::now() + std::chrono::seconds(20);
+        while (moving.surfaceBuildPending() &&
+               std::chrono::steady_clock::now() < ready)
+          std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        require(!moving.surfaceBuildPending(), "replacement worker finishes");
+        moving.render(w, h, 670);
+        require(moving.surfaceMeshRevision() == beforeStaging &&
+                    moving.surfaceUploadBytes() > 0 &&
+                    moving.surfaceUploadBytes() <= 2 * 1024 * 1024,
+                "seek fixture contains a partially uploaded replacement");
+        moving.render(w, h, 800);
+        require(moving.surfaceBuildsStarted() == 7 &&
+                    !moving.surfaceBuildPending(),
+                "seek safely reuses partially staged storage");
+        agreesWithFresh(800);
         GLfloat expected[4] = {.13f, .17f, .21f, .29f};
         glClearColor(expected[0], expected[1], expected[2], expected[3]);
         moving.render(w, h, 520.1);

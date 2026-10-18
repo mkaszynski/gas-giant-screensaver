@@ -244,6 +244,32 @@ int main() {
     auto center = w.location(16200);
     auto mesh = buildSurfaceMesh(w, center);
     {
+      auto sameMesh = [&](const SurfaceMesh &other) {
+        require(other.center.latitude == mesh.center.latitude &&
+                    other.center.longitude == mesh.center.longitude &&
+                    other.vertices.size() == mesh.vertices.size() &&
+                    std::memcmp(other.vertices.data(), mesh.vertices.data(),
+                                mesh.vertices.size() * sizeof(SurfaceVertex)) ==
+                        0 &&
+                    other.indices == mesh.indices &&
+                    other.waterIndices == mesh.waterIndices &&
+                    other.hasLand == mesh.hasLand &&
+                    other.hasWater == mesh.hasWater &&
+                    other.pureLand == mesh.pureLand &&
+                    other.bounds.size() == mesh.bounds.size(),
+                "scheduling and storage reuse preserve every vertex and index");
+        for (size_t i = 0; i < mesh.bounds.size(); ++i) {
+          const auto &a = mesh.bounds[i], &b = other.bounds[i];
+          require(length(a.minimum - b.minimum) == 0 &&
+                      length(a.maximum - b.maximum) == 0 &&
+                      a.firstIndex == b.firstIndex &&
+                      a.indexCount == b.indexCount &&
+                      a.waterFirstIndex == b.waterFirstIndex &&
+                      a.waterIndexCount == b.waterIndexCount &&
+                      a.deepWater == b.deepWater,
+                  "storage reuse preserves culling and water bounds");
+        }
+      };
       size_t checkpoints = 0;
       auto sliced = buildSurfaceMesh(w, center, [&] {
         ++checkpoints;
@@ -251,28 +277,28 @@ int main() {
       });
       require(checkpoints > 0,
               "streaming mesh construction cooperates with its scheduler");
-      require(
-          sliced.vertices.size() == mesh.vertices.size() &&
-              std::memcmp(sliced.vertices.data(), mesh.vertices.data(),
-                          mesh.vertices.size() * sizeof(SurfaceVertex)) == 0 &&
-              sliced.indices == mesh.indices &&
-              sliced.waterIndices == mesh.waterIndices &&
-              sliced.hasLand == mesh.hasLand &&
-              sliced.hasWater == mesh.hasWater &&
-              sliced.pureLand == mesh.pureLand &&
-              sliced.bounds.size() == mesh.bounds.size(),
-          "cooperative scheduling preserves every vertex and index exactly");
-      for (size_t i = 0; i < mesh.bounds.size(); ++i) {
-        const auto &a = mesh.bounds[i], &b = sliced.bounds[i];
-        require(length(a.minimum - b.minimum) == 0 &&
-                    length(a.maximum - b.maximum) == 0 &&
-                    a.firstIndex == b.firstIndex &&
-                    a.indexCount == b.indexCount &&
-                    a.waterFirstIndex == b.waterFirstIndex &&
-                    a.waterIndexCount == b.waterIndexCount &&
-                    a.deepWater == b.deepWater,
-                "cooperative scheduling preserves culling and water bounds");
-      }
+      sameMesh(sliced);
+      const std::array<const void *, 4> storage{
+          sliced.vertices.data(), sliced.indices.data(),
+          sliced.waterIndices.data(), sliced.bounds.data()};
+      // Stale location, flags and contents must never survive a reused build.
+      sliced.center = w.location(0.);
+      sliced.hasLand = !mesh.hasLand;
+      sliced.hasWater = !mesh.hasWater;
+      sliced.pureLand = !mesh.pureLand;
+      sliced.vertices.front().x = std::numeric_limits<float>::quiet_NaN();
+      sliced.vertices.back().coastalWeight =
+          std::numeric_limits<float>::quiet_NaN();
+      sliced.indices.front() = std::numeric_limits<uint32_t>::max();
+      sliced.waterIndices.front() = std::numeric_limits<uint32_t>::max();
+      sliced.bounds.back().minimum.x = std::numeric_limits<double>::quiet_NaN();
+      auto reused = buildSurfaceMesh(w, center, {}, std::move(sliced));
+      sameMesh(reused);
+      require(storage == std::array<const void *, 4>{reused.vertices.data(),
+                                                     reused.indices.data(),
+                                                     reused.waterIndices.data(),
+                                                     reused.bounds.data()},
+              "all four large CPU buffers are reused without reallocation");
     }
     require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");

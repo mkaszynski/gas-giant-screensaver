@@ -153,7 +153,8 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
                        SurfaceMaterial::pureLand);
   }
   if (reflectionsEnabled) {
-    reflectionProgram = link(root, "surface.vert", "surface.frag", true, weather);
+    reflectionProgram =
+        link(root, "surface.vert", "surface.frag", true, weather);
     glGenBuffers(1, &reflectionIndices);
   }
   shadowProgram = link(root, "surface_shadow.vert", "surface_shadow.frag");
@@ -426,7 +427,10 @@ void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
       std::copy(product, product + 16, matrix);
     }
   }
-  mesh = std::move(m);
+  // The worker consumes this spare before producing the next replacement.
+  // Swap ownership without freeing the previous mesh on the rendering thread.
+  std::swap(mesh, m);
+  recycled = std::move(m);
   ++revision;
   const size_t vertexBytes = mesh.vertices.size() * sizeof(SurfaceVertex);
   if (vertexBytes > vertexCapacity) {
@@ -632,7 +636,7 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   };
   if (mesh.vertices.empty()) {
     ++buildStarts;
-    upload(buildSurfaceMesh(terrain, location));
+    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled)));
   }
   if (pending.valid() &&
       pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
@@ -642,31 +646,39 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   stageUpload();
   Vec3 eye = delta(mesh.center);
   if (length(eye) > 2000.) {
+    if (staged)
+      recycled = std::move(*staged);
     staged.reset();
     stagedBytes = 0;
     if (pending.valid())
       pending.wait();
     if (pending.valid())
-      pending.get();
+      recycled = pending.get();
     ++buildStarts;
-    upload(buildSurfaceMesh(terrain, location));
+    upload(buildSurfaceMesh(terrain, location, {}, std::move(recycled)));
     eye = delta(mesh.center);
   } else if (length(eye) > 750. && !pending.valid() && !staged) {
     ++buildStarts;
-    pending = std::async(std::launch::async, [this, location] {
-      // A continuous CPU burst competes with the GPU on shared-power APUs,
-      // even before any mesh upload. Spread only background work over short
-      // slices; the resident mesh covers the flight while this one is built.
-      // Reset after sleeping so an oversleep never causes catch-up work.
-      using Clock = std::chrono::steady_clock;
-      auto activeUntil = Clock::now() + std::chrono::milliseconds(1);
-      return buildSurfaceMesh(terrain, location, [&] {
-        if (Clock::now() >= activeUntil) {
-          std::this_thread::sleep_for(std::chrono::milliseconds(4));
-          activeUntil = Clock::now() + std::chrono::milliseconds(1);
-        }
-      });
-    });
+    pending = std::async(
+        std::launch::async,
+        [this, location, reusable = std::move(recycled)]() mutable {
+          // A continuous CPU burst competes with the GPU on shared-power APUs,
+          // even before any mesh upload. Spread only background work over short
+          // slices; the resident mesh covers the flight while this one is
+          // built. Reset after sleeping so an oversleep never causes catch-up
+          // work.
+          using Clock = std::chrono::steady_clock;
+          auto activeUntil = Clock::now() + std::chrono::milliseconds(1);
+          return buildSurfaceMesh(
+              terrain, location,
+              [&] {
+                if (Clock::now() >= activeUntil) {
+                  std::this_thread::sleep_for(std::chrono::milliseconds(4));
+                  activeUntil = Clock::now() + std::chrono::milliseconds(1);
+                }
+              },
+              std::move(reusable));
+        });
   }
   double altitude = s.altitudeMeters;
   Vec3 bodyEye = geographicUp(location) * (surfaceRadius + altitude) -
