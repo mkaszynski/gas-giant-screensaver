@@ -13,7 +13,7 @@ bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  vec4 low=min(min(a,b),min(c,e));
  // A negative transmission marks any ground coverage in the coarse draw.
  if(low.a<0.)return false;
- vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),0).rgb*(uExposure/uSceneScale);
+ vec3 background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),0).rgb*(uExposure/uSceneScale);
  // Tiny, intense sources need exact extinction even inside a smooth field.
  if(max(background.x,max(background.y,background.z))>16.)return false;
  // Project each emission/transmission pair together: their changes often

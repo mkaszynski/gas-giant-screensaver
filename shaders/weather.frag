@@ -1,8 +1,14 @@
 #version 300 es
 precision highp float;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+vec2 uv;
+vec4 color,skyWeather;
+bool weatherNeedsSkyOutput=false;
+#else
 in vec2 uv;
 layout(location=0)out vec4 color;
 layout(location=1)out vec4 skyWeather;
+#endif
 uniform highp sampler2D uSurface;
 #include "atmosphere.glsl"
 #include "scene.glsl"
@@ -10,8 +16,20 @@ uniform highp sampler2D uSurface;
 #include "weather_depth.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+const bool uWeatherSkyPass=false;
+uniform bool uWeatherCacheEnabled;
+#else
 uniform bool uWeatherSkyPass,uWeatherCacheEnabled;
+#endif
 uniform highp sampler3D uWeatherLightCache;
+vec2 weatherPixelPosition(){
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ return vec2(gl_GlobalInvocationID.xy)+.5;
+#else
+ return gl_FragCoord.xy;
+#endif
+}
 #include "weather_sky_cache.glsl"
 vec2 cloudSunTransmission(vec3 p,float density,float lod){
  if(uSun.y<=-.08||uEclipse<=0.)return vec2(1.);
@@ -155,6 +173,9 @@ void main(){
  float coverage=0.;
  if(uv.y<uSurfaceFraction)coverage=texelFetch(uSurface,ivec2(uv*uResolution),0).a;
  bool edge=coverage>0.&&coverage<1.;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ weatherNeedsSkyOutput=edge;
+#endif
  float distance=weatherDepth(uv,d,coverage);
  bool reused=false;
  if(uWeatherSkyPass&&coverage>0.){color=vec4(0.,0.,0.,-1.);reused=true;}

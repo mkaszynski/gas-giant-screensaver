@@ -18,6 +18,7 @@ struct SurfaceOptions {
   bool waterLod = true;
   bool weather = true;
   bool weatherCache = true;
+  bool weatherCompute = true;
 };
 struct TravelLocation {
   double latitude, longitude;

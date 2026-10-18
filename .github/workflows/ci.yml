@@ -50,6 +50,7 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-specialization-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-sampling-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-compute-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-optics-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py

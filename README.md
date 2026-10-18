@@ -316,6 +316,11 @@ sky table changes during the day. Sphere draws are bounded to screen rectangles;
 impossible shadow casters are rejected on the CPU. Weather integrates cached
 cloud density at display resolution with a bounded sample count and a small
 solar-transmission volume. `--no-weather` retains the thin-cloud path.
+Native contexts with suitable OpenGL ES 3.1 compute support run the same
+full-resolution cloud solver in 16×4 workgroups. Density samples, lighting,
+terrain clipping and effects are preserved. Older contexts and browser builds
+retain fragment clouds; `--no-weather-compute` selects that comparison path.
+See [native cloud compute validation](docs/NATIVE_CLOUD_COMPUTE.md).
 Solar glare adds no extra rendering pass. There is no runtime AI,
 network access or per-frame asset texture upload.
 The moving world streams bounded local geometry with one background worker;

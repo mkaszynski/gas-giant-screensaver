@@ -111,6 +111,7 @@ int main(int argc, char **argv) {
                "reflections\n"
                "  --no-weather-cache      Trace every cloud ray for "
                "comparison\n"
+               "  --no-weather-compute    Use fragment clouds for comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
                "  --debug                 Open time and weather controls at "
@@ -136,6 +137,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-weather-cache") {
         surface.weatherCache = false;
+        continue;
+      }
+      if (a == "--no-weather-compute") {
+        surface.weatherCompute = false;
         continue;
       }
       if (a == "--fixed-view") {
@@ -499,6 +504,11 @@ int main(int argc, char **argv) {
           if (cloudSize[0] > 0)
             std::cout << "Cloud sky cache: " << cacheSize[0] << 'x'
                       << cacheSize[1] << '\n';
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud backend: "
+                      << (renderer.computingWeather() ? "OpenGL compute"
+                                                      : "fragment shader")
+                      << '\n';
           break;
         }
         std::this_thread::sleep_until(frameStart +

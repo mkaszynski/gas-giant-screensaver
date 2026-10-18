@@ -263,13 +263,14 @@ int main() {
         balanced.replace("weather_sky_cache.glsl", " return true;",
                          " cacheUsed=true;return true;");
         const std::string background =
-            "vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),"
+            "vec3 "
+            "background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),"
             "0).rgb*(uExposure/uSceneScale);";
         balanced.replace("weather_sky_cache.glsl", background,
                          "vec3 background=vec3(.1)*uExposure;");
         balanced.append("weather.frag", R"(
  if(uWeatherSkyPass){
-  float t=.1+.8*mod(floor(gl_FragCoord.x),2.);
+  float t=.1+.8*mod(floor(weatherPixelPosition().x),2.);
   color=vec4(vec3(.1)*(1.-t)*uSceneScale,t);
  }else color=vec4(vec3(cacheUsed?1.:0.),1.);
 )");
