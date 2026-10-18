@@ -62,7 +62,6 @@ def programs():
                 "background",
                 "body",
                 "rings",
-                "post",
                 "weather",
                 "weather-light",
                 "weather-filter-probe",
@@ -81,9 +80,35 @@ def programs():
         ("stars.frag", "stars.vert", ""),
         ("emission.frag", "emission.vert", ""),
         ("meteors.frag", "meteors.vert", ""),
-        ("surface.frag", "surface.vert", ""),
-        ("surface.frag", "surface.vert", "#define SURFACE_REFLECTION\n"),
-        ("surface_shadow.frag", "surface_shadow.vert", ""),
+        # Match SurfaceRenderer::link's byte-exact insertion order: material
+        # precedes the fixed cloud model. Shadows use link's default mode 1.
+        *[
+            (
+                "surface.frag",
+                "surface.vert",
+                material + f"#define OBSERVATORY_WEATHER_MODE {weather}\n",
+            )
+            for weather in (0, 1)
+            for material in (
+                "",
+                "#define SURFACE_REFLECTION\n",
+                "#define SURFACE_DEEP_WATER\n",
+                "#define SURFACE_PURE_LAND\n",
+            )
+        ],
+        *[
+            (
+                "post.frag",
+                "fullscreen.vert",
+                f"#define OBSERVATORY_WEATHER_MODE {weather}\n",
+            )
+            for weather in (0, 1)
+        ],
+        (
+            "surface_shadow.frag",
+            "surface_shadow.vert",
+            "#define OBSERVATORY_WEATHER_MODE 1\n",
+        ),
     ]:
         fragment = source(frag)
         if define:
@@ -92,8 +117,9 @@ def programs():
             fragment = fragment.replace("\n", "\nuniform highp float uSceneScale;\n", 1)
             fragment = fragment.replace("void main()", "void scenePixel()", 1)
             fragment += "\nvoid main(){scenePixel();color.rgb=min(color.rgb*uSceneScale,vec3(60000.));}\n"
+        flags = ",".join(line.removeprefix("#define ") for line in define.splitlines())
         yield (
-            frag + (":" + define.splitlines()[-1] if define else ""),
+            frag + (":" + flags if flags else ""),
             source(vert),
             fragment,
         )
@@ -136,6 +162,50 @@ def arguments(text):
             result.append(text[start:index].strip())
             start = index + 1
     return result + [text[start:].strip()]
+
+
+def padded_vec2_name(typ, name):
+    return re.fullmatch(r"(\w+)\s*\[[^\[\]]+\]", name) if typ == "vec2" else None
+
+
+def pad_uniform_arrays(text, uniforms):
+    """Represent std140 vec2 array elements with WGSL's natural vec4 stride.
+
+    Only storage changes. Reads retain their original two components, and the
+    manifest records the logical upload type separately from reflected storage.
+    Reject whole-array uses rather than silently changing function signatures.
+    """
+    storage = []
+    for typ, name in uniforms:
+        padded = padded_vec2_name(typ, name)
+        storage.append(("vec4" if padded else typ, name))
+        if not padded:
+            continue
+        for match in reversed(list(re.finditer(r"\b" + padded[1] + r"\b", text))):
+            start = match.end()
+            while start < len(text) and text[start].isspace():
+                start += 1
+            if start == len(text) or text[start] != "[":
+                raise ValueError("Padded uniform array must be indexed: " + padded[1])
+            depth = 0
+            for end in range(start, len(text)):
+                depth += (text[end] == "[") - (text[end] == "]")
+                if depth == 0:
+                    text = text[: end + 1] + ".xy" + text[end + 1 :]
+                    break
+            else:
+                raise ValueError("Unbalanced uniform array index: " + padded[1])
+    return text, storage
+
+
+def logical_uniform_types(original):
+    return {
+        padded[1]: typ
+        for match in UNIFORM.finditer(original)
+        for typ in [match[1]]
+        for name in match[2].split(",")
+        if (padded := padded_vec2_name(typ, name.strip()))
+    }
 
 
 def split_sampler_parameters(text):
@@ -222,6 +292,7 @@ def convert(text, stage, varyings, post=False, points=False):
         return ""
 
     text = UNIFORM.sub(uniform, text)
+    text, uniforms = pad_uniform_arrays(text, uniforms)
     text = split_sampler_parameters(text)
 
     def interface(m):
@@ -233,9 +304,7 @@ def convert(text, stage, varyings, post=False, points=False):
                 varyings[name]
                 if (stage == "vert" and direction == "out")
                 or (stage == "frag" and direction == "in")
-                else int(re.search(r"location\s*=\s*(\d+)", layout)[1])
-                if layout
-                else 0
+                else int(re.search(r"location\s*=\s*(\d+)", layout)[1]) if layout else 0
             )
             result.append(
                 f"layout(location={location}) {flat or ''}{direction} {typ} {name};"
@@ -278,6 +347,17 @@ def convert(text, stage, varyings, post=False, points=False):
             "vec4(gl_FragCoord.x,uResolution.y-gl_FragCoord.y,gl_FragCoord.zw)",
         )
     return text.replace("#version 450", "#version 450\n" + header, 1), samplers
+
+
+def convert_program(label, original, stage, varyings):
+    name = label.split(":", 1)[0]
+    return convert(
+        original,
+        stage,
+        varyings,
+        post=name == "post.frag",
+        points=name == "stars.frag",
+    )
 
 
 def main():
@@ -329,13 +409,7 @@ def main():
                 raise ValueError("Duplicate shader source fingerprint: " + label)
             seen_keys.add(item["key"])
             for stage, original in [("vert", vertex), ("frag", fragment)]:
-                converted, samplers = convert(
-                    original,
-                    stage,
-                    varyings,
-                    post=label == "post.frag",
-                    points=item["points"],
-                )
+                converted, samplers = convert_program(label, original, stage, varyings)
                 file = directory / f"{i}.{stage}"
                 file.write_text(converted)
                 spv = directory / f"{i}.{stage}.spv"
@@ -355,12 +429,19 @@ def main():
                     raise RuntimeError(label + "\n" + error.output) from error
                 ubo = reflected.get("ubos", [])
                 block = ubo[0] if ubo else None
+                members = reflected["types"][block["type"]]["members"] if block else []
+                logical = logical_uniform_types(original)
+                for member in members:
+                    if member["name"] in logical:
+                        if member["type"] != "vec4" or member.get("array_stride") != 16:
+                            raise ValueError(
+                                "Unexpected padded array layout: " + member["name"]
+                            )
+                        member["valueType"] = logical[member["name"]]
                 item[stage] = {
                     "path": str(spv),
                     "blockSize": block["block_size"] if block else 0,
-                    "members": reflected["types"][block["type"]]["members"]
-                    if block
-                    else [],
+                    "members": members,
                     "samplers": [
                         {
                             "name": name,
@@ -393,9 +474,11 @@ require(process.argv[3])(process.argv[4]).then(t=>{
   const b=fs.readFileSync(p[s].path);
   let code=t.convertSpirV2WGSL(new Uint32Array(b.buffer,b.byteOffset,b.length/4));
   // The pinned compiler emits a redundant legacy stride attribute for
-  // naturally 16-byte vec4 arrays. Current WGSL infers the same layout.
+  // naturally aligned arrays. Non-natural vec2 arrays were padded in GLSL;
+  // never strip their original 16-byte stride from a natural 8-byte type.
   code=code.replace(/@stride\(16\) (array<vec4<f32>,)/g,'$1');
-  if(code.includes('@stride')) throw new Error('Unsupported legacy array stride');
+  code=code.replace(/@stride\(64\) (array<mat4x4<f32>,)/g,'$1');
+  if(code.includes('@stride')) throw new Error(p.label+' '+s+' Unsupported legacy array stride: '+code.match(/@stride[^;\n]*/g).join(' | '));
   if(!code.includes('@'+(s==='vert'?'vertex':'fragment'))) throw new Error(p.label+' WGSL conversion failed');
   p[s].code='diagnostic(off, derivative_uniformity);\n'+code;delete p[s].path;
  }

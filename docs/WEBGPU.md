@@ -25,12 +25,19 @@ fails at linking instead of selecting stale shaders. Tests compare the Python
 and JavaScript fingerprints and validate every WGSL module in Chromium.
 The manifest includes the shared meteor optical kernel and its HDR scaling;
 integrating the native meteor renderer must also retain this shader variant.
+It bakes 25 programs, covering both fixed cloud profiles, general/deep-water/
+inland/reflected terrain and both composite variants. Material defines precede
+the cloud define, matching the shared C++ source fingerprints exactly. Composite
+variants retain the swapchain coordinate conversion regardless of their label.
 
 The build-only twgsl JS/WASM files are pinned to a Babylon.js commit with SHA-256
 checksums verified before use. CMake downloads missing tools into the build tree;
 `OBSERVATORY_TWGSL_DIR` can point to an already populated cache for offline builds.
 No new runtime CDN is required. The pinned writer's redundant legacy 16-byte
-stride on vec4 arrays is removed; other unexpected legacy strides fail the build.
+strides on naturally aligned vec4 and mat4 arrays are removed. Uniform vec2
+arrays use padded vec4 storage, with `.xy` reads and a separate logical upload
+type; their original 16-byte std140 element stride is preserved. Other unexpected
+legacy strides fail the build.
 The existing GLSL derivative behavior is retained with WGSL's
 `derivative_uniformity` diagnostic disabled, followed by browser shader validation.
 
@@ -56,6 +63,8 @@ material-quality reduction was added.
 
 ## Validation and limits
 
+The shader conversion tests require Node and `glslangValidator` on `PATH`.
+
 ```sh
 python3 tests/test_webgpu_shaders.py
 node tests/webgpu_data.cjs
@@ -72,6 +81,9 @@ sprites contribute visible light on both backends. The eclipse fixture also
 regresses scissor-disable state and filtered mountain occlusion: either can
 otherwise clip the aurora or expose a bright strip of rings through the ridge.
 `surface=0`, `stars=0` and `galaxy=0` mirror existing native review options.
+`volumetric=0` selects the existing native `--no-weather` thin-cloud comparison.
+The day, dusk, night, storm and thin-cloud fixtures compare both browser backends;
+the thin-cloud case exercises the padded cloud-offset array in a live pipeline.
 Software GPU checks establish behavior and visual agreement, **not hardware performance**.
 Normal `cost` metrics measure CPU command submission; callbacks wait for GPU
 completion before another frame is submitted. Synchronous `benchmark=1` remains

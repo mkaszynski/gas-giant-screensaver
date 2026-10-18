@@ -1,8 +1,15 @@
 #version 300 es
 precision highp float;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+vec2 uv;
+vec2 weatherCachePixel;
+vec4 color,skyWeather;
+bool weatherNeedsSkyOutput=false;
+#else
 in vec2 uv;
 layout(location=0)out vec4 color;
 layout(location=1)out vec4 skyWeather;
+#endif
 uniform highp sampler2D uSurface;
 #include "atmosphere.glsl"
 #include "scene.glsl"
@@ -10,8 +17,24 @@ uniform highp sampler2D uSurface;
 #include "weather_depth.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+#ifdef OBSERVATORY_WEATHER_SKY_PASS
+const bool uWeatherSkyPass=true;
+#else
+const bool uWeatherSkyPass=false;
+#endif
+uniform bool uWeatherCacheEnabled;
+#else
 uniform bool uWeatherSkyPass,uWeatherCacheEnabled;
+#endif
 uniform highp sampler3D uWeatherLightCache;
+vec2 weatherPixelPosition(){
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ return vec2(gl_GlobalInvocationID.xy)+.5;
+#else
+ return gl_FragCoord.xy;
+#endif
+}
 #include "weather_sky_cache.glsl"
 vec2 cloudSunTransmission(vec3 p,float density,float lod){
  if(uSun.y<=-.08||uEclipse<=0.)return vec2(1.);
@@ -101,10 +124,12 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
     // bounded by the rendered-reference regression test.
     vec3 solar=transmission(uTrans,weatherHeight(p,uObserverHeight),uSun.y)*lightingTerms.sunlit;
     vec3 lighting=solar*(lightingTerms.forward*shadow.x+.032*(.35+.65*shadow.y))+lightingTerms.ambient;
+#ifndef OBSERVATORY_WEATHER_CALM
     if(uWeatherFlash.w>0.){
      vec3 delta=p-vec3(uWeatherFlash.x,uWeatherFlash.y-uObserverHeight,uWeatherFlash.z);
      lighting+=vec3(.90,.94,1.)*uWeatherFlash.w*exp(-dot(delta,delta)/18.);
     }
+#endif
     float meanHeight=max(0.,.5*(uObserverHeight+weatherHeight(p,uObserverHeight)));
     vec3 air=exp(-distance*(betaR*exp(-meanHeight/8.)+betaM*1.11*exp(-meanHeight/1.2)));
     lighting=lighting*air+viewSky*(1.-air);
@@ -155,6 +180,9 @@ void main(){
  float coverage=0.;
  if(uv.y<uSurfaceFraction)coverage=texelFetch(uSurface,ivec2(uv*uResolution),0).a;
  bool edge=coverage>0.&&coverage<1.;
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ weatherNeedsSkyOutput=edge;
+#endif
  float distance=weatherDepth(uv,d,coverage);
  bool reused=false;
  if(uWeatherSkyPass&&coverage>0.){color=vec4(0.,0.,0.,-1.);reused=true;}

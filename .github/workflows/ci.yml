@@ -17,6 +17,9 @@ jobs:
         run: |
           ctest --test-dir build --output-on-failure
           python3 tests/test_native_benchmark.py
+          python3 scripts/tests/test_benchmark_native_guard.py
+          python3 scripts/tests/test_workload_sampler.py
+          python3 scripts/tests/test_hyprland_ipc.py
       - name: Offline galaxy model behavior
         run: |
           python3 -m venv /tmp/sky-model-tests
@@ -33,6 +36,7 @@ jobs:
         run: |
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/ring-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/projection-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/edge-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/atmosphere-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/scattering-edge-tests
@@ -44,8 +48,11 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-shadow-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-preparation-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-specialization-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-sampling-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-compute-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-optics-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py

@@ -2,7 +2,9 @@ uniform vec2 uResolution;
 uniform vec3 uForward,uRight,uUp,uSun;
 uniform highp sampler2D uSky,uTrans;
 uniform float uTanFov,uExposure,uPlanetLight,uEclipse,uDarkGain,uObserverHeight;
+#ifndef OBSERVATORY_WEATHER_COMPUTE
 vec3 ray(){vec2 p=(gl_FragCoord.xy/uResolution*2.-1.)*vec2(uResolution.x/uResolution.y,1.)*uTanFov;return normalize(uForward+uRight*p.x+uUp*p.y);}
+#endif
 // Decorative night lift is kept in display space; it must not drown physical
 // emission or grow brighter when the dark-scene exposure increases.
 vec3 skyFloor(vec3 d){
@@ -11,5 +13,11 @@ vec3 skyFloor(vec3 d){
  floorLight+=vec3(.0000007,.000001,.000002)*(1.+uPlanetLight*25.);
  return floorLight/uDarkGain;
 }
-vec3 sky(vec3 d){return texture(uSky,skyUV(d)).rgb+skyFloor(d);}
+vec3 sky(vec3 d){
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ return textureLod(uSky,skyUV(d),0.).rgb+skyFloor(d);
+#else
+ return texture(uSky,skyUV(d)).rgb+skyFloor(d);
+#endif
+}
 vec3 viewT(vec3 d){return transmission(uTrans,uObserverHeight,d.y);}

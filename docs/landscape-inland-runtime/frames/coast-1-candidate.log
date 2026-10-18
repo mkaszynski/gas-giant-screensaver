@@ -1,0 +1,3 @@
+Renderer: AMD Radeon Graphics (radeonsi, renoir, ACO, DRM 3.64, 6.18.6)
+Synchronized GPU+CPU render ms: median=17.2457 p95=41.3009 p99=63.9741 max=493.619 deadline_misses=20 frames=180 resolution=1920x1080
+GPU timer ms: median=14.5152 p95=39.4675

@@ -18,6 +18,7 @@ struct SurfaceOptions {
   bool waterLod = true;
   bool weather = true;
   bool weatherCache = true;
+  bool weatherCompute = true;
 };
 struct TravelLocation {
   double latitude, longitude;
@@ -80,16 +81,23 @@ struct SurfaceMesh {
     bool deepWater = true;
   };
   TravelLocation center{};
-  bool hasLand = false, hasWater = false;
+  bool hasLand = false, hasWater = false, pureLand = false;
   std::vector<SurfaceVertex> vertices;
   std::vector<uint32_t> indices;
   std::vector<uint32_t> waterIndices;
   std::vector<Bounds> bounds;
 };
+// One exclusively owned workspace per active builder. Retain temporary
+// positions instead of allocating and unmapping them for every mesh.
+struct SurfaceBuildWorkspace {
+  std::vector<Vec3> basePositions;
+};
 // Optional cooperative checkpoints let the streaming worker share CPU/APU
 // resources without changing the mesh. Offline and initial builds run directly.
 SurfaceMesh buildSurfaceMesh(const SurfaceWorld &, TravelLocation,
-                             const std::function<void()> &checkpoint = {});
+                             const std::function<void()> &checkpoint = {},
+                             SurfaceMesh reusable = {},
+                             SurfaceBuildWorkspace *workspace = nullptr);
 struct SurfacePlane {
   Vec3 normal;
   double offset;

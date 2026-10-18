@@ -1,0 +1,423 @@
+{
+  "status": "complete",
+  "kind": "Water-shader value lifetime diagnostic; never original Phase1 or presentation acceptance.",
+  "records": [
+    {
+      "biome": "coast",
+      "order": 1,
+      "version": "baseline",
+      "stages": {
+        "render_ms": {
+          "median_ms": 32.4728035,
+          "p95_ms": 37.538564
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.41924
+        },
+        "celestial_ms": {
+          "median_ms": 5.26557,
+          "p95_ms": 6.23638
+        },
+        "terrain_ms": {
+          "median_ms": 11.24692,
+          "p95_ms": 12.99296
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.42706,
+          "p95_ms": 0.50252
+        },
+        "sky_cache_ms": {
+          "median_ms": 4.1099,
+          "p95_ms": 4.93972
+        },
+        "clouds_ms": {
+          "median_ms": 7.17858,
+          "p95_ms": 8.40916
+        },
+        "composite_ms": {
+          "median_ms": 0.96328,
+          "p95_ms": 1.10092
+        }
+      },
+      "background_cpu_cores": 0.7949468339566643,
+      "external_gpu_fraction": 0.05594562952298102,
+      "max_active_cycle_ms": 9.808662995055784,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "coast",
+      "order": 2,
+      "version": "cache",
+      "stages": {
+        "render_ms": {
+          "median_ms": 30.049816,
+          "p95_ms": 35.223308
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.6194
+        },
+        "celestial_ms": {
+          "median_ms": 5.14518,
+          "p95_ms": 6.11919
+        },
+        "terrain_ms": {
+          "median_ms": 8.910720000000001,
+          "p95_ms": 10.35412
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.42828,
+          "p95_ms": 0.5244
+        },
+        "sky_cache_ms": {
+          "median_ms": 4.1261600000000005,
+          "p95_ms": 5.14048
+        },
+        "clouds_ms": {
+          "median_ms": 7.22936,
+          "p95_ms": 8.66568
+        },
+        "composite_ms": {
+          "median_ms": 0.9726600000000001,
+          "p95_ms": 1.13028
+        }
+      },
+      "background_cpu_cores": 0.8689347218254844,
+      "external_gpu_fraction": 0.06072426551154474,
+      "max_active_cycle_ms": 9.5662710009492,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "coast",
+      "order": 3,
+      "version": "cache",
+      "stages": {
+        "render_ms": {
+          "median_ms": 29.625114,
+          "p95_ms": 34.077361
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.6774
+        },
+        "celestial_ms": {
+          "median_ms": 5.14361,
+          "p95_ms": 6.23308
+        },
+        "terrain_ms": {
+          "median_ms": 8.7172,
+          "p95_ms": 11.45108
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.42854000000000003,
+          "p95_ms": 0.54624
+        },
+        "sky_cache_ms": {
+          "median_ms": 4.10492,
+          "p95_ms": 4.93148
+        },
+        "clouds_ms": {
+          "median_ms": 7.19946,
+          "p95_ms": 8.64608
+        },
+        "composite_ms": {
+          "median_ms": 0.9703200000000001,
+          "p95_ms": 1.15756
+        }
+      },
+      "background_cpu_cores": 0.7988217146915044,
+      "external_gpu_fraction": 0.05872595320690273,
+      "max_active_cycle_ms": 8.719912999367807,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "coast",
+      "order": 4,
+      "version": "baseline",
+      "stages": {
+        "render_ms": {
+          "median_ms": 32.616896,
+          "p95_ms": 38.185113
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.70636
+        },
+        "celestial_ms": {
+          "median_ms": 5.32179,
+          "p95_ms": 6.25829
+        },
+        "terrain_ms": {
+          "median_ms": 11.33356,
+          "p95_ms": 13.3724
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.43248,
+          "p95_ms": 0.509
+        },
+        "sky_cache_ms": {
+          "median_ms": 4.15144,
+          "p95_ms": 4.85508
+        },
+        "clouds_ms": {
+          "median_ms": 7.23768,
+          "p95_ms": 8.18316
+        },
+        "composite_ms": {
+          "median_ms": 0.97238,
+          "p95_ms": 1.0906
+        }
+      },
+      "background_cpu_cores": 0.8090315845419395,
+      "external_gpu_fraction": 0.06110443214340909,
+      "max_active_cycle_ms": 9.844036001595668,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "forest",
+      "order": 1,
+      "version": "baseline",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.440846999999998,
+          "p95_ms": 34.593827
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.55722
+        },
+        "celestial_ms": {
+          "median_ms": 3.88997,
+          "p95_ms": 4.8898
+        },
+        "terrain_ms": {
+          "median_ms": 6.33256,
+          "p95_ms": 8.08928
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.3608,
+          "p95_ms": 0.448
+        },
+        "sky_cache_ms": {
+          "median_ms": 0.82138,
+          "p95_ms": 0.98864
+        },
+        "clouds_ms": {
+          "median_ms": 13.12808,
+          "p95_ms": 16.5134
+        },
+        "composite_ms": {
+          "median_ms": 0.9679800000000001,
+          "p95_ms": 1.17332
+        }
+      },
+      "background_cpu_cores": 0.8570566553994478,
+      "external_gpu_fraction": 0.060176174210510316,
+      "max_active_cycle_ms": 10.567884994088672,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "forest",
+      "order": 2,
+      "version": "cache",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.820867999999997,
+          "p95_ms": 33.147602
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.43936
+        },
+        "celestial_ms": {
+          "median_ms": 3.8363899999999997,
+          "p95_ms": 4.80352
+        },
+        "terrain_ms": {
+          "median_ms": 6.37926,
+          "p95_ms": 7.92336
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.36807999999999996,
+          "p95_ms": 0.43344
+        },
+        "sky_cache_ms": {
+          "median_ms": 0.83138,
+          "p95_ms": 0.96644
+        },
+        "clouds_ms": {
+          "median_ms": 13.45678,
+          "p95_ms": 15.81344
+        },
+        "composite_ms": {
+          "median_ms": 0.98262,
+          "p95_ms": 1.12176
+        }
+      },
+      "background_cpu_cores": 0.858406521007016,
+      "external_gpu_fraction": 0.05993835401180792,
+      "max_active_cycle_ms": 8.948204005719163,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "forest",
+      "order": 3,
+      "version": "cache",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.7375735,
+          "p95_ms": 33.021031
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.65384
+        },
+        "celestial_ms": {
+          "median_ms": 3.866925,
+          "p95_ms": 4.57665
+        },
+        "terrain_ms": {
+          "median_ms": 6.32974,
+          "p95_ms": 7.69844
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.36685999999999996,
+          "p95_ms": 0.44076
+        },
+        "sky_cache_ms": {
+          "median_ms": 0.82416,
+          "p95_ms": 1.01256
+        },
+        "clouds_ms": {
+          "median_ms": 13.33752,
+          "p95_ms": 15.39512
+        },
+        "composite_ms": {
+          "median_ms": 0.98236,
+          "p95_ms": 1.11952
+        }
+      },
+      "background_cpu_cores": 0.8524812443689659,
+      "external_gpu_fraction": 0.06853033820451374,
+      "max_active_cycle_ms": 10.141314000065904,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    },
+    {
+      "biome": "forest",
+      "order": 4,
+      "version": "baseline",
+      "stages": {
+        "render_ms": {
+          "median_ms": 29.520449,
+          "p95_ms": 33.478987
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.50908
+        },
+        "celestial_ms": {
+          "median_ms": 3.9355,
+          "p95_ms": 4.65028
+        },
+        "terrain_ms": {
+          "median_ms": 6.563420000000001,
+          "p95_ms": 7.75232
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37314,
+          "p95_ms": 0.42848
+        },
+        "sky_cache_ms": {
+          "median_ms": 0.8345400000000001,
+          "p95_ms": 1.01732
+        },
+        "clouds_ms": {
+          "median_ms": 13.522639999999999,
+          "p95_ms": 15.05028
+        },
+        "composite_ms": {
+          "median_ms": 0.99234,
+          "p95_ms": 1.13432
+        }
+      },
+      "background_cpu_cores": 0.8202689333707797,
+      "external_gpu_fraction": 0.062053849803872824,
+      "max_active_cycle_ms": 10.710329006542452,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "variant_env": {}
+    }
+  ],
+  "performance_acceptance": false,
+  "all_controls_pass": false,
+  "median_of_run_medians": {
+    "coast": {
+      "baseline": {
+        "render_ms": 32.54484975,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.29368,
+        "terrain_ms": 11.29024,
+        "solar_cache_ms": 0.42977,
+        "sky_cache_ms": 4.13067,
+        "clouds_ms": 7.208130000000001,
+        "composite_ms": 0.96783
+      },
+      "cache": {
+        "render_ms": 29.837465,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.144394999999999,
+        "terrain_ms": 8.813960000000002,
+        "solar_cache_ms": 0.42841,
+        "sky_cache_ms": 4.11554,
+        "clouds_ms": 7.21441,
+        "composite_ms": 0.9714900000000001
+      }
+    },
+    "forest": {
+      "baseline": {
+        "render_ms": 28.980648,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 3.912735,
+        "terrain_ms": 6.447990000000001,
+        "solar_cache_ms": 0.36697,
+        "sky_cache_ms": 0.82796,
+        "clouds_ms": 13.32536,
+        "composite_ms": 0.98016
+      },
+      "cache": {
+        "render_ms": 28.77922075,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 3.8516575,
+        "terrain_ms": 6.3545,
+        "solar_cache_ms": 0.36746999999999996,
+        "sky_cache_ms": 0.82777,
+        "clouds_ms": 13.39715,
+        "composite_ms": 0.9824900000000001
+      }
+    }
+  },
+  "note": "Exploratory ABBA stage profiles with busy desktop; every workload control failure is retained. Not sustained-30-fps or Phase1 acceptance. Baseline and candidate share celestial bounds; only water evaluation order differs."
+}

@@ -1,5 +1,7 @@
 #define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
+#include "frame_pacing.hpp"
+#include "preview_statistics.hpp"
 #include "renderer.hpp"
 #include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
@@ -111,9 +113,11 @@ int main(int argc, char **argv) {
                "reflections\n"
                "  --no-weather-cache      Trace every cloud ray for "
                "comparison\n"
+               "  --no-weather-compute    Use fragment clouds for comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
-               "  --debug                 Open time and weather controls at "
+               "  --debug                 Show FPS/native quality and open "
+               "time and weather controls at "
                "launch; "
                "release slider to seek\n"
                "Space pauses; Home resets the slider; Left/Right step time.\n"
@@ -136,6 +140,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-weather-cache") {
         surface.weatherCache = false;
+        continue;
+      }
+      if (a == "--no-weather-compute") {
+        surface.weatherCompute = false;
         continue;
       }
       if (a == "--fixed-view") {
@@ -334,6 +342,8 @@ int main(int argc, char **argv) {
         frameLog << std::setprecision(12);
       }
       int frames = 0;
+      PreviewFrameRate frameRate;
+      FramePacer framePacer(fps);
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
         double elapsed =
@@ -404,6 +414,8 @@ int main(int argc, char **argv) {
                         weatherTime + weatherElapsed);
         if (controls) {
           controls->menu.meteorDark = renderer.meteorDarkEnough();
+          if (debug)
+            controls->setFrameRate(frameRate.fps(), fps);
           int ww, wh;
           glfwGetWindowSize(window, &ww, &wh);
           controls->draw(w, h, ww, wh, elapsed);
@@ -470,6 +482,9 @@ int main(int argc, char **argv) {
           continue;
         }
         glfwSwapBuffers(window);
+        if (interactive)
+          frameRate.presented(
+              std::chrono::duration<double>(Clock::now() - start).count());
         if (benchmark && ++frames >= benchmark) {
           std::sort(durations.begin(), durations.end());
           std::cout << "Synchronized GPU+CPU render ms: median="
@@ -499,10 +514,15 @@ int main(int argc, char **argv) {
           if (cloudSize[0] > 0)
             std::cout << "Cloud sky cache: " << cacheSize[0] << 'x'
                       << cacheSize[1] << '\n';
+          if (cloudSize[0] > 0)
+            std::cout << "Cloud backend: "
+                      << (renderer.computingWeather() ? "OpenGL compute"
+                                                      : "fragment shader")
+                      << '\n';
           break;
         }
-        std::this_thread::sleep_until(frameStart +
-                                      std::chrono::microseconds(1000000 / fps));
+        std::this_thread::sleep_until(
+            framePacer.deadline(frameStart, Clock::now()));
       }
       if (query)
         glDeleteQueries(1, &query);

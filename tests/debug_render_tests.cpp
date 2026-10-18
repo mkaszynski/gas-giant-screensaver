@@ -100,6 +100,21 @@ int main() {
       controls.draw(1280, 720, 640, 360, 129603);
       require(pixel(1260, 695) == corner,
               "closed menu leaves no pixels behind");
+      // Only the preview opts into statistics; the real lock screen's shared
+      // overlay remains unchanged. Closing the menu must retain the readout.
+      hover.menu.pointer(1280, 720, 0, 0, false, 129610);
+      hover.setFrameRate(27.5, 30);
+      glClear(GL_COLOR_BUFFER_BIT);
+      hover.draw(1280, 720, 1280, 720, 129610);
+      require(pixel(20, 15) != terrain && pixel(640, 600) == sky,
+              "FPS and native-quality HUD stays visible with menu closed");
+      int glyphPixels = 0;
+      std::vector<unsigned char> glyphs(386 * 12 * 4);
+      glReadPixels(24, 18, 386, 12, GL_RGBA, GL_UNSIGNED_BYTE, glyphs.data());
+      for (size_t i = 2; i < glyphs.size(); i += 4)
+        if (glyphs[i] > 180)
+          ++glyphPixels;
+      require(glyphPixels > 100, "statistics must contain visible text");
       require(glGetError() == GL_NO_ERROR, "debug GL errors");
     }
     glfwDestroyWindow(window);

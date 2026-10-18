@@ -1,11 +1,17 @@
 #include "renderer.hpp"
+#include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
 #include <GLES2/gl2ext.h>
+#ifndef __EMSCRIPTEN__
+#include <GLES3/gl31.h>
+#endif
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <initializer_list>
+#include <iostream>
 #include <png.h>
 #include <random>
 #include <sstream>
@@ -116,6 +122,49 @@ GLuint compile(GLenum type, const std::string &source) {
   }
   return s;
 }
+GLuint linkProgram(std::initializer_list<GLuint> shaders) {
+  GLuint p = glCreateProgram();
+  for (auto shader : shaders)
+    glAttachShader(p, shader);
+  glLinkProgram(p);
+  for (auto shader : shaders)
+    glDeleteShader(shader);
+  GLint ok = 0;
+  glGetProgramiv(p, GL_LINK_STATUS, &ok);
+  if (!ok) {
+    char log[8192];
+    glGetProgramInfoLog(p, sizeof(log), nullptr, log);
+    glDeleteProgram(p);
+    throw std::runtime_error(log);
+  }
+  return p;
+}
+#ifndef __EMSCRIPTEN__
+struct ImageBindings {
+  struct Binding {
+    GLint texture, level, layered, layer, access, format;
+  };
+  std::array<Binding, 2> saved{};
+  ImageBindings() {
+    for (GLuint i = 0; i < saved.size(); ++i) {
+      auto &s = saved[i];
+      glGetIntegeri_v(GL_IMAGE_BINDING_NAME, i, &s.texture);
+      glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, i, &s.level);
+      glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, i, &s.layered);
+      glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, i, &s.layer);
+      glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, i, &s.access);
+      glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, i, &s.format);
+    }
+  }
+  ~ImageBindings() {
+    for (GLuint i = 0; i < saved.size(); ++i) {
+      auto &s = saved[i];
+      glBindImageTexture(i, s.texture, s.level, s.layered, s.layer, s.access,
+                         s.format);
+    }
+  }
+};
+#endif
 } // namespace
 std::string Renderer::defaultDataDirectory() {
   if (const char *p = std::getenv("OBSERVATORY_DATA_DIR"))
@@ -141,6 +190,13 @@ std::string Renderer::shader(const std::string &name) {
 GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
                          int giantAtmosphere) {
   auto fragmentSource = shader(fragment);
+  // Weather is a construction-time option. Remove its unreachable branches
+  // from the large composite shader instead of retaining a uniform branch.
+  if (fragment == "post.frag")
+    fragmentSource.insert(
+        fragmentSource.find('\n') + 1,
+        std::string("#define OBSERVATORY_WEATHER_MODE ") +
+            (surfaceOptions.enabled && surfaceOptions.weather ? "1\n" : "0\n"));
   if (giantAtmosphere)
     fragmentSource.insert(
         fragmentSource.find('\n') + 1,
@@ -165,22 +221,79 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
   }
   GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)),
          fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
-  GLuint p = glCreateProgram();
-  glAttachShader(p, vs);
-  glAttachShader(p, fs);
-  glLinkProgram(p);
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-  GLint ok;
-  glGetProgramiv(p, GL_LINK_STATUS, &ok);
-  if (!ok) {
-    char log[8192];
-    glGetProgramInfoLog(p, sizeof(log), nullptr, log);
-    glDeleteProgram(p);
-    throw std::runtime_error(log);
-  }
+  GLuint p = linkProgram({vs, fs});
   programs.push_back(p);
   return p;
+}
+GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
+#ifndef __EMSCRIPTEN__
+  GLint major = 0, minor = 0, images = 0, samplers = 0;
+  glGetIntegerv(GL_MAJOR_VERSION, &major);
+  glGetIntegerv(GL_MINOR_VERSION, &minor);
+  const std::string version(
+      reinterpret_cast<const char *>(glGetString(GL_VERSION)));
+  const bool es = version.starts_with("OpenGL ES");
+  if (es ? (major < 3 || (major == 3 && minor < 1))
+         : (major < 4 || (major == 4 && minor < 3)))
+    return 0;
+  // The coordinate cache needs full float render targets. Half-float-only
+  // implementations keep the original fragment renderer.
+  if (es) {
+    bool floatingColor = false;
+    GLint count = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+    for (GLint i = 0; i < count; ++i)
+      floatingColor |= std::string(reinterpret_cast<const char *>(glGetStringi(
+                           GL_EXTENSIONS, i))) == "GL_EXT_color_buffer_float";
+    if (!floatingColor)
+      return 0;
+  }
+  glGetIntegerv(GL_MAX_COMPUTE_IMAGE_UNIFORMS, &images);
+  glGetIntegerv(GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS, &samplers);
+  if (images < 2 || samplers < 16)
+    return 0;
+  auto source = shader("weather.frag");
+  const std::string versionLine = "#version 300 es\n";
+  if (!source.starts_with(versionLine))
+    throw std::runtime_error(
+        "Weather shader requires a GLSL ES 300 entry point");
+  // Compile the same solver and entry point. Keeping this transformation at
+  // the entry-point boundary avoids maintaining a second cloud algorithm.
+  source.replace(0, versionLine.size(),
+                 "#version 310 es\n#define OBSERVATORY_WEATHER_COMPUTE\n"
+                 "#define main weatherPixel\n");
+  if (calm)
+    source.insert(source.find('\n') + 1, "#define OBSERVATORY_WEATHER_CALM\n");
+  if (skyPass)
+    source.insert(source.find('\n') + 1,
+                  "#define OBSERVATORY_WEATHER_SKY_PASS\n");
+  source += R"(
+#undef main
+layout(local_size_x=16,local_size_y=4)in;
+uniform highp sampler2D uWeatherPixels;
+layout(rgba16f,binding=0)writeonly uniform highp image2D uWeatherImage;
+layout(rgba16f,binding=1)writeonly uniform highp image2D uWeatherSkyImage;
+void main(){
+ ivec2 p=ivec2(gl_GlobalInvocationID.xy);
+ if(any(greaterThanEqual(p,imageSize(uWeatherImage))))return;
+ vec4 pixel=texelFetch(uWeatherPixels,p,0);
+ uv=pixel.rg;
+ weatherCachePixel=pixel.ba;
+ weatherPixel();
+ imageStore(uWeatherImage,p,color);
+ // Only mixed MSAA pixels consume this attachment, including manual meteors.
+ // Newly exposed mixed pixels are written in this dispatch before either use.
+ if(!uWeatherSkyPass&&weatherNeedsSkyOutput)imageStore(uWeatherSkyImage,p,skyWeather);
+}
+)";
+  const GLuint p = linkProgram({compile(GL_COMPUTE_SHADER, source)});
+  programs.push_back(p);
+  return p;
+#else
+  (void)calm;
+  (void)skyPass;
+  return 0;
+#endif
 }
 void Renderer::release(Target &t) {
   if (t.depth)
@@ -193,16 +306,23 @@ void Renderer::release(Target &t) {
     glDeleteTextures(1, &t.skyTexture);
   t = {};
 }
-void Renderer::target(Target &t, int w, int h, bool depth, bool skyLayer) {
-  if (t.width == w && t.height == h)
+void Renderer::target(Target &t, int w, int h, bool depth, bool skyLayer,
+                      GLenum format, bool immutable) {
+  if (t.width == w && t.height == h && t.format == format &&
+      t.immutable == immutable)
     return;
   release(t);
   t.width = w;
   t.height = h;
+  t.format = format;
+  t.immutable = immutable;
   glGenTextures(1, &t.texture);
   glBindTexture(GL_TEXTURE_2D, t.texture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT,
-               nullptr);
+  if (immutable)
+    glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
+  else
+    glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, GL_RGBA, GL_HALF_FLOAT,
+                 nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -214,8 +334,11 @@ void Renderer::target(Target &t, int w, int h, bool depth, bool skyLayer) {
   if (skyLayer) {
     glGenTextures(1, &t.skyTexture);
     glBindTexture(GL_TEXTURE_2D, t.skyTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT,
-                 nullptr);
+    if (immutable)
+      glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w, h);
+    else
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA,
+                   GL_HALF_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
@@ -436,9 +559,41 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   if (surfaceOptions.enabled) {
     surface = std::make_unique<SurfaceRenderer>(
         root, surfaceOptions.reflections, surfaceOptions.culling,
-        surfaceOptions.waterLod);
+        surfaceOptions.waterLod, surfaceOptions.weather);
     if (surfaceOptions.weather) {
       weatherProgram = program("weather.frag");
+      if (surfaceOptions.weatherCompute) {
+        try {
+          const GLuint compute = createWeatherComputeProgram();
+          if (compute) {
+            weatherPixelProgram = program("weather-pixels.frag");
+            weatherComputeProgram = compute;
+          }
+        } catch (const std::exception &error) {
+          std::cerr << "Weather compute unavailable; using fragment shader: "
+                    << error.what() << '\n';
+        }
+      }
+      if (weatherComputeProgram) {
+        try {
+          weatherCalmComputeProgram = createWeatherComputeProgram(true);
+        } catch (const std::exception &error) {
+          std::cerr << "Calm weather specialization unavailable; using full "
+                       "compute shader: "
+                    << error.what() << '\n';
+        }
+        if (surfaceOptions.weatherCache) {
+          try {
+            weatherSkyComputeProgram = createWeatherComputeProgram(false, true);
+            weatherSkyCalmComputeProgram =
+                createWeatherComputeProgram(true, true);
+          } catch (const std::exception &error) {
+            std::cerr << "Sky weather compute specialization unavailable; "
+                         "using the available cloud solver: "
+                      << error.what() << '\n';
+          }
+        }
+      }
       weatherLightProgram = program("weather-light.frag");
       glGenTextures(1, &weatherLightTexture);
       textures.push_back(weatherLightTexture);
@@ -610,6 +765,8 @@ Renderer::~Renderer() {
   release(scene);
   release(weather);
   release(skyWeatherCache);
+  release(weatherPixels);
+  release(weatherSkyPixels);
   glDeleteFramebuffers(1, &weatherLightFbo);
   for (auto p : programs)
     glDeleteProgram(p);
@@ -623,6 +780,41 @@ Renderer::~Renderer() {
   glDeleteVertexArrays(1, &starVao);
   glDeleteVertexArrays(1, &vao);
 }
+void Renderer::weatherPixelCoordinates(Target &pixels, int w, int h,
+                                       int cacheWidth, int cacheHeight) {
+  if (pixels.width == w && pixels.height == h)
+    return;
+  // Preserve fragment interpolation and cache-cell arithmetic exactly. Mesa
+  // varies their last bits across rows, so separable strips are insufficient.
+  // Generate this immutable coordinate cache only at construction/resize.
+  target(pixels, w, h, false, false, GL_RGBA32F, true);
+  glBindTexture(GL_TEXTURE_2D, pixels.texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glViewport(0, 0, w, h);
+  glUseProgram(weatherPixelProgram);
+  glUniform2f(glGetUniformLocation(weatherPixelProgram, "uWeatherCacheSize"),
+              cacheWidth, cacheHeight);
+  glBindFramebuffer(GL_FRAMEBUFFER, pixels.framebuffer);
+  quad(weatherPixelProgram);
+}
+#ifndef __EMSCRIPTEN__
+void Renderer::dispatchWeather(GLuint p, const Target &pixels,
+                               const Target &output) {
+  bind(p, 2, "uWeatherPixels", pixels.texture);
+  const ImageBindings images;
+  glBindImageTexture(0, output.texture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
+                     GL_RGBA16F);
+  // The coarse sky program has no secondary output. Never bind or write the
+  // host's image unit there; only mixed display pixels consume this image.
+  if (output.skyTexture)
+    glBindImageTexture(1, output.skyTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
+                       GL_RGBA16F);
+  glDispatchCompute((output.width + 15) / 16, (output.height + 3) / 4, 1);
+  glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT |
+                  GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+#endif
 void Renderer::common(GLuint p, const Scene &s, int w, int h) {
   glUseProgram(p);
   glUniform2f(glGetUniformLocation(p, "uResolution"), w, h);
@@ -839,7 +1031,22 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                  ringOccluders.size() / 4, ringOccluders.data());
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    const Vec3 ringCenter = s.local(-s.observer);
+    const Vec3 ringNormal = s.local(giantPole());
+    const auto ringBounds =
+        celestialScissor
+            ? projectedDiskBounds(
+                  {dot(ringCenter, s.right), dot(ringCenter, s.cameraUp),
+                   dot(ringCenter, s.forward)},
+                  ringOuter,
+                  {dot(ringNormal, s.right), dot(ringNormal, s.cameraUp),
+                   dot(ringNormal, s.forward)},
+                  w, h, std::tan(29 * pi / 180))
+            : ScreenBounds{0, 0, w, h};
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(ringBounds.x, ringBounds.y, ringBounds.width, ringBounds.height);
     quad(ringProgram);
+    glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
   }
   glEnable(GL_DEPTH_TEST);
@@ -860,15 +1067,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     const double z = dot(center, s.forward), tanFov = std::tan(29 * pi / 180);
     if (z <= b.radius)
       continue;
-    const double cx = dot(center, s.right) / z / tanFov * h * .5 + w * .5,
-                 cy = dot(center, s.cameraUp) / z / tanFov * h * .5 + h * .5;
-    const double radius =
-        b.radius / (z - b.radius) / tanFov * h * .5 * 1.5 + 2.;
-    const int x = std::max(0, int(std::floor(cx - radius))),
-              y = std::max(0, int(std::floor(cy - radius)));
-    const int x2 = std::min(w, int(std::ceil(cx + radius))),
-              y2 = std::min(h, int(std::ceil(cy + radius)));
-    if (x >= x2 || y >= y2)
+    // Match the giant's 12 scale-height shell (giant_atmosphere.glsl).
+    // The projection helper adds a separate pixel guard for analytic filtering.
+    const double radius = b.radius * (b.material == 0 ? 1.0023 : 1.);
+    const auto bounds =
+        celestialScissor ? projectedSphereBounds({dot(center, s.right),
+                                                  dot(center, s.cameraUp), z},
+                                                 radius, w, h, tanFov)
+                         : ScreenBounds{0, 0, w, h};
+    if (bounds.empty())
       continue;
     // Separate programs keep the narrow limb integrator's register pressure
     // out of the much larger cloud-disk draw. Their pixel domains are disjoint.
@@ -914,7 +1121,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         glUniform4fv(glGetUniformLocation(bodyShader, "uOccluders"),
                      occluders.size() / 4, occluders.data());
       glEnable(GL_SCISSOR_TEST);
-      glScissor(x, y, x2 - x, y2 - y);
+      glScissor(bounds.x, bounds.y, bounds.width, bounds.height);
       glEnable(GL_BLEND);
       glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
       quad(bodyShader);
@@ -954,37 +1161,77 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     // Preserve vertical sampling of long grazing columns. Wider horizontal
     // cells remove redundant smooth-sky rays without coarsening the horizon.
     if (surfaceOptions.weatherCache)
-      target(skyWeatherCache, (w + 2) / 3, (h + 1) / 2);
+      target(skyWeatherCache, (w + 2) / 3, (h + 1) / 2, false, false,
+             GL_RGBA16F, weatherSkyComputeProgram != 0);
     // Ground and partial MSAA pixels retain exact, display-resolution paths.
-    target(weather, w, h, false, true);
+    target(weather, w, h, false, true, GL_RGBA16F, weatherComputeProgram != 0);
+    if (weatherComputeProgram)
+      weatherPixelCoordinates(weatherPixels, w, h, (w + 2) / 3, (h + 1) / 2);
+    if (weatherSkyComputeProgram)
+      weatherPixelCoordinates(weatherSkyPixels, skyWeatherCache.width,
+                              skyWeatherCache.height, 0, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
-    common(weatherProgram, s, w, h);
-    weatherUniforms(weatherProgram, s);
-    glActiveTexture(GL_TEXTURE12);
-    glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
-    integer(weatherProgram, "uWeatherLightCache", 12);
-    glUniform2f(glGetUniformLocation(weatherProgram, "uWeatherResolution"),
-                weather.width, weather.height);
-    scalar(weatherProgram, "uSurfaceFraction", surface->coverageFraction());
-    bind(weatherProgram, 11, "uSurfaceDistance", surface->distanceTexture());
-    bind(weatherProgram, 9, "uSurface", surfaceTexture);
-    bind(weatherProgram, 14, "uWeatherScene", scene.texture);
-    bind(weatherProgram, 13, "uWeatherSkyCache", mountains);
-    integer(weatherProgram, "uWeatherCacheEnabled",
-            surfaceOptions.weatherCache);
+    auto prepareWeather = [&](GLuint p) {
+      common(p, s, w, h);
+      weatherUniforms(p, s);
+      glActiveTexture(GL_TEXTURE12);
+      glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
+      integer(p, "uWeatherLightCache", 12);
+      glUniform2f(glGetUniformLocation(p, "uWeatherResolution"), weather.width,
+                  weather.height);
+      scalar(p, "uSurfaceFraction", surface->coverageFraction());
+      bind(p, 11, "uSurfaceDistance", surface->distanceTexture());
+      bind(p, 9, "uSurface", surfaceTexture);
+      bind(p, 14, "uWeatherScene", scene.texture);
+      bind(p, 13, "uWeatherSkyCache", mountains);
+      integer(p, "uWeatherCacheEnabled", surfaceOptions.weatherCache);
+    };
     if (surfaceOptions.weatherCache) {
-      integer(weatherProgram, "uWeatherSkyPass", true);
-      glBindFramebuffer(GL_FRAMEBUFFER, skyWeatherCache.framebuffer);
-      glViewport(0, 0, skyWeatherCache.width, skyWeatherCache.height);
-      quad(weatherProgram);
-      bind(weatherProgram, 13, "uWeatherSkyCache", skyWeatherCache.texture);
+      if (weatherSkyComputeProgram) {
+#ifndef __EMSCRIPTEN__
+        const GLuint compute = weatherSkyCalmComputeProgram &&
+                                       weatherState.storm == 0. &&
+                                       weatherState.flashRadiance == 0.
+                                   ? weatherSkyCalmComputeProgram
+                                   : weatherSkyComputeProgram;
+        prepareWeather(compute);
+        dispatchWeather(compute, weatherSkyPixels, skyWeatherCache);
+#endif
+      } else {
+        prepareWeather(weatherProgram);
+        integer(weatherProgram, "uWeatherSkyPass", true);
+        glBindFramebuffer(GL_FRAMEBUFFER, skyWeatherCache.framebuffer);
+        glViewport(0, 0, skyWeatherCache.width, skyWeatherCache.height);
+        quad(weatherProgram);
+      }
     }
-    integer(weatherProgram, "uWeatherSkyPass", false);
     WEATHER_PROFILE_STAGE(5);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
-    quad(weatherProgram);
+    if (weatherComputeProgram) {
+#ifndef __EMSCRIPTEN__
+      // Exact zeros only: a growing storm or even a subframe flash must use
+      // the full solver immediately. No weather parameter is quantized.
+      const GLuint compute = computingCalmWeather() ? weatherCalmComputeProgram
+                                                    : weatherComputeProgram;
+      prepareWeather(compute);
+      bind(compute, 13, "uWeatherSkyCache",
+           surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
+      // The post pass samples these images; manual meteors also blend into
+      // their framebuffer attachments. Both consumers need visibility.
+      dispatchWeather(compute, weatherPixels, weather);
+#endif
+    } else {
+      // With a fragment sky cache this program is already prepared; retain
+      // the original single uniform setup on WebGL and older native contexts.
+      if (!surfaceOptions.weatherCache)
+        prepareWeather(weatherProgram);
+      bind(weatherProgram, 13, "uWeatherSkyCache",
+           surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
+      integer(weatherProgram, "uWeatherSkyPass", false);
+      quad(weatherProgram);
+    }
     revealMeteors(s, w, h, surfaceTexture);
   }
   WEATHER_PROFILE_STAGE(6);

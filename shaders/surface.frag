@@ -2,7 +2,9 @@
 precision highp float;
 in vec3 vPosition,vNormal,vProperties,vMesh;
 layout(location=0)out vec4 color;
+#if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
 layout(location=1)out float weatherDistance;
+#endif
 #include "atmosphere.glsl"
 #include "scene.glsl"
 #include "clouds.glsl"
@@ -145,16 +147,39 @@ void physicalMaterial(vec2 uv,vec2 dx,vec2 dy,float dry,float cold,float rock,fl
   roughness+=w*a.a;cavity+=w*n.b;
  }
 }
-void main(){
- vec3 d=normalize(vPosition);float distance=length(vPosition);
- weatherDistance=distance*.001;
- float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
- vec4 phase=vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));
- vec4 foot=fwidth(phase);
+vec4 wavePhase(){return vec4(dot(vMaterial,uWaves[0].xy),dot(vMaterial,uWaves[1].xy),dot(vMaterial,uWaves[2].xy),dot(vMaterial,uWaves[3].xy));}
+vec3 preparedOcean(vec3 d,vec4 foot){
+ vec4 phase=wavePhase();
  vec4 amplitude=exp(-foot*foot*.5)*vec4(uWaves[0].w,uWaves[1].w,uWaves[2].w,uWaves[3].w);
  if(uWeatherEnabled)amplitude*=1.+.7*uWeatherKind.y;
  // Sphere normal avoids coastal land slopes tilting the sea reflection.
  vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
+ return oceanRadiance(d,waterNormal,phase,amplitude);
+}
+void main(){
+ vec3 d=normalize(vPosition);float distance=length(vPosition);
+#if !defined(OBSERVATORY_WEATHER_MODE) || OBSERVATORY_WEATHER_MODE
+ weatherDistance=distance*.001;
+#endif
+ #ifdef SURFACE_DEEP_WATER
+ // Selected only for blocks whose vertices are all below -64 m and warm
+ // enough to be liquid. Linear interpolation preserves those bounds, so the
+ // general shader's water mask is exactly one over every such triangle.
+ const float water=1.;
+ #else
+ float water=(1.-smoothstep(-.25,.65,vProperties.x))*smoothstep(-5.,-1.,vProperties.z);
+ #endif
+ #ifdef SURFACE_PURE_LAND
+ // All mesh vertices are above the shoreline blend, not only this block.
+ // Keep the early water branch for helper lanes and remove the final blend
+ // after land derivatives. Mixed coastal meshes retain the general shader.
+ const float shorelineBlend=0.;
+ #else
+ float shorelineBlend=water;
+ #endif
+ // Derivatives stay outside divergent shoreline branches. Prepare the other
+ // water values only at their use, without keeping them live across land PBR.
+ vec4 foot=fwidth(wavePhase());
  // Pure water avoids land's shadow/normal/material work. Mixed shore pixels
  // use explicit gradients below so divergent branches cannot alias textures.
  vec2 material=(vMaterial+uMaterialOffset)/24.,broadUV=(vMaterial+uMaterialOffset)/310.;
@@ -166,7 +191,7 @@ void main(){
  if(water>.001)discard;
  #endif
  if(water>=1.){
-  vec3 L=oceanRadiance(d,waterNormal,phase,amplitude),T=aerialTransmission(distance);
+  vec3 L=preparedOcean(d,foot),T=aerialTransmission(distance);
   color=vec4(min((L*T+sky(d)*(1.-T))*uSceneScale,vec3(60000.)),1.);return;
  }
  vec3 N=normalize(vNormal);
@@ -250,7 +275,7 @@ void main(){
  roughness=mix(roughness,.28,wetness);
  float spec=dielectricSpecular(N,-d,uSun,max(.28,roughness),.04);
  land+=irradiance*NoL*spec*mix(1.,.35,forest);
- if(water>0.)land=mix(land,oceanRadiance(d,waterNormal,phase,amplitude),water);
+ if(shorelineBlend>0.)land=mix(land,preparedOcean(d,foot),shorelineBlend);
  vec3 T=aerialTransmission(distance);
  land=land*T+sky(d)*(1.-T);
  color=vec4(min(land*uSceneScale,vec3(60000.)),1.);

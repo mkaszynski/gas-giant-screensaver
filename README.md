@@ -14,6 +14,11 @@ and release to fast-forward the whole scene. In the preview, Space pauses/resume
 Home resets the range, and Left/Right step time. On the lock screen, keyboard
 input remains exclusively for authentication; use the menu's mouse controls.
 
+The standalone `--debug` demo also shows measured FPS, the configured frame cap,
+and **Quality Native** with the actual rendering resolution. This readout stays
+visible when the menu is closed. It does not change quality, resolution, effects,
+or the frame cap; FPS measures completed preview swaps over wall time.
+
 **Weather** offers Auto, Clear, Fair, Overcast, Fog and Storm. Auto restores the
 current biome's evolving weather. Overrides preserve wind and cloud motion and
 feed the same cloud, ground-shadow, reflection, precipitation and lightning
@@ -316,6 +321,12 @@ sky table changes during the day. Sphere draws are bounded to screen rectangles;
 impossible shadow casters are rejected on the CPU. Weather integrates cached
 cloud density at display resolution with a bounded sample count and a small
 solar-transmission volume. `--no-weather` retains the thin-cloud path.
+Native contexts with suitable OpenGL ES 3.1 compute support run the same
+full-resolution cloud solver and coarse sky cache in 16×4 workgroups.
+Density samples, lighting,
+terrain clipping and effects are preserved. Older contexts and browser builds
+retain fragment clouds; `--no-weather-compute` selects that comparison path.
+See [native cloud compute validation](docs/NATIVE_CLOUD_COMPUTE.md).
 Solar glare adds no extra rendering pass. There is no runtime AI,
 network access or per-frame asset texture upload.
 The moving world streams bounded local geometry with one background worker;

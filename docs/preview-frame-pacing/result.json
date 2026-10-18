@@ -1,0 +1,379 @@
+{
+  "status": "complete",
+  "records": [
+    {
+      "case": "forest",
+      "order": 1,
+      "version": "relative",
+      "frames": 528,
+      "steady_frames": 440,
+      "swap_fps": 29.861852489885035,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.471133498499995,
+          "p95_ms": 33.860686999,
+          "max_ms": 45.436339002
+        },
+        "swap_ms": {
+          "median_ms": 0.504255502,
+          "p95_ms": 0.660475001,
+          "max_ms": 2.623448003
+        },
+        "work_ms": {
+          "median_ms": 2.077856003,
+          "p95_ms": 2.604193003,
+          "max_ms": 14.401033994
+        },
+        "sleep_ms": {
+          "median_ms": 30.856920002499997,
+          "p95_ms": 31.096300001,
+          "max_ms": 31.383299996
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.733021,
+          "p95_ms": 30.852999,
+          "max_ms": 30.902571
+        }
+      },
+      "background_cpu_cores": 0.4146271330171595,
+      "external_gpu_fraction": 0.009150739493175651,
+      "max_active_cycle_ms": 8.391217001189943,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "forest",
+      "order": 2,
+      "version": "absolute",
+      "frames": 530,
+      "steady_frames": 441,
+      "swap_fps": 30.000520627664077,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.341402996,
+          "p95_ms": 33.768784,
+          "max_ms": 46.618241999
+        },
+        "swap_ms": {
+          "median_ms": 0.515135995,
+          "p95_ms": 0.696723,
+          "max_ms": 10.108575007
+        },
+        "work_ms": {
+          "median_ms": 2.126206004,
+          "p95_ms": 2.61245,
+          "max_ms": 15.599986
+        },
+        "sleep_ms": {
+          "median_ms": 30.680424999,
+          "p95_ms": 30.949558997,
+          "max_ms": 31.348583005
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.533047,
+          "p95_ms": 30.723975,
+          "max_ms": 30.784288
+        }
+      },
+      "background_cpu_cores": 0.4278737787934234,
+      "external_gpu_fraction": 0.010787375024482597,
+      "max_active_cycle_ms": 8.582962000218686,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "forest",
+      "order": 3,
+      "version": "absolute",
+      "frames": 531,
+      "steady_frames": 442,
+      "swap_fps": 30.000285343533932,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.328080000499995,
+          "p95_ms": 33.722991,
+          "max_ms": 45.800221
+        },
+        "swap_ms": {
+          "median_ms": 0.5202010035,
+          "p95_ms": 0.673741,
+          "max_ms": 2.269564
+        },
+        "work_ms": {
+          "median_ms": 2.047506001,
+          "p95_ms": 2.680006997,
+          "max_ms": 14.730732
+        },
+        "sleep_ms": {
+          "median_ms": 30.715053500499998,
+          "p95_ms": 30.986585996,
+          "max_ms": 31.191851995
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.539555999999997,
+          "p95_ms": 30.715502,
+          "max_ms": 30.752025
+        }
+      },
+      "background_cpu_cores": 0.432426036162325,
+      "external_gpu_fraction": 0.01418852357615145,
+      "max_active_cycle_ms": 8.140623998770025,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "forest",
+      "order": 4,
+      "version": "relative",
+      "frames": 528,
+      "steady_frames": 439,
+      "swap_fps": 29.844104831579408,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.487704,
+          "p95_ms": 33.806450003,
+          "max_ms": 46.926389005
+        },
+        "swap_ms": {
+          "median_ms": 0.520335998,
+          "p95_ms": 0.673711002,
+          "max_ms": 2.017847997
+        },
+        "work_ms": {
+          "median_ms": 2.052141994,
+          "p95_ms": 2.382054998,
+          "max_ms": 15.754396001
+        },
+        "sleep_ms": {
+          "median_ms": 30.881409002,
+          "p95_ms": 31.105437003,
+          "max_ms": 31.368254997
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.74344,
+          "p95_ms": 30.831915,
+          "max_ms": 30.879864
+        }
+      },
+      "background_cpu_cores": 0.4149784136275447,
+      "external_gpu_fraction": 0.01174846923948289,
+      "max_active_cycle_ms": 8.847201999742538,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "coast",
+      "order": 1,
+      "version": "relative",
+      "frames": 525,
+      "steady_frames": 437,
+      "swap_fps": 29.87299060434012,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.465531,
+          "p95_ms": 33.916732995,
+          "max_ms": 46.605843003
+        },
+        "swap_ms": {
+          "median_ms": 0.521579001,
+          "p95_ms": 5.585487001,
+          "max_ms": 16.191881994
+        },
+        "work_ms": {
+          "median_ms": 2.433820991,
+          "p95_ms": 2.973905008,
+          "max_ms": 15.801499998
+        },
+        "sleep_ms": {
+          "median_ms": 30.492708996,
+          "p95_ms": 30.750307997,
+          "max_ms": 31.030637001
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.372439,
+          "p95_ms": 30.543396,
+          "max_ms": 30.705007
+        }
+      },
+      "background_cpu_cores": 0.49867510440488266,
+      "external_gpu_fraction": 0.013480115680689284,
+      "max_active_cycle_ms": 13.486044001183473,
+      "gpu_clients_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false
+    },
+    {
+      "case": "coast",
+      "order": 2,
+      "version": "absolute",
+      "frames": 528,
+      "steady_frames": 440,
+      "swap_fps": 29.999815635066927,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.336473999999995,
+          "p95_ms": 33.746386995,
+          "max_ms": 45.655458998
+        },
+        "swap_ms": {
+          "median_ms": 0.5182329990000001,
+          "p95_ms": 0.605375004,
+          "max_ms": 2.556471998
+        },
+        "work_ms": {
+          "median_ms": 2.3820515015000003,
+          "p95_ms": 2.79246,
+          "max_ms": 15.111086992
+        },
+        "sleep_ms": {
+          "median_ms": 30.4352684945,
+          "p95_ms": 30.739064001,
+          "max_ms": 31.058296998
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.259966499999997,
+          "p95_ms": 30.491312,
+          "max_ms": 30.663779
+        }
+      },
+      "background_cpu_cores": 0.43610377139044343,
+      "external_gpu_fraction": 0.012636297713834295,
+      "max_active_cycle_ms": 9.40495699614985,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "coast",
+      "order": 3,
+      "version": "absolute",
+      "frames": 526,
+      "steady_frames": 439,
+      "swap_fps": 30.000556779510266,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.332929997,
+          "p95_ms": 33.830082997,
+          "max_ms": 45.496489001
+        },
+        "swap_ms": {
+          "median_ms": 0.524836003,
+          "p95_ms": 0.635580996,
+          "max_ms": 17.613507
+        },
+        "work_ms": {
+          "median_ms": 2.421592006,
+          "p95_ms": 2.973607996,
+          "max_ms": 14.729435003
+        },
+        "sleep_ms": {
+          "median_ms": 30.372724003,
+          "p95_ms": 30.674910005,
+          "max_ms": 30.975806003
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.249166,
+          "p95_ms": 30.461459,
+          "max_ms": 30.656729
+        }
+      },
+      "background_cpu_cores": 0.4614678285313164,
+      "external_gpu_fraction": 0.01585450236025524,
+      "max_active_cycle_ms": 9.644077996199485,
+      "gpu_clients_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false
+    },
+    {
+      "case": "coast",
+      "order": 4,
+      "version": "relative",
+      "frames": 524,
+      "steady_frames": 437,
+      "swap_fps": 29.857451008058273,
+      "stages": {
+        "interval_ms": {
+          "median_ms": 33.489942994,
+          "p95_ms": 33.981191998,
+          "max_ms": 45.227183997
+        },
+        "swap_ms": {
+          "median_ms": 0.515718995,
+          "p95_ms": 0.867903997,
+          "max_ms": 16.331539999
+        },
+        "work_ms": {
+          "median_ms": 2.414189003,
+          "p95_ms": 2.961417005,
+          "max_ms": 14.488964
+        },
+        "sleep_ms": {
+          "median_ms": 30.532181001,
+          "p95_ms": 30.826431001,
+          "max_ms": 31.284447003
+        },
+        "requested_sleep_ms": {
+          "median_ms": 30.410425,
+          "p95_ms": 30.595098,
+          "max_ms": 30.70286
+        }
+      },
+      "background_cpu_cores": 0.4732244946715161,
+      "external_gpu_fraction": 0.013862194454111257,
+      "max_active_cycle_ms": 10.061109998787288,
+      "gpu_clients_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false
+    }
+  ],
+  "all_controls_pass": false,
+  "performance_acceptance": false,
+  "fixtures": {
+    "relative": {
+      "binary_sha256": "b333f00fa028a9f0299f4ea11178673afbd42d87240c4d5041eb405e54fb899f"
+    },
+    "absolute": {
+      "binary_sha256": "484b42f654e471e53f8be410fc7ee4146cb59e5ed6f98d81fb15741f9f0c798b"
+    }
+  },
+  "settings": {
+    "order": [
+      "relative",
+      "absolute",
+      "absolute",
+      "relative"
+    ],
+    "cases": [
+      [
+        "forest",
+        510,
+        162000
+      ],
+      [
+        "coast",
+        1740,
+        5600.390625
+      ]
+    ],
+    "seconds_per_run": 18,
+    "steady_excluded_seconds": 3,
+    "fps_cap": 30,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "debug_hud": true,
+    "controls": {
+      "background_cpu_cores": 1,
+      "external_gpu_fraction": 0.05,
+      "max_active_collection_ms": 10,
+      "stable_gpu_clients": true
+    }
+  },
+  "observer_sha256": "da3a8a33d6279e3247caecde28823eef529c397e0e321a5caf7f4613e08fa4c0",
+  "limits": "All raw events retained. Completed GLFW swaps, not physical presentation. No GPU finish/query or effect/quality changes. The relative and absolute binaries share renderer objects, compiler and GLFW library; only main pacing differs. No retries to seek a pass."
+}

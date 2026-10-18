@@ -39,6 +39,20 @@ writeUniform(
   4,
 );
 assert.deepEqual([...f.slice(4, 12)], [1, 2, 0, 0, 3, 4, 0, 0]);
+// The shader stores thin-cloud offsets in padded vec4s. CPU uploads still
+// contain consecutive vec2 values, including partial/nonzero-element writes.
+writeUniform(
+  buffer,
+  { offset: 16, type: 'vec4', valueType: 'vec2', array_stride: 16 },
+  [99, 5, 6, 7, 8, 99], 1, 4,
+);
+assert.deepEqual([...f.slice(4, 12)], [5, 6, 0, 0, 7, 8, 0, 0]);
+writeUniform(
+  buffer,
+  { offset: 16, type: 'vec4', valueType: 'vec2', array_stride: 16 },
+  [9, 10], 0, 2, 0, 1,
+);
+assert.deepEqual([...f.slice(4, 12)], [5, 6, 0, 0, 9, 10, 0, 0]);
 writeUniform(
   buffer,
   { offset: 48, type: 'mat3', matrix_stride: 16 },

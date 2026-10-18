@@ -57,6 +57,26 @@ int main() {
       rejected = true;
     }
     require(rejected, "invalid rate rejected");
+    for (int fps : {30, 60}) {
+      FramePacer preview(fps);
+      auto nextStart = start;
+      for (int frame = 0; frame < fps * 20; ++frame) {
+        const auto finished = nextStart + milliseconds(7);
+        nextStart = preview.deadline(nextStart, finished) + microseconds(125);
+      }
+      const auto error =
+          duration_cast<microseconds>(nextStart - start - seconds(20));
+      require(std::abs(error.count()) < 250,
+              "preview sleep overshoot must not accumulate across frames");
+    }
+    FramePacer previewOverrun;
+    require(previewOverrun.deadline(start, start + milliseconds(40)) ==
+                start + milliseconds(40),
+            "late preview draws resume immediately without a catch-up queue");
+    require(previewOverrun.deadline(start + seconds(60),
+                                    start + seconds(60) + milliseconds(7)) ==
+                start + seconds(60) + nanoseconds(33333333),
+            "preview idle restart retains precise frame duration");
     std::cout << "Native frame deadlines account for render work PASS\n";
     return 0;
   } catch (const std::exception &e) {

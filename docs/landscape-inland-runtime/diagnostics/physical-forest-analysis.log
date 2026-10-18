@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/tmp/landscape-present-probe/analyze.py", line 52, in <module>
+    args=parser.parse_args();result=report(list(csv.DictReader(args.csv.open())),args.warmup)
+                                    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/landscape-present-probe/analyze.py", line 10, in report
+    if any(b<=a for a,b in zip(stamps,stamps[1:])):raise ValueError('Non-monotonic presentation clock')
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Non-monotonic presentation clock
