@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
+#include "preview_statistics.hpp"
 #include "renderer.hpp"
 #include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
@@ -114,7 +115,8 @@ int main(int argc, char **argv) {
                "  --no-weather-compute    Use fragment clouds for comparison\n"
                "  --fixed-view            Previous stationary landscape "
                "comparison\n"
-               "  --debug                 Open time and weather controls at "
+               "  --debug                 Show FPS/native quality and open "
+               "time and weather controls at "
                "launch; "
                "release slider to seek\n"
                "Space pauses; Home resets the slider; Left/Right step time.\n"
@@ -339,6 +341,7 @@ int main(int argc, char **argv) {
         frameLog << std::setprecision(12);
       }
       int frames = 0;
+      PreviewFrameRate frameRate;
       while (!glfwWindowShouldClose(window) && !interrupted) {
         auto frameStart = Clock::now();
         double elapsed =
@@ -409,6 +412,8 @@ int main(int argc, char **argv) {
                         weatherTime + weatherElapsed);
         if (controls) {
           controls->menu.meteorDark = renderer.meteorDarkEnough();
+          if (debug)
+            controls->setFrameRate(frameRate.fps(), fps);
           int ww, wh;
           glfwGetWindowSize(window, &ww, &wh);
           controls->draw(w, h, ww, wh, elapsed);
@@ -475,6 +480,9 @@ int main(int argc, char **argv) {
           continue;
         }
         glfwSwapBuffers(window);
+        if (interactive)
+          frameRate.presented(
+              std::chrono::duration<double>(Clock::now() - start).count());
         if (benchmark && ++frames >= benchmark) {
           std::sort(durations.begin(), durations.end());
           std::cout << "Synchronized GPU+CPU render ms: median="

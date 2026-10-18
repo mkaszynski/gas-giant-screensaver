@@ -130,7 +130,7 @@ void DebugOverlay::text(double x, double y, double scale,
 void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
                         float opacity) {
   if (w <= 0 || h <= 0 || ww <= 0 || wh <= 0 || opacity <= 0 ||
-      (!menu.open() && !menu.promptVisible(real)))
+      (!menu.open() && !menu.promptVisible(real) && !statistics))
     return;
   if (!program)
     initialize();
@@ -235,11 +235,25 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
                                                   : rarity.str();
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
          1.5 * layout.scale, status);
-  } else {
+  } else if (menu.promptVisible(real)) {
     auto button = layout.prompt(ww);
     rectangle(button, .018, .028, .043, .94);
     text(button.x + 10 * layout.scale, button.y + 9 * layout.scale,
          1.5 * layout.scale, "OPEN DEBUG MENU");
+  }
+  if (statistics) {
+    std::ostringstream status;
+    status << "FPS ";
+    if (fps > 0 && std::isfinite(fps))
+      status << std::fixed << std::setprecision(1) << fps;
+    else
+      status << "--";
+    status << "  CAP " << cap << "   QUALITY NATIVE " << w << " X " << h;
+    const double scale = layout.scale;
+    rectangle({16 * scale, wh - 36 * scale,
+               (status.str().size() * 9 + 16) * scale, 24 * scale},
+              .018, .028, .043, .90);
+    text(24 * scale, wh - 29 * scale, 1.5 * scale, status.str());
   }
   for (auto &v : vertices)
     v.a *= opacity;

@@ -14,6 +14,11 @@ and release to fast-forward the whole scene. In the preview, Space pauses/resume
 Home resets the range, and Left/Right step time. On the lock screen, keyboard
 input remains exclusively for authentication; use the menu's mouse controls.
 
+The standalone `--debug` demo also shows measured FPS, the configured frame cap,
+and **Quality Native** with the actual rendering resolution. This readout stays
+visible when the menu is closed. It does not change quality, resolution, effects,
+or the frame cap; FPS measures completed preview swaps over wall time.
+
 **Weather** offers Auto, Clear, Fair, Overcast, Fog and Storm. Auto restores the
 current biome's evolving weather. Overrides preserve wind and cloud motion and
 feed the same cloud, ground-shadow, reflection, precipitation and lightning
