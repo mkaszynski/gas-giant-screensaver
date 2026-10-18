@@ -24,8 +24,11 @@ and 8.81 ms after, with complete frames at 32.54 and 29.84 ms respectively.
 Forest complete-frame medians were 28.98 and 28.78 ms. These measurements had
 failed background-work controls and establish neither sustained 30 fps nor the
 original Phase 1 cost requirement. Every raw frame and failed workload control
-is preserved in that evidence directory. Controlled fullscreen-condition timing
-is being recorded separately; release acceptance remains open.
+is preserved in that evidence directory. A subsequent [fullscreen-condition trial](water-preparation/fullscreen-condition-trial/)
+measured coast medians of 28.29 → 24.85 ms and forest medians of
+25.08 → 23.62 ms versus the previous compute package. Its two late candidate
+frames and one failed collector control are retained; release acceptance remains
+open.
 
 Run the focused comparison from the source root after building:
 
