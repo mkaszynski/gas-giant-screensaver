@@ -331,7 +331,7 @@ int main() {
         Fixture unpruned;
         unpruned.copyShaders(anchored);
         unpruned.replace("weather_common.glsl",
-                         "if(shape<=threshold&&(uWeatherKind.y<=0.||z<=.72||"
+                         "if(shape<=threshold&&(weatherStorm<=0.||z<=.72||"
                          "n.r<=threshold-.12))return 0.;",
                          "");
         Renderer exhaustive(unpruned.root.string(), {}, {true, 0, 162000});

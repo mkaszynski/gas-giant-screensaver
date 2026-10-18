@@ -4,7 +4,12 @@ uniform highp sampler2D uWeatherSkyCache,uWeatherScene;
 bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  if(dot(direction,uSun)>.995)return false;
  ivec2 size=textureSize(uWeatherSkyCache,0);
- vec2 q=uv*vec2(size)-.5,f=fract(q);
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ vec2 q=weatherCachePixel;
+#else
+ vec2 q=uv*vec2(size)-.5;
+#endif
+ vec2 f=fract(q);
  ivec2 p=ivec2(floor(q));
  vec4 a=texelFetch(uWeatherSkyCache,clamp(p,ivec2(0),size-1),0);
  vec4 b=texelFetch(uWeatherSkyCache,clamp(p+ivec2(1,0),ivec2(0),size-1),0);

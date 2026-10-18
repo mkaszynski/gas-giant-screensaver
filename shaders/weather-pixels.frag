@@ -2,6 +2,9 @@
 precision highp float;
 in vec2 uv;
 out vec4 color;
-// Render one row and one column with the full display viewport. These tiny
-// floating-point strips retain the rasterizer's exact interpolation rounding.
-void main(){color=vec4(uv,0.,1.);}
+uniform vec2 uWeatherCacheSize;
+// Capture the full viewport once on creation/resize. Interpolation can vary
+// across rows by a few float bits, so separable strips are insufficient.
+// Keep the cache-cell arithmetic in the fragment stage as well: drivers can
+// contract its multiply/add differently when compiling a compute program.
+void main(){color=vec4(uv,uv*uWeatherCacheSize-.5);}

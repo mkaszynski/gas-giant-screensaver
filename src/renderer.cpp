@@ -224,7 +224,7 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
   programs.push_back(p);
   return p;
 }
-GLuint Renderer::createWeatherComputeProgram() {
+GLuint Renderer::createWeatherComputeProgram(bool calm) {
 #ifndef __EMSCRIPTEN__
   GLint major = 0, minor = 0, images = 0, samplers = 0;
   glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -235,7 +235,7 @@ GLuint Renderer::createWeatherComputeProgram() {
   if (es ? (major < 3 || (major == 3 && minor < 1))
          : (major < 4 || (major == 4 && minor < 3)))
     return 0;
-  // The coordinate strips need full float render targets. Half-float-only
+  // The coordinate cache needs full float render targets. Half-float-only
   // implementations keep the original fragment renderer.
   if (es) {
     bool floatingColor = false;
@@ -261,17 +261,20 @@ GLuint Renderer::createWeatherComputeProgram() {
   source.replace(0, versionLine.size(),
                  "#version 310 es\n#define OBSERVATORY_WEATHER_COMPUTE\n"
                  "#define main weatherPixel\n");
+  if (calm)
+    source.insert(source.find('\n') + 1, "#define OBSERVATORY_WEATHER_CALM\n");
   source += R"(
 #undef main
 layout(local_size_x=16,local_size_y=4)in;
-uniform highp sampler2D uWeatherPixelU,uWeatherPixelV;
+uniform highp sampler2D uWeatherPixels;
 layout(rgba16f,binding=0)writeonly uniform highp image2D uWeatherImage;
 layout(rgba16f,binding=1)writeonly uniform highp image2D uWeatherSkyImage;
 void main(){
  ivec2 p=ivec2(gl_GlobalInvocationID.xy);
  if(any(greaterThanEqual(p,ivec2(uWeatherResolution))))return;
- uv=vec2(texelFetch(uWeatherPixelU,ivec2(p.x,0),0).r,
-         texelFetch(uWeatherPixelV,ivec2(0,p.y),0).g);
+ vec4 pixel=texelFetch(uWeatherPixels,p,0);
+ uv=pixel.rg;
+ weatherCachePixel=pixel.ba;
  weatherPixel();
  imageStore(uWeatherImage,p,color);
  // Only mixed MSAA pixels consume this attachment, including manual meteors.
@@ -283,6 +286,7 @@ void main(){
   programs.push_back(p);
   return p;
 #else
+  (void)calm;
   return 0;
 #endif
 }
@@ -565,6 +569,15 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
                     << error.what() << '\n';
         }
       }
+      if (weatherComputeProgram) {
+        try {
+          weatherCalmComputeProgram = createWeatherComputeProgram(true);
+        } catch (const std::exception &error) {
+          std::cerr << "Calm weather specialization unavailable; using full "
+                       "compute shader: "
+                    << error.what() << '\n';
+        }
+      }
       weatherLightProgram = program("weather-light.frag");
       glGenTextures(1, &weatherLightTexture);
       textures.push_back(weatherLightTexture);
@@ -736,8 +749,7 @@ Renderer::~Renderer() {
   release(scene);
   release(weather);
   release(skyWeatherCache);
-  release(weatherPixelU);
-  release(weatherPixelV);
+  release(weatherPixels);
   glDeleteFramebuffers(1, &weatherLightFbo);
   for (auto p : programs)
     glDeleteProgram(p);
@@ -752,24 +764,20 @@ Renderer::~Renderer() {
   glDeleteVertexArrays(1, &vao);
 }
 void Renderer::weatherPixelCoordinates(int w, int h) {
-  if (weatherPixelU.width == w && weatherPixelV.height == h)
+  if (weatherPixels.width == w && weatherPixels.height == h)
     return;
-  // Raster interpolation and compute division can differ by one float ULP.
-  // At an exact cache-cell boundary that can select different neighbors and
-  // flip the reuse decision. Preserve the original samples with O(w+h)
-  // storage, generated on the GPU only at construction/resize (48 KiB at FHD).
-  target(weatherPixelU, w, 1, false, false, GL_RGBA32F, true);
-  glBindTexture(GL_TEXTURE_2D, weatherPixelU.texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  target(weatherPixelV, 1, h, false, false, GL_RGBA32F, true);
-  glBindTexture(GL_TEXTURE_2D, weatherPixelV.texture);
+  // Preserve fragment interpolation and cache-cell arithmetic exactly. Mesa
+  // varies their last bits across rows, so separable strips are insufficient.
+  // Generate this immutable coordinate cache only at construction/resize.
+  target(weatherPixels, w, h, false, false, GL_RGBA32F, true);
+  glBindTexture(GL_TEXTURE_2D, weatherPixels.texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glViewport(0, 0, w, h);
-  glBindFramebuffer(GL_FRAMEBUFFER, weatherPixelU.framebuffer);
-  quad(weatherPixelProgram);
-  glBindFramebuffer(GL_FRAMEBUFFER, weatherPixelV.framebuffer);
+  glUseProgram(weatherPixelProgram);
+  glUniform2f(glGetUniformLocation(weatherPixelProgram, "uWeatherCacheSize"),
+              (w + 2) / 3, (h + 1) / 2);
+  glBindFramebuffer(GL_FRAMEBUFFER, weatherPixels.framebuffer);
   quad(weatherPixelProgram);
 }
 void Renderer::common(GLuint p, const Scene &s, int w, int h) {
@@ -1139,11 +1147,14 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     glViewport(0, 0, weather.width, weather.height);
     if (weatherComputeProgram) {
 #ifndef __EMSCRIPTEN__
-      prepareWeather(weatherComputeProgram);
-      bind(weatherComputeProgram, 13, "uWeatherSkyCache",
+      // Exact zeros only: a growing storm or even a subframe flash must use
+      // the full solver immediately. No weather parameter is quantized.
+      const GLuint compute = computingCalmWeather() ? weatherCalmComputeProgram
+                                                    : weatherComputeProgram;
+      prepareWeather(compute);
+      bind(compute, 13, "uWeatherSkyCache",
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
-      bind(weatherComputeProgram, 2, "uWeatherPixelU", weatherPixelU.texture);
-      bind(weatherComputeProgram, 3, "uWeatherPixelV", weatherPixelV.texture);
+      bind(compute, 2, "uWeatherPixels", weatherPixels.texture);
       const ImageBindings images;
       glBindImageTexture(0, weather.texture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
                          GL_RGBA16F);

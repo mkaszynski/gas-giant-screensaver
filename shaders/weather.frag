@@ -2,6 +2,7 @@
 precision highp float;
 #ifdef OBSERVATORY_WEATHER_COMPUTE
 vec2 uv;
+vec2 weatherCachePixel;
 vec4 color,skyWeather;
 bool weatherNeedsSkyOutput=false;
 #else
@@ -119,10 +120,12 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
     // bounded by the rendered-reference regression test.
     vec3 solar=transmission(uTrans,weatherHeight(p,uObserverHeight),uSun.y)*lightingTerms.sunlit;
     vec3 lighting=solar*(lightingTerms.forward*shadow.x+.032*(.35+.65*shadow.y))+lightingTerms.ambient;
+#ifndef OBSERVATORY_WEATHER_CALM
     if(uWeatherFlash.w>0.){
      vec3 delta=p-vec3(uWeatherFlash.x,uWeatherFlash.y-uObserverHeight,uWeatherFlash.z);
      lighting+=vec3(.90,.94,1.)*uWeatherFlash.w*exp(-dot(delta,delta)/18.);
     }
+#endif
     float meanHeight=max(0.,.5*(uObserverHeight+weatherHeight(p,uObserverHeight)));
     vec3 air=exp(-distance*(betaR*exp(-meanHeight/8.)+betaM*1.11*exp(-meanHeight/1.2)));
     lighting=lighting*air+viewSky*(1.-air);

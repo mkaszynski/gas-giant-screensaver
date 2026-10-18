@@ -96,6 +96,8 @@ int main() {
         require(!fragment.computingWeather(), "explicit fragment fallback");
         const auto scene = travelScene(world, sky, route);
         compare(compute, fragment, scene, 1920, 1080, sky, 1790900000.);
+        require(compute.computingCalmWeather() == (route != 0.),
+                "only exact zero-storm states select calm compute");
         if (route != 162000.)
           continue;
         // Repeated width-only, height-only and full changes exercise both
@@ -111,8 +113,22 @@ int main() {
           compute.setWeatherPreset(preset);
           fragment.setWeatherPreset(preset);
           compare(compute, fragment, scene, 640, 360, sky, 1260.);
+          require(compute.computingCalmWeather() ==
+                      (preset != WeatherPreset::Storm),
+                  "preset change must select the matching compute solver");
           const auto night = travelScene(world, 1200, route);
           compare(compute, fragment, night, 640, 360, 1200, 1512.8);
+        }
+        // Jump between calm, storm and an exposure-integrated lightning pulse
+        // on the same renderer. A previous specialization must never suppress
+        // a newly active anvil or flash, including after a backwards time seek.
+        compute.setWeatherPreset(WeatherPreset::Auto);
+        fragment.setWeatherPreset(WeatherPreset::Auto);
+        for (double clock : {1790900000., 1260., 1512.8, 1790900000., 1512.8}) {
+          compare(compute, fragment, scene, 640, 360, sky, clock);
+          require(
+              compute.computingCalmWeather() == (clock == 1790900000.),
+              "weather clock seek must switch calm/full solver immediately");
         }
         // The manual meteor pass blends into both weather attachments after
         // compute. This checks the image-to-framebuffer visibility barrier.
