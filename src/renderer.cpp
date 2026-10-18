@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
 #include <GLES2/gl2ext.h>
@@ -1030,7 +1031,22 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                  ringOccluders.size() / 4, ringOccluders.data());
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    const Vec3 ringCenter = s.local(-s.observer);
+    const Vec3 ringNormal = s.local(giantPole());
+    const auto ringBounds =
+        celestialScissor
+            ? projectedDiskBounds(
+                  {dot(ringCenter, s.right), dot(ringCenter, s.cameraUp),
+                   dot(ringCenter, s.forward)},
+                  ringOuter,
+                  {dot(ringNormal, s.right), dot(ringNormal, s.cameraUp),
+                   dot(ringNormal, s.forward)},
+                  w, h, std::tan(29 * pi / 180))
+            : ScreenBounds{0, 0, w, h};
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(ringBounds.x, ringBounds.y, ringBounds.width, ringBounds.height);
     quad(ringProgram);
+    glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
   }
   glEnable(GL_DEPTH_TEST);
@@ -1051,15 +1067,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     const double z = dot(center, s.forward), tanFov = std::tan(29 * pi / 180);
     if (z <= b.radius)
       continue;
-    const double cx = dot(center, s.right) / z / tanFov * h * .5 + w * .5,
-                 cy = dot(center, s.cameraUp) / z / tanFov * h * .5 + h * .5;
-    const double radius =
-        b.radius / (z - b.radius) / tanFov * h * .5 * 1.5 + 2.;
-    const int x = std::max(0, int(std::floor(cx - radius))),
-              y = std::max(0, int(std::floor(cy - radius)));
-    const int x2 = std::min(w, int(std::ceil(cx + radius))),
-              y2 = std::min(h, int(std::ceil(cy + radius)));
-    if (x >= x2 || y >= y2)
+    // Match the giant's 12 scale-height shell (giant_atmosphere.glsl).
+    // The projection helper adds a separate pixel guard for analytic filtering.
+    const double radius = b.radius * (b.material == 0 ? 1.0023 : 1.);
+    const auto bounds =
+        celestialScissor ? projectedSphereBounds({dot(center, s.right),
+                                                  dot(center, s.cameraUp), z},
+                                                 radius, w, h, tanFov)
+                         : ScreenBounds{0, 0, w, h};
+    if (bounds.empty())
       continue;
     // Separate programs keep the narrow limb integrator's register pressure
     // out of the much larger cloud-disk draw. Their pixel domains are disjoint.
@@ -1105,7 +1121,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         glUniform4fv(glGetUniformLocation(bodyShader, "uOccluders"),
                      occluders.size() / 4, occluders.data());
       glEnable(GL_SCISSOR_TEST);
-      glScissor(x, y, x2 - x, y2 - y);
+      glScissor(bounds.x, bounds.y, bounds.width, bounds.height);
       glEnable(GL_BLEND);
       glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
       quad(bodyShader);

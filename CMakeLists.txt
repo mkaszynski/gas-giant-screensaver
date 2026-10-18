@@ -189,6 +189,11 @@ set_tests_properties(cli-benchmark-output-without-benchmark cli-benchmark-captur
 add_executable(frame-pacing-tests tests/frame_pacing_tests.cpp)
 target_include_directories(frame-pacing-tests PRIVATE src)
 add_test(NAME native-frame-pacing COMMAND frame-pacing-tests)
+add_executable(projection-tests tests/projection_tests.cpp)
+target_include_directories(projection-tests PRIVATE src)
+add_test(NAME celestial-projection COMMAND projection-tests)
+add_executable(projection-render-tests tests/projection_render_tests.cpp)
+target_link_libraries(projection-render-tests PRIVATE observatory PkgConfig::GLFW)
 
 add_executable(fidelity-render-tests tests/fidelity_render_tests.cpp)
 target_link_libraries(fidelity-render-tests PRIVATE observatory PkgConfig::GLFW)

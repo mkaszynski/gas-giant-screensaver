@@ -37,6 +37,8 @@ public:
     return {skyWeatherCache.width, skyWeatherCache.height};
   }
   void setWeatherPreset(WeatherPreset preset) { weatherPreset = preset; }
+  // Diagnostic reference for detecting clipped filtering or atmospheric glow.
+  void setCelestialScissor(bool enabled) { celestialScissor = enabled; }
   void setMeteorFrame(MeteorFrame frame) { meteorFrame = frame; }
   bool meteorDarkEnough() const { return meteorDark; }
   bool floatingWeatherNoise() const { return floatingNoise; }
@@ -140,6 +142,7 @@ private:
   void revealMeteors(const Scene &, int, int, GLuint surfaceTexture);
   void emissions(const Scene &, int, int, EmissionFrame, bool ringsEnabled,
                  double daySeconds);
+  bool celestialScissor = true;
 };
 void savePng(const std::string &path, int w, int h);
 } // namespace observatory
