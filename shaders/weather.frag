@@ -18,7 +18,11 @@ uniform highp sampler2D uSurface;
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
 #ifdef OBSERVATORY_WEATHER_COMPUTE
+#ifdef OBSERVATORY_WEATHER_SKY_PASS
+const bool uWeatherSkyPass=true;
+#else
 const bool uWeatherSkyPass=false;
+#endif
 uniform bool uWeatherCacheEnabled;
 #else
 uniform bool uWeatherSkyPass,uWeatherCacheEnabled;

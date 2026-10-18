@@ -91,9 +91,13 @@ int main() {
         Renderer compute(data, {}, options);
         require(compute.computingWeather(),
                 "native compute path must be active");
+        require(compute.computingWeatherCache(),
+                "coarse sky compute path must be active");
         options.weatherCompute = false;
         Renderer fragment(data, {}, options);
         require(!fragment.computingWeather(), "explicit fragment fallback");
+        require(!fragment.computingWeatherCache(),
+                "explicit fallback must retain fragment sky cache");
         const auto scene = travelScene(world, sky, route);
         compare(compute, fragment, scene, 1920, 1080, sky, 1790900000.);
         require(compute.computingCalmWeather() == (route != 0.),
@@ -151,6 +155,8 @@ int main() {
         SurfaceOptions options{true, 0, 162000};
         options.weatherCache = false;
         Renderer compute(data, {}, options);
+        require(!compute.computingWeatherCache(),
+                "disabled sky cache must not allocate a compute program");
         options.weatherCompute = false;
         Renderer fragment(data, {}, options);
         compare(compute, fragment, travelScene(world, 900, 162000), 641, 359,

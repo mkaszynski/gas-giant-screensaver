@@ -41,6 +41,7 @@ public:
   bool meteorDarkEnough() const { return meteorDark; }
   bool floatingWeatherNoise() const { return floatingNoise; }
   bool computingWeather() const { return weatherComputeProgram != 0; }
+  bool computingWeatherCache() const { return weatherSkyComputeProgram != 0; }
   bool computingCalmWeather() const {
     return weatherCalmComputeProgram && weatherState.storm == 0. &&
            weatherState.flashRadiance == 0.;
@@ -103,6 +104,7 @@ private:
          giantLimbProgram = 0, emissionProgram = 0, weatherProgram = 0,
          weatherLightProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
+         weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0;
   GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
          terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
@@ -110,7 +112,7 @@ private:
          emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
          weatherLightFbo = 0;
   Target trans, multi, sky, scene, weather, skyWeatherCache;
-  Target weatherPixels;
+  Target weatherPixels, weatherSkyPixels;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;
   Vec3 lastSun;
@@ -123,8 +125,9 @@ private:
   GLuint galaxyTexture();
   void target(Target &, int, int, bool depth = false, bool skyLayer = false,
               GLenum format = GL_RGBA16F, bool immutable = false);
-  GLuint createWeatherComputeProgram(bool calm = false);
-  void weatherPixelCoordinates(int, int);
+  GLuint createWeatherComputeProgram(bool calm = false, bool skyPass = false);
+  void weatherPixelCoordinates(Target &, int, int, int, int);
+  void dispatchWeather(GLuint, const Target &, const Target &);
   void release(Target &);
   void bind(GLuint, int, const char *, GLuint);
   void common(GLuint, const Scene &, int, int);

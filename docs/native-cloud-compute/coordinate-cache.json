@@ -1,0 +1,1426 @@
+{
+  "status": "complete",
+  "kind": "Cloud-only optimization diagnostic, never original-baseline acceptance.",
+  "records": [
+    {
+      "biome": "forest",
+      "order": 1,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 36.738006,
+          "p95_ms": 51.983192
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.34572
+        },
+        "celestial_ms": {
+          "median_ms": 4.86464,
+          "p95_ms": 6.85856
+        },
+        "terrain_ms": {
+          "median_ms": 6.55408,
+          "p95_ms": 9.0434
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37104,
+          "p95_ms": 0.52672
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.2175599999999998,
+          "p95_ms": 3.0808
+        },
+        "clouds_ms": {
+          "median_ms": 18.98156,
+          "p95_ms": 26.3912
+        },
+        "composite_ms": {
+          "median_ms": 0.88202,
+          "p95_ms": 1.22632
+        }
+      },
+      "background_cpu_cores": 0.5728174943278813,
+      "external_gpu_fraction": 0.04276518145631262,
+      "max_active_cycle_ms": 8.00119100313168,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-1-fragment.csv"
+    },
+    {
+      "biome": "forest",
+      "order": 2,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 31.476498,
+          "p95_ms": 38.482566
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.3728
+        },
+        "celestial_ms": {
+          "median_ms": 5.13882,
+          "p95_ms": 6.12344
+        },
+        "terrain_ms": {
+          "median_ms": 6.65652,
+          "p95_ms": 8.3156
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37829999999999997,
+          "p95_ms": 0.46804
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.25364,
+          "p95_ms": 2.78332
+        },
+        "clouds_ms": {
+          "median_ms": 13.208020000000001,
+          "p95_ms": 16.10412
+        },
+        "composite_ms": {
+          "median_ms": 0.96704,
+          "p95_ms": 1.15536
+        }
+      },
+      "background_cpu_cores": 0.5457290938328317,
+      "external_gpu_fraction": 0.04954572544230368,
+      "max_active_cycle_ms": 7.592794005176984,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-2-strips.csv"
+    },
+    {
+      "biome": "forest",
+      "order": 3,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 31.218984499999998,
+          "p95_ms": 39.158746
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.44224
+        },
+        "celestial_ms": {
+          "median_ms": 5.154389999999999,
+          "p95_ms": 6.70472
+        },
+        "terrain_ms": {
+          "median_ms": 6.573980000000001,
+          "p95_ms": 8.42756
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37370000000000003,
+          "p95_ms": 0.4732
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.2462400000000002,
+          "p95_ms": 2.79524
+        },
+        "clouds_ms": {
+          "median_ms": 13.0503,
+          "p95_ms": 16.40332
+        },
+        "composite_ms": {
+          "median_ms": 0.95492,
+          "p95_ms": 1.21236
+        }
+      },
+      "background_cpu_cores": 0.5427996668224859,
+      "external_gpu_fraction": 0.04249243127950013,
+      "max_active_cycle_ms": 7.836242002667859,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-3-full.csv"
+    },
+    {
+      "biome": "forest",
+      "order": 4,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 31.8895485,
+          "p95_ms": 37.944356
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.38536
+        },
+        "celestial_ms": {
+          "median_ms": 5.1646,
+          "p95_ms": 6.03676
+        },
+        "terrain_ms": {
+          "median_ms": 6.74442,
+          "p95_ms": 8.30544
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37842,
+          "p95_ms": 0.46884
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.2948,
+          "p95_ms": 2.76936
+        },
+        "clouds_ms": {
+          "median_ms": 13.3222,
+          "p95_ms": 16.2146
+        },
+        "composite_ms": {
+          "median_ms": 0.96368,
+          "p95_ms": 1.138
+        }
+      },
+      "background_cpu_cores": 0.5465034788188355,
+      "external_gpu_fraction": 0.06063474524452083,
+      "max_active_cycle_ms": 7.844987994758412,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-4-full.csv"
+    },
+    {
+      "biome": "forest",
+      "order": 5,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 31.7375185,
+          "p95_ms": 38.719682
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.38048
+        },
+        "celestial_ms": {
+          "median_ms": 5.11576,
+          "p95_ms": 5.90272
+        },
+        "terrain_ms": {
+          "median_ms": 6.74888,
+          "p95_ms": 8.37748
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.38095999999999997,
+          "p95_ms": 0.45036
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.28536,
+          "p95_ms": 2.68668
+        },
+        "clouds_ms": {
+          "median_ms": 13.28098,
+          "p95_ms": 15.86628
+        },
+        "composite_ms": {
+          "median_ms": 0.9686600000000001,
+          "p95_ms": 1.1142
+        }
+      },
+      "background_cpu_cores": 0.4850742103198052,
+      "external_gpu_fraction": 0.03786661445139802,
+      "max_active_cycle_ms": 7.6292329977150075,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-5-strips.csv"
+    },
+    {
+      "biome": "forest",
+      "order": 6,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 36.945912,
+          "p95_ms": 51.39608
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.3498
+        },
+        "celestial_ms": {
+          "median_ms": 4.87106,
+          "p95_ms": 6.88592
+        },
+        "terrain_ms": {
+          "median_ms": 6.576040000000001,
+          "p95_ms": 8.9676
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37312,
+          "p95_ms": 0.53876
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.2416799999999997,
+          "p95_ms": 2.89544
+        },
+        "clouds_ms": {
+          "median_ms": 19.03518,
+          "p95_ms": 27.74416
+        },
+        "composite_ms": {
+          "median_ms": 0.88496,
+          "p95_ms": 1.28868
+        }
+      },
+      "background_cpu_cores": 0.49157009942546986,
+      "external_gpu_fraction": 0.05607522358503545,
+      "max_active_cycle_ms": 8.136876000207849,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-forest-6-fragment.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 1,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 41.3861725,
+          "p95_ms": 59.700731
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.34524
+        },
+        "celestial_ms": {
+          "median_ms": 5.63608,
+          "p95_ms": 8.26656
+        },
+        "terrain_ms": {
+          "median_ms": 10.99214,
+          "p95_ms": 15.0682
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.4284,
+          "p95_ms": 0.60728
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.508039999999999,
+          "p95_ms": 9.27364
+        },
+        "clouds_ms": {
+          "median_ms": 13.86774,
+          "p95_ms": 20.19484
+        },
+        "composite_ms": {
+          "median_ms": 0.8676,
+          "p95_ms": 1.25992
+        }
+      },
+      "background_cpu_cores": 0.5767176528148272,
+      "external_gpu_fraction": 0.03666963023477117,
+      "max_active_cycle_ms": 11.470653997093905,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-1-fragment.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 2,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 35.425362,
+          "p95_ms": 43.489526
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.36412
+        },
+        "celestial_ms": {
+          "median_ms": 5.9859,
+          "p95_ms": 7.26776
+        },
+        "terrain_ms": {
+          "median_ms": 11.3645,
+          "p95_ms": 13.93476
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.43226,
+          "p95_ms": 0.54572
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.5969,
+          "p95_ms": 8.38976
+        },
+        "clouds_ms": {
+          "median_ms": 6.96026,
+          "p95_ms": 8.55692
+        },
+        "composite_ms": {
+          "median_ms": 0.9448000000000001,
+          "p95_ms": 1.13364
+        }
+      },
+      "background_cpu_cores": 0.4698314863245324,
+      "external_gpu_fraction": 0.033805006787583025,
+      "max_active_cycle_ms": 8.375543999136426,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-2-strips.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 3,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 35.519354,
+          "p95_ms": 47.347289
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.36844
+        },
+        "celestial_ms": {
+          "median_ms": 6.01818,
+          "p95_ms": 7.62628
+        },
+        "terrain_ms": {
+          "median_ms": 11.3778,
+          "p95_ms": 13.50084
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.43104,
+          "p95_ms": 0.5316
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.592779999999999,
+          "p95_ms": 7.9992
+        },
+        "clouds_ms": {
+          "median_ms": 7.01872,
+          "p95_ms": 8.46312
+        },
+        "composite_ms": {
+          "median_ms": 0.9454,
+          "p95_ms": 1.14352
+        }
+      },
+      "background_cpu_cores": 0.5830720020496314,
+      "external_gpu_fraction": 0.054743029867946845,
+      "max_active_cycle_ms": 7.83153300289996,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-3-full.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 4,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 36.001484000000005,
+          "p95_ms": 46.264907
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.37024
+        },
+        "celestial_ms": {
+          "median_ms": 6.10108,
+          "p95_ms": 7.233
+        },
+        "terrain_ms": {
+          "median_ms": 11.565760000000001,
+          "p95_ms": 13.26984
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.44032,
+          "p95_ms": 0.52356
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.682,
+          "p95_ms": 8.3908
+        },
+        "clouds_ms": {
+          "median_ms": 7.096920000000001,
+          "p95_ms": 8.68284
+        },
+        "composite_ms": {
+          "median_ms": 0.95282,
+          "p95_ms": 1.184
+        }
+      },
+      "background_cpu_cores": 0.49973962000026373,
+      "external_gpu_fraction": 0.03890468296692764,
+      "max_active_cycle_ms": 13.290050002979115,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-4-full.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 5,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 35.0892015,
+          "p95_ms": 45.102485
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.36376
+        },
+        "celestial_ms": {
+          "median_ms": 5.93818,
+          "p95_ms": 7.44552
+        },
+        "terrain_ms": {
+          "median_ms": 11.2588,
+          "p95_ms": 13.77952
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.42928,
+          "p95_ms": 0.52176
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.54346,
+          "p95_ms": 8.12108
+        },
+        "clouds_ms": {
+          "median_ms": 6.91502,
+          "p95_ms": 8.30228
+        },
+        "composite_ms": {
+          "median_ms": 0.94068,
+          "p95_ms": 1.16428
+        }
+      },
+      "background_cpu_cores": 0.484040208791867,
+      "external_gpu_fraction": 0.045758360081749626,
+      "max_active_cycle_ms": 8.143107006617356,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-5-strips.csv"
+    },
+    {
+      "biome": "coast",
+      "order": 6,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 41.1814685,
+          "p95_ms": 56.414232
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.33916
+        },
+        "celestial_ms": {
+          "median_ms": 5.60968,
+          "p95_ms": 8.05324
+        },
+        "terrain_ms": {
+          "median_ms": 10.94772,
+          "p95_ms": 14.63356
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.42228,
+          "p95_ms": 0.575
+        },
+        "sky_cache_ms": {
+          "median_ms": 6.46514,
+          "p95_ms": 9.06892
+        },
+        "clouds_ms": {
+          "median_ms": 13.78284,
+          "p95_ms": 19.65492
+        },
+        "composite_ms": {
+          "median_ms": 0.86686,
+          "p95_ms": 1.21932
+        }
+      },
+      "background_cpu_cores": 0.7636482131003094,
+      "external_gpu_fraction": 0.050894834728156126,
+      "max_active_cycle_ms": 12.289742997381836,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-coast-6-fragment.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 1,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 36.5192515,
+          "p95_ms": 49.0897
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.33748
+        },
+        "celestial_ms": {
+          "median_ms": 4.6190999999999995,
+          "p95_ms": 6.20164
+        },
+        "terrain_ms": {
+          "median_ms": 4.8282,
+          "p95_ms": 6.34392
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.41328,
+          "p95_ms": 0.53348
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.23786,
+          "p95_ms": 3.10532
+        },
+        "clouds_ms": {
+          "median_ms": 20.60286,
+          "p95_ms": 29.26212
+        },
+        "composite_ms": {
+          "median_ms": 0.8734999999999999,
+          "p95_ms": 1.21664
+        }
+      },
+      "background_cpu_cores": 0.5582501905676378,
+      "external_gpu_fraction": 0.03803218809847157,
+      "max_active_cycle_ms": 8.417693003138993,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-1-fragment.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 2,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 25.608883,
+          "p95_ms": 34.344809
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.4636
+        },
+        "celestial_ms": {
+          "median_ms": 4.302289999999999,
+          "p95_ms": 5.98992
+        },
+        "terrain_ms": {
+          "median_ms": 4.29704,
+          "p95_ms": 5.87752
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.36922,
+          "p95_ms": 0.49876
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.9811,
+          "p95_ms": 2.658
+        },
+        "clouds_ms": {
+          "median_ms": 10.83222,
+          "p95_ms": 14.39924
+        },
+        "composite_ms": {
+          "median_ms": 0.89484,
+          "p95_ms": 1.16604
+        }
+      },
+      "background_cpu_cores": 0.48447469674514343,
+      "external_gpu_fraction": 0.05612142984356791,
+      "max_active_cycle_ms": 8.674436001456343,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-2-strips.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 3,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 27.6763645,
+          "p95_ms": 36.569165
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.53194
+        },
+        "celestial_ms": {
+          "median_ms": 4.635405,
+          "p95_ms": 6.23864
+        },
+        "terrain_ms": {
+          "median_ms": 4.6467,
+          "p95_ms": 6.39084
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.39774,
+          "p95_ms": 0.53356
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.16454,
+          "p95_ms": 2.92632
+        },
+        "clouds_ms": {
+          "median_ms": 11.7462,
+          "p95_ms": 16.22824
+        },
+        "composite_ms": {
+          "median_ms": 0.9348799999999999,
+          "p95_ms": 1.22904
+        }
+      },
+      "background_cpu_cores": 0.6224548267295407,
+      "external_gpu_fraction": 0.05341281956391665,
+      "max_active_cycle_ms": 8.672130999912042,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-3-full.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 4,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 25.832323000000002,
+          "p95_ms": 33.977529
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.53162
+        },
+        "celestial_ms": {
+          "median_ms": 4.25282,
+          "p95_ms": 6.21916
+        },
+        "terrain_ms": {
+          "median_ms": 4.30674,
+          "p95_ms": 6.00004
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.37268,
+          "p95_ms": 0.48288
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.99254,
+          "p95_ms": 2.73628
+        },
+        "clouds_ms": {
+          "median_ms": 11.02032,
+          "p95_ms": 14.40088
+        },
+        "composite_ms": {
+          "median_ms": 0.89356,
+          "p95_ms": 1.16724
+        }
+      },
+      "background_cpu_cores": 0.41442566164308753,
+      "external_gpu_fraction": 0.03783240131576272,
+      "max_active_cycle_ms": 8.574496998335235,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-4-full.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 5,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 26.261478,
+          "p95_ms": 34.655953
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.67012
+        },
+        "celestial_ms": {
+          "median_ms": 4.418825,
+          "p95_ms": 6.11864
+        },
+        "terrain_ms": {
+          "median_ms": 4.432919999999999,
+          "p95_ms": 6.20932
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.3808,
+          "p95_ms": 0.51748
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.03718,
+          "p95_ms": 2.80848
+        },
+        "clouds_ms": {
+          "median_ms": 11.222840000000001,
+          "p95_ms": 15.2798
+        },
+        "composite_ms": {
+          "median_ms": 0.91142,
+          "p95_ms": 1.1516
+        }
+      },
+      "background_cpu_cores": 0.5361332333965514,
+      "external_gpu_fraction": 0.06264652095887584,
+      "max_active_cycle_ms": 8.436969001195394,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-5-strips.csv"
+    },
+    {
+      "biome": "snow",
+      "order": 6,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 36.335481,
+          "p95_ms": 48.315788
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.33412
+        },
+        "celestial_ms": {
+          "median_ms": 4.62486,
+          "p95_ms": 6.29284
+        },
+        "terrain_ms": {
+          "median_ms": 4.83488,
+          "p95_ms": 6.26772
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.4123,
+          "p95_ms": 0.51428
+        },
+        "sky_cache_ms": {
+          "median_ms": 2.21096,
+          "p95_ms": 2.83204
+        },
+        "clouds_ms": {
+          "median_ms": 20.49284,
+          "p95_ms": 28.7184
+        },
+        "composite_ms": {
+          "median_ms": 0.87066,
+          "p95_ms": 1.20556
+        }
+      },
+      "background_cpu_cores": 0.5707881005408285,
+      "external_gpu_fraction": 0.040850708785402125,
+      "max_active_cycle_ms": 8.746190003876109,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-snow-6-fragment.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 1,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 17.710299,
+          "p95_ms": 39.398927
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.74513
+        },
+        "celestial_ms": {
+          "median_ms": 4.082179999999999,
+          "p95_ms": 9.94621
+        },
+        "terrain_ms": {
+          "median_ms": 3.701,
+          "p95_ms": 8.65807
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.34432,
+          "p95_ms": 0.72656
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.8102,
+          "p95_ms": 4.14838
+        },
+        "clouds_ms": {
+          "median_ms": 4.0034600000000005,
+          "p95_ms": 8.67612
+        },
+        "composite_ms": {
+          "median_ms": 0.7700400000000001,
+          "p95_ms": 1.57301
+        }
+      },
+      "background_cpu_cores": 0.480302928656751,
+      "external_gpu_fraction": 0.057625041805989,
+      "max_active_cycle_ms": 8.684423999511637,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-1-fragment.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 2,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 18.803597500000002,
+          "p95_ms": 30.145074
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.55358
+        },
+        "celestial_ms": {
+          "median_ms": 4.297925,
+          "p95_ms": 7.46828
+        },
+        "terrain_ms": {
+          "median_ms": 3.90992,
+          "p95_ms": 6.25036
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.35734,
+          "p95_ms": 0.52876
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.90222,
+          "p95_ms": 2.95496
+        },
+        "clouds_ms": {
+          "median_ms": 4.4776,
+          "p95_ms": 6.40596
+        },
+        "composite_ms": {
+          "median_ms": 0.81498,
+          "p95_ms": 1.1428
+        }
+      },
+      "background_cpu_cores": 0.5356095575102313,
+      "external_gpu_fraction": 0.05114212455596662,
+      "max_active_cycle_ms": 9.443248993193265,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-2-strips.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 3,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 18.5194135,
+          "p95_ms": 29.376482
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.47029
+        },
+        "celestial_ms": {
+          "median_ms": 4.20359,
+          "p95_ms": 7.82984
+        },
+        "terrain_ms": {
+          "median_ms": 3.78948,
+          "p95_ms": 6.50988
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.3493,
+          "p95_ms": 0.551
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.85394,
+          "p95_ms": 3.02656
+        },
+        "clouds_ms": {
+          "median_ms": 4.50492,
+          "p95_ms": 6.586
+        },
+        "composite_ms": {
+          "median_ms": 0.7932,
+          "p95_ms": 1.10348
+        }
+      },
+      "background_cpu_cores": 0.49234016026128546,
+      "external_gpu_fraction": 0.04182254106486075,
+      "max_active_cycle_ms": 8.509395993314683,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-3-full.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 4,
+      "version": "full",
+      "stages": {
+        "render_ms": {
+          "median_ms": 18.742673,
+          "p95_ms": 30.877971
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.49156
+        },
+        "celestial_ms": {
+          "median_ms": 4.30348,
+          "p95_ms": 7.12552
+        },
+        "terrain_ms": {
+          "median_ms": 3.8937999999999997,
+          "p95_ms": 6.80372
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.35541999999999996,
+          "p95_ms": 0.5636
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.8830200000000001,
+          "p95_ms": 3.14988
+        },
+        "clouds_ms": {
+          "median_ms": 4.59554,
+          "p95_ms": 6.90728
+        },
+        "composite_ms": {
+          "median_ms": 0.80412,
+          "p95_ms": 1.1546
+        }
+      },
+      "background_cpu_cores": 0.5933011257754569,
+      "external_gpu_fraction": 0.06379363143119109,
+      "max_active_cycle_ms": 9.540391001792159,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-4-full.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 5,
+      "version": "strips",
+      "stages": {
+        "render_ms": {
+          "median_ms": 18.616039999999998,
+          "p95_ms": 29.453977
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.61694
+        },
+        "celestial_ms": {
+          "median_ms": 4.19658,
+          "p95_ms": 6.75408
+        },
+        "terrain_ms": {
+          "median_ms": 3.85684,
+          "p95_ms": 6.40804
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.35414,
+          "p95_ms": 0.54872
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.8775,
+          "p95_ms": 3.05148
+        },
+        "clouds_ms": {
+          "median_ms": 4.44236,
+          "p95_ms": 6.51696
+        },
+        "composite_ms": {
+          "median_ms": 0.80404,
+          "p95_ms": 1.0932
+        }
+      },
+      "background_cpu_cores": 0.543708381771316,
+      "external_gpu_fraction": 0.041581499334975916,
+      "max_active_cycle_ms": 10.28271500399569,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-5-strips.csv"
+    },
+    {
+      "biome": "ocean",
+      "order": 6,
+      "version": "fragment",
+      "stages": {
+        "render_ms": {
+          "median_ms": 17.754737499999997,
+          "p95_ms": 38.861409
+        },
+        "atmosphere_ms": {
+          "median_ms": 0.0,
+          "p95_ms": 0.45372
+        },
+        "celestial_ms": {
+          "median_ms": 4.2034400000000005,
+          "p95_ms": 9.99701
+        },
+        "terrain_ms": {
+          "median_ms": 3.74354,
+          "p95_ms": 8.66562
+        },
+        "solar_cache_ms": {
+          "median_ms": 0.34404,
+          "p95_ms": 0.73016
+        },
+        "sky_cache_ms": {
+          "median_ms": 1.82374,
+          "p95_ms": 4.1341
+        },
+        "clouds_ms": {
+          "median_ms": 4.0475200000000005,
+          "p95_ms": 8.67329
+        },
+        "composite_ms": {
+          "median_ms": 0.7756,
+          "p95_ms": 1.57225
+        }
+      },
+      "background_cpu_cores": 0.4859037573561798,
+      "external_gpu_fraction": 0.062011562689261786,
+      "max_active_cycle_ms": 9.295802999986336,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "performance_acceptance": false,
+      "raw_csv": "coordinate-cache-ocean-6-fragment.csv"
+    }
+  ],
+  "performance_acceptance": false,
+  "all_controls_pass": false,
+  "median_of_run_medians": {
+    "forest": {
+      "fragment": {
+        "render_ms": 36.841959,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.86785,
+        "terrain_ms": 6.565060000000001,
+        "solar_cache_ms": 0.37207999999999997,
+        "sky_cache_ms": 2.2296199999999997,
+        "clouds_ms": 19.00837,
+        "composite_ms": 0.88349
+      },
+      "strips": {
+        "render_ms": 31.60700825,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.12729,
+        "terrain_ms": 6.7027,
+        "solar_cache_ms": 0.37962999999999997,
+        "sky_cache_ms": 2.2695,
+        "clouds_ms": 13.2445,
+        "composite_ms": 0.9678500000000001
+      },
+      "full": {
+        "render_ms": 31.554266499999997,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.159495,
+        "terrain_ms": 6.6592,
+        "solar_cache_ms": 0.37606,
+        "sky_cache_ms": 2.2705200000000003,
+        "clouds_ms": 13.186250000000001,
+        "composite_ms": 0.9593
+      }
+    },
+    "coast": {
+      "fragment": {
+        "render_ms": 41.283820500000004,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.62288,
+        "terrain_ms": 10.96993,
+        "solar_cache_ms": 0.42534,
+        "sky_cache_ms": 6.48659,
+        "clouds_ms": 13.825289999999999,
+        "composite_ms": 0.86723
+      },
+      "strips": {
+        "render_ms": 35.257281750000004,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 5.96204,
+        "terrain_ms": 11.31165,
+        "solar_cache_ms": 0.43077,
+        "sky_cache_ms": 6.57018,
+        "clouds_ms": 6.93764,
+        "composite_ms": 0.94274
+      },
+      "full": {
+        "render_ms": 35.760419,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 6.05963,
+        "terrain_ms": 11.47178,
+        "solar_cache_ms": 0.43567999999999996,
+        "sky_cache_ms": 6.63739,
+        "clouds_ms": 7.05782,
+        "composite_ms": 0.94911
+      }
+    },
+    "snow": {
+      "fragment": {
+        "render_ms": 36.427366250000006,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.62198,
+        "terrain_ms": 4.83154,
+        "solar_cache_ms": 0.41279,
+        "sky_cache_ms": 2.2244099999999998,
+        "clouds_ms": 20.54785,
+        "composite_ms": 0.87208
+      },
+      "strips": {
+        "render_ms": 25.9351805,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.3605575,
+        "terrain_ms": 4.364979999999999,
+        "solar_cache_ms": 0.37501,
+        "sky_cache_ms": 2.0091400000000004,
+        "clouds_ms": 11.02753,
+        "composite_ms": 0.90313
+      },
+      "full": {
+        "render_ms": 26.75434375,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.4441125,
+        "terrain_ms": 4.47672,
+        "solar_cache_ms": 0.38521,
+        "sky_cache_ms": 2.0785400000000003,
+        "clouds_ms": 11.38326,
+        "composite_ms": 0.91422
+      }
+    },
+    "ocean": {
+      "fragment": {
+        "render_ms": 17.73251825,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.14281,
+        "terrain_ms": 3.72227,
+        "solar_cache_ms": 0.34418000000000004,
+        "sky_cache_ms": 1.81697,
+        "clouds_ms": 4.0254900000000005,
+        "composite_ms": 0.7728200000000001
+      },
+      "strips": {
+        "render_ms": 18.70981875,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.2472525,
+        "terrain_ms": 3.88338,
+        "solar_cache_ms": 0.35574,
+        "sky_cache_ms": 1.88986,
+        "clouds_ms": 4.45998,
+        "composite_ms": 0.80951
+      },
+      "full": {
+        "render_ms": 18.631043249999998,
+        "atmosphere_ms": 0.0,
+        "celestial_ms": 4.253535,
+        "terrain_ms": 3.84164,
+        "solar_cache_ms": 0.35236,
+        "sky_cache_ms": 1.86848,
+        "clouds_ms": 4.55023,
+        "composite_ms": 0.7986599999999999
+      }
+    }
+  },
+  "settings": {
+    "width": 1920,
+    "height": 1080,
+    "sky": 510,
+    "route": 162000,
+    "weather": 1790900000,
+    "step": 0.03333333333333333,
+    "sky_cache": 1
+  },
+  "cases": [
+    [
+      "forest",
+      510.0,
+      162000.0
+    ],
+    [
+      "coast",
+      1740.0,
+      5600.390625
+    ],
+    [
+      "snow",
+      360.0,
+      210600.0
+    ],
+    [
+      "ocean",
+      1740.0,
+      0.0
+    ]
+  ],
+  "frames_per_run": 90,
+  "warmup_frames": 30,
+  "controls": {
+    "max_active_cycle_ms": 10,
+    "max_background_cpu_cores": 1,
+    "max_external_gpu_fraction": 0.05,
+    "stable_gpu_clients": true
+  },
+  "fixtures": {
+    "fragment": {
+      "binary_sha256": "aff79c6e9c50988b05ca679f812df2908525ad2695cc1abe874ab0a499b79315",
+      "shader_sha256": {
+        "atmosphere.glsl": "276861659b47ccfea4acd22ad08f527c14eaa59473b7b7b19bfa5dcd67ec3abc",
+        "background.frag": "7fbd879b78d4c5f1f898b3ccedfc2b4559e56375389891b8d46182584df3de9c",
+        "body.frag": "b228b8fbec1a1bd852d5bbe2c212a40a779ba36588d27206502ad6ed3024c1e8",
+        "clouds.glsl": "398e456b56a52cf84bab9d9b22c312d3bd1c6b27f33f0423fc42b8e970d9b873",
+        "emission.frag": "45e35fee757d0b623c73c46f53d6cef99d254700903af3ecfa3881a085474d48",
+        "emission.vert": "1e31d6e444bbc9a1ddd10ac5067410655bfbf2d7f8df10b267e5c26e12860040",
+        "fullscreen.vert": "2945ca9d242def3d04f29cffabd1ead2628f7e060eaf5e688d2129a0e5c64658",
+        "giant_atmosphere.glsl": "d7730b730b837f41e70ccd2340b01bc7e891e7f702258f3f5a66738017f3b349",
+        "giant_filter.glsl": "2061f832d6df9849c2654fbaa953dfb1c2cdfbd7a00fa7a6432db12f32f72cb1",
+        "meteors.frag": "c731acb780e26f796b3a797ca355b336b4a353b06d4148c351f94699f65463b7",
+        "meteors.vert": "aa755305d02aa2bbb1341d102030d6abfa92c21ff4734089b9534472929fb859",
+        "multiple.frag": "60749303cc472e7c7bba03d0af8232b855a8f1f1ed4ecaa70e36fd4a3b3cb0c2",
+        "post.frag": "7b05ed6f4f9ded6d79c81d3b288e9f1ca522f44feec7965f9ff88c58eca3ba82",
+        "ring_layer.glsl": "6465ffa6a3915e548ae9aefaaa1ceb7380143f6ba25e353450a74c37cf104070",
+        "ring_profile.glsl": "e17b72d437455134e86cc95041a1eed896de6e5319628749be00186c9dba0e78",
+        "rings.frag": "aa36aa621c318d4f4030efa8e200216b1e5839ac58dd1ef0da27b86728c11a31",
+        "scene.glsl": "60b5184ea1563520b09844adb7c81e6d9d4934ea9ef8bfbc31c89274480db710",
+        "sky_lut.frag": "02d25067c3999dfd2129704a39b49800d72b7c5fb84e04824aa71ca8338423a1",
+        "sphere_shadow.glsl": "1eaf660e13a6dc60d814315dc6ae77acd33946c96294360b432310027e17bcc2",
+        "stars.frag": "5c0d51fef657ed0846d6d16e87a52e22c4f15242a449da6bca806f7c7d3ec10b",
+        "stars.vert": "0fec9b2824fd5b518c0597fc3b7e7f06f176942f35b45da9713d60fd17419c67",
+        "surface.frag": "f502efdb669a151c2042659c2af866451554c527caf8613d57d6da33e86155bf",
+        "surface.vert": "94cc5c6fe4ff30cd5c801a20e45b205ad41621a6101427f50829d7a60cdeaf13",
+        "surface_shadow.frag": "5d0df7d61af04f1d841d1313ef44c4a8cd942622d7bbc5d34d9e66797c03f8b7",
+        "surface_shadow.vert": "e403af00c5aff3e24674759646b5142f519cc45f1033bde9b3582a8f369010f3",
+        "terrain.glsl": "0537a034755b49e80bf6eac0ccf664069e8a47dceca397e37cc236dedaac37c0",
+        "transmittance.frag": "d4771015cfa5ff28e2b41e80fa208ebcda7f8677d73b5e3c2f7cac6a8b4bbd4c",
+        "weather-filter-probe.frag": "d3b820623e0a9bf2730fe17b2cd8b37190398b89cc7e4467ee42a7a272613f74",
+        "weather-light.frag": "036c1ce1af55d55ade6fdce93f2868917c93556c3106d08832cc3b1fbb7c68e6",
+        "weather.frag": "4eb9f7c8ee5b7943bdadbaf9036436eea19ec016d805636c36e24ea64920e977",
+        "weather_common.glsl": "80651de96e3a8016af3c6c7bf798cfe7a7b60d30feb298edf86fd20b473b8217",
+        "weather_depth.glsl": "95025df9fc94cde96a4a5d45ab5a261674388d43feb34e7b450c7cbf606f9d8b",
+        "weather_sky_cache.glsl": "8835d9c166867ba3cddf59756a12097aa1cd3300e19e0715747c43d5aa57d59e"
+      }
+    },
+    "strips": {
+      "binary_sha256": "e380d6a83a28ad8c70ac91237e7e8a70ae241d9a7e82c5f0b2c8521e964a1dcc",
+      "shader_sha256": {
+        "atmosphere.glsl": "e3b132ef8eb6393c68a7028d96f6993484d2428e045359004cdf86b27f2eaa9f",
+        "background.frag": "7fbd879b78d4c5f1f898b3ccedfc2b4559e56375389891b8d46182584df3de9c",
+        "body.frag": "b228b8fbec1a1bd852d5bbe2c212a40a779ba36588d27206502ad6ed3024c1e8",
+        "clouds.glsl": "398e456b56a52cf84bab9d9b22c312d3bd1c6b27f33f0423fc42b8e970d9b873",
+        "emission.frag": "45e35fee757d0b623c73c46f53d6cef99d254700903af3ecfa3881a085474d48",
+        "emission.vert": "1e31d6e444bbc9a1ddd10ac5067410655bfbf2d7f8df10b267e5c26e12860040",
+        "fullscreen.vert": "2945ca9d242def3d04f29cffabd1ead2628f7e060eaf5e688d2129a0e5c64658",
+        "giant_atmosphere.glsl": "d7730b730b837f41e70ccd2340b01bc7e891e7f702258f3f5a66738017f3b349",
+        "giant_filter.glsl": "2061f832d6df9849c2654fbaa953dfb1c2cdfbd7a00fa7a6432db12f32f72cb1",
+        "meteors.frag": "c731acb780e26f796b3a797ca355b336b4a353b06d4148c351f94699f65463b7",
+        "meteors.vert": "aa755305d02aa2bbb1341d102030d6abfa92c21ff4734089b9534472929fb859",
+        "multiple.frag": "60749303cc472e7c7bba03d0af8232b855a8f1f1ed4ecaa70e36fd4a3b3cb0c2",
+        "post.frag": "7b05ed6f4f9ded6d79c81d3b288e9f1ca522f44feec7965f9ff88c58eca3ba82",
+        "ring_layer.glsl": "6465ffa6a3915e548ae9aefaaa1ceb7380143f6ba25e353450a74c37cf104070",
+        "ring_profile.glsl": "e17b72d437455134e86cc95041a1eed896de6e5319628749be00186c9dba0e78",
+        "rings.frag": "aa36aa621c318d4f4030efa8e200216b1e5839ac58dd1ef0da27b86728c11a31",
+        "scene.glsl": "03f3f49f5d3c9f440db5dd4c106e564159954ad9f827ff91ca5ecbebee191e34",
+        "sky_lut.frag": "02d25067c3999dfd2129704a39b49800d72b7c5fb84e04824aa71ca8338423a1",
+        "sphere_shadow.glsl": "1eaf660e13a6dc60d814315dc6ae77acd33946c96294360b432310027e17bcc2",
+        "stars.frag": "5c0d51fef657ed0846d6d16e87a52e22c4f15242a449da6bca806f7c7d3ec10b",
+        "stars.vert": "0fec9b2824fd5b518c0597fc3b7e7f06f176942f35b45da9713d60fd17419c67",
+        "surface.frag": "f502efdb669a151c2042659c2af866451554c527caf8613d57d6da33e86155bf",
+        "surface.vert": "94cc5c6fe4ff30cd5c801a20e45b205ad41621a6101427f50829d7a60cdeaf13",
+        "surface_shadow.frag": "5d0df7d61af04f1d841d1313ef44c4a8cd942622d7bbc5d34d9e66797c03f8b7",
+        "surface_shadow.vert": "e403af00c5aff3e24674759646b5142f519cc45f1033bde9b3582a8f369010f3",
+        "terrain.glsl": "0537a034755b49e80bf6eac0ccf664069e8a47dceca397e37cc236dedaac37c0",
+        "transmittance.frag": "d4771015cfa5ff28e2b41e80fa208ebcda7f8677d73b5e3c2f7cac6a8b4bbd4c",
+        "weather-filter-probe.frag": "d3b820623e0a9bf2730fe17b2cd8b37190398b89cc7e4467ee42a7a272613f74",
+        "weather-light.frag": "036c1ce1af55d55ade6fdce93f2868917c93556c3106d08832cc3b1fbb7c68e6",
+        "weather-pixels.frag": "28839aaf3a3c38484adbae133eec674886d5c902c3202c1634bb058455632026",
+        "weather.frag": "72d38d47272870898f1708695aa76829a2ae632d76f4994314b8b229e6dc14b3",
+        "weather_common.glsl": "dd7356858ea2c7b69d20777c9fc10acd67194cf90357a51d31e3b1d3cf643f18",
+        "weather_depth.glsl": "95025df9fc94cde96a4a5d45ab5a261674388d43feb34e7b450c7cbf606f9d8b",
+        "weather_sky_cache.glsl": "d4ac01abfc7418295f176e8c53fb76b5766b72cacdb01f2068533f17f61a5033"
+      }
+    },
+    "full": {
+      "binary_sha256": "e8c3231ebd3aacfd18899498637d12d610e1357dc35a19f3e01c18202d1d6796",
+      "shader_sha256": {
+        "atmosphere.glsl": "e3b132ef8eb6393c68a7028d96f6993484d2428e045359004cdf86b27f2eaa9f",
+        "background.frag": "7fbd879b78d4c5f1f898b3ccedfc2b4559e56375389891b8d46182584df3de9c",
+        "body.frag": "b228b8fbec1a1bd852d5bbe2c212a40a779ba36588d27206502ad6ed3024c1e8",
+        "clouds.glsl": "398e456b56a52cf84bab9d9b22c312d3bd1c6b27f33f0423fc42b8e970d9b873",
+        "emission.frag": "45e35fee757d0b623c73c46f53d6cef99d254700903af3ecfa3881a085474d48",
+        "emission.vert": "1e31d6e444bbc9a1ddd10ac5067410655bfbf2d7f8df10b267e5c26e12860040",
+        "fullscreen.vert": "2945ca9d242def3d04f29cffabd1ead2628f7e060eaf5e688d2129a0e5c64658",
+        "giant_atmosphere.glsl": "d7730b730b837f41e70ccd2340b01bc7e891e7f702258f3f5a66738017f3b349",
+        "giant_filter.glsl": "2061f832d6df9849c2654fbaa953dfb1c2cdfbd7a00fa7a6432db12f32f72cb1",
+        "meteors.frag": "c731acb780e26f796b3a797ca355b336b4a353b06d4148c351f94699f65463b7",
+        "meteors.vert": "aa755305d02aa2bbb1341d102030d6abfa92c21ff4734089b9534472929fb859",
+        "multiple.frag": "60749303cc472e7c7bba03d0af8232b855a8f1f1ed4ecaa70e36fd4a3b3cb0c2",
+        "post.frag": "7b05ed6f4f9ded6d79c81d3b288e9f1ca522f44feec7965f9ff88c58eca3ba82",
+        "ring_layer.glsl": "6465ffa6a3915e548ae9aefaaa1ceb7380143f6ba25e353450a74c37cf104070",
+        "ring_profile.glsl": "e17b72d437455134e86cc95041a1eed896de6e5319628749be00186c9dba0e78",
+        "rings.frag": "aa36aa621c318d4f4030efa8e200216b1e5839ac58dd1ef0da27b86728c11a31",
+        "scene.glsl": "03f3f49f5d3c9f440db5dd4c106e564159954ad9f827ff91ca5ecbebee191e34",
+        "sky_lut.frag": "02d25067c3999dfd2129704a39b49800d72b7c5fb84e04824aa71ca8338423a1",
+        "sphere_shadow.glsl": "1eaf660e13a6dc60d814315dc6ae77acd33946c96294360b432310027e17bcc2",
+        "stars.frag": "5c0d51fef657ed0846d6d16e87a52e22c4f15242a449da6bca806f7c7d3ec10b",
+        "stars.vert": "0fec9b2824fd5b518c0597fc3b7e7f06f176942f35b45da9713d60fd17419c67",
+        "surface.frag": "f502efdb669a151c2042659c2af866451554c527caf8613d57d6da33e86155bf",
+        "surface.vert": "94cc5c6fe4ff30cd5c801a20e45b205ad41621a6101427f50829d7a60cdeaf13",
+        "surface_shadow.frag": "5d0df7d61af04f1d841d1313ef44c4a8cd942622d7bbc5d34d9e66797c03f8b7",
+        "surface_shadow.vert": "e403af00c5aff3e24674759646b5142f519cc45f1033bde9b3582a8f369010f3",
+        "terrain.glsl": "0537a034755b49e80bf6eac0ccf664069e8a47dceca397e37cc236dedaac37c0",
+        "transmittance.frag": "d4771015cfa5ff28e2b41e80fa208ebcda7f8677d73b5e3c2f7cac6a8b4bbd4c",
+        "weather-filter-probe.frag": "d3b820623e0a9bf2730fe17b2cd8b37190398b89cc7e4467ee42a7a272613f74",
+        "weather-light.frag": "036c1ce1af55d55ade6fdce93f2868917c93556c3106d08832cc3b1fbb7c68e6",
+        "weather-pixels.frag": "852596b78a68677e24a7bf5f3edbfad3d26655c61033e793adc3e6a08ccce63f",
+        "weather.frag": "72d38d47272870898f1708695aa76829a2ae632d76f4994314b8b229e6dc14b3",
+        "weather_common.glsl": "dd7356858ea2c7b69d20777c9fc10acd67194cf90357a51d31e3b1d3cf643f18",
+        "weather_depth.glsl": "95025df9fc94cde96a4a5d45ab5a261674388d43feb34e7b450c7cbf606f9d8b",
+        "weather_sky_cache.glsl": "d4ac01abfc7418295f176e8c53fb76b5766b72cacdb01f2068533f17f61a5033"
+      }
+    }
+  },
+  "limitations": "Shared-desktop diagnostic only; all frames retained. Failed controls and frame deadlines remain failures. Not the frozen Phase 1 cost trial or native presentation acceptance.",
+  "raw_sha256": {
+    "coordinate-cache-forest-1-fragment.csv": "ea934c8d1d073eb5ff91b742cf52028ee02c8dd30cced8713e73fcfb38a09ade",
+    "coordinate-cache-forest-2-strips.csv": "a426346ec3521ba91335fb582f01cda4da6329e08564d6a0ed5f66e31b09380d",
+    "coordinate-cache-forest-3-full.csv": "5743b47a521c0f30bae39d4c9e87d84809c1349b7f2398c81a581ed1a6ef8dbc",
+    "coordinate-cache-forest-4-full.csv": "d15ef4e53e33016ced8393fd10c176345e0935663271d06bf7a7b03dbc06ccce",
+    "coordinate-cache-forest-5-strips.csv": "f50a5ad7c532f09e7ecd6490a2ff7ad5f7c19cfb3cacaa12cc1be3d2ad03c42c",
+    "coordinate-cache-forest-6-fragment.csv": "fc7c594eab3113ef4b588a8f23307867ff88b588aadbf7331febf8572ec69bae",
+    "coordinate-cache-coast-1-fragment.csv": "e059bb39bfd549614f6a7592db55aaf487843e825ee8a1bd7a450ce67e47a6a4",
+    "coordinate-cache-coast-2-strips.csv": "0c4a9316d036f404018cc61cf29d120d279cb76b050ad1aba832651e6c72003a",
+    "coordinate-cache-coast-3-full.csv": "65cadea4cea558935b1bca8681fa0def184f91e10d1fdf3b9c9413cae289905d",
+    "coordinate-cache-coast-4-full.csv": "a1f49be9bb063df2a7dd7bee78f81478f219e4a49cd16f19d00aaec60e34371f",
+    "coordinate-cache-coast-5-strips.csv": "81db5724ccb23eebdbd9dd490af7eab28028df0c33a083433b0f6f80036b524b",
+    "coordinate-cache-coast-6-fragment.csv": "5033194f1f16e2bf884ad2d2a886d11cf7b1579c4589d04823c13a2e45fc36ce",
+    "coordinate-cache-snow-1-fragment.csv": "df53a2eaaa01e9d8dc93234384ead145647f8e820c83f8d26339ce81addb3bcb",
+    "coordinate-cache-snow-2-strips.csv": "44d84106ac94943545e4df0013833df4e4e2022014cc22ff837ceb73be0122de",
+    "coordinate-cache-snow-3-full.csv": "b4c2b26ee642e374addec8e6c547d4679ba074c77d45c7eb48f72263f126476d",
+    "coordinate-cache-snow-4-full.csv": "5234bc492b8292f09fe8ebc3916ddc3c6d0cdce70908b1e5eb31044f12d1b7b0",
+    "coordinate-cache-snow-5-strips.csv": "a827b967c69b9b0e5f72a708b93f7dc5f5105bcc2fdafe39ad53923144d2f565",
+    "coordinate-cache-snow-6-fragment.csv": "4890abb6fa46206cc55d47089a46f8a289602177a707991e7d658df678931736",
+    "coordinate-cache-ocean-1-fragment.csv": "eb1d4c635f3f6a8fce0d75440b6a8ffd5cf08c09f333480de296828b9e7cd99b",
+    "coordinate-cache-ocean-2-strips.csv": "351657f2094d4c2db9250d9f10e17d6475de38f7e78bc1f7ebe19cf9d3c32a7c",
+    "coordinate-cache-ocean-3-full.csv": "759eed233af96e1290b48527599f1bdf8ea03a26dd966cbea1730a59449aed12",
+    "coordinate-cache-ocean-4-full.csv": "06f1074d45c58c141b9e49ca4299310e40575431053aa8ff811055c7771c6867",
+    "coordinate-cache-ocean-5-strips.csv": "ba928624e4f9598b3ba2fd69184dc06c679def5c4671e19fb5958f58228ad578",
+    "coordinate-cache-ocean-6-fragment.csv": "84f6f1bf0ff65373d77a54f3b808bf4d55b585108705563a3e9e4924424f329d"
+  }
+}
