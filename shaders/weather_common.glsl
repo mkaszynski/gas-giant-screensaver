@@ -1,11 +1,24 @@
 // Cached periodic 3D noise, fixed in planetary geographic coordinates. The CPU
 // wraps offsets in double precision; local displacements keep Unix time stable.
+#ifdef OBSERVATORY_WEATHER_MODE
+// Cloud model selection is fixed at construction; discard the unused model
+// and its register footprint while preserving dynamic weather parameters.
+const bool uWeatherEnabled=OBSERVATORY_WEATHER_MODE!=0;
+#else
 uniform bool uWeatherEnabled;
+#endif
 uniform highp sampler3D uWeatherNoise;
 uniform mat3 uWeatherFrame;
 uniform vec3 uWeatherOffset,uWeatherRegionalOffset,uWeatherCirrusOffset;
 // cover, storm, stratus, cirrus; base, thickness, fog extinction/km, fog top
 uniform vec4 uWeatherKind,uWeatherLayer;
+#ifdef OBSERVATORY_WEATHER_CALM
+// Selected only when storm and flash inputs are exactly zero. The fragment
+// cache, surface, browser and storm compute programs keep the dynamic model.
+const float weatherStorm=0.;
+#else
+#define weatherStorm uWeatherKind.y
+#endif
 uniform float uWeatherRain;
 uniform vec4 uWeatherFlash;
 uniform vec3 uWeatherPlanetDirection;
@@ -44,19 +57,19 @@ float weatherDensity(vec3 p,float observerHeight,float lod){
  float threshold=mix(.79,.26,cover);
  // Erosion only removes density. Skip its lookup when neither the body nor
  // a storm anvil can contribute, preserving exactly the same density field.
- if(shape<=threshold&&(uWeatherKind.y<=0.||z<=.72||n.r<=threshold-.12))return 0.;
+ if(shape<=threshold&&(weatherStorm<=0.||z<=.72||n.r<=threshold-.12))return 0.;
  vec4 detail=textureLod(uWeatherNoise,q*4.,min(5.,lod+2.));
  shape-=(1.-detail.g)*.075;
  // Flat condensation base and rounded, eroded tops. Only active convection
  // grows towers/anvils high enough to cover the gas giant for extended periods.
  float top=mix(.25+.75*smoothstep(.25,.72,n.r)+.32*(detail.g-.5),.94,uWeatherKind.z);
- top+=uWeatherKind.y*.35*smoothstep(.42,.72,n.r);
+ top+=weatherStorm*.35*smoothstep(.42,.72,n.r);
  float profile=smoothstep(0.,.12,z)*(1.-smoothstep(top-.30,top,z));
  float body=smoothstep(threshold,threshold+.085,shape)*profile;
  // A thin spreading anvil near the storm top, attached to the same cells.
  float anvil=smoothstep(.72,.87,z)*(1.-smoothstep(.92,1.,z))*
-             smoothstep(threshold-.12,threshold+.04,n.r)*uWeatherKind.y;
- return max(body,anvil*.65)*(6.+8.*uWeatherKind.y+uWeatherKind.z);
+             smoothstep(threshold-.12,threshold+.04,n.r)*weatherStorm;
+ return max(body,anvil*.65)*(6.+8.*weatherStorm+uWeatherKind.z);
 }
 float weatherCirrus(vec3 p){
  vec3 q=weatherPoint(p+vec3(0.,uObserverHeight,0.))/96.*vec3(1.,3.5,.7)+uWeatherCirrusOffset;

@@ -259,6 +259,7 @@ int main() {
               sliced.waterIndices == mesh.waterIndices &&
               sliced.hasLand == mesh.hasLand &&
               sliced.hasWater == mesh.hasWater &&
+              sliced.pureLand == mesh.pureLand &&
               sliced.bounds.size() == mesh.bounds.size(),
           "cooperative scheduling preserves every vertex and index exactly");
       for (size_t i = 0; i < mesh.bounds.size(); ++i) {
@@ -334,11 +335,35 @@ int main() {
               "unit surface normals");
       require(v.ny > 0, "terrain normals follow upward triangle winding");
     }
+    {
+      auto inland = buildSurfaceMesh(w, w.location(162000.));
+      require(inland.pureLand, "inland forest selects the pure-land program");
+      for (const auto &vertex : inland.vertices)
+        require(vertex.ground >= 1.,
+                "whole land mesh cannot interpolate into the shoreline blend");
+    }
+    auto coast = buildSurfaceMesh(w, w.location(5600.390625));
+    require(coast.hasLand && coast.hasWater && !coast.pureLand,
+            "mixed coastal meshes retain the general shoreline shader");
     auto ocean = buildSurfaceMesh(w, w.location(0));
+    require(!ocean.pureLand, "ocean cannot select the pure-land program");
     require(!ocean.hasLand,
             "open ocean skips unneeded terrain-shadow rendering");
     require(ocean.waterIndices.size() < ocean.indices.size() / 3,
             "deep water omits unneeded interior triangles");
+    size_t liquidBlocks = 0;
+    for (const auto &box : ocean.bounds) {
+      if (!box.deepWater)
+        continue;
+      ++liquidBlocks;
+      for (uint32_t i = box.waterFirstIndex;
+           i < box.waterFirstIndex + box.waterIndexCount; ++i) {
+        const auto &v = ocean.vertices.at(ocean.waterIndices.at(i));
+        require(v.ground <= -64 && v.temperature >= -1,
+                "specialized water triangles interpolate a pure liquid mask");
+      }
+    }
+    require(liquidBlocks > 100, "deep-water shader has substantial coverage");
     for (size_t block :
          {size_t(0), size_t(47), size_t(48), size_t(79), size_t(1700),
           size_t(3120), size_t(3167), size_t(3168), size_t(3199)}) {

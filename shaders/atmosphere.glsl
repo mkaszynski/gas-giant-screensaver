@@ -11,7 +11,15 @@ void medium(float h,out vec3 scattering,out vec3 extinction,out vec3 rayleigh,ou
  scattering=rayleigh+mie;
  extinction=rayleigh+mie*1.11+betaO*max(0.,1.-abs(h-25.)/15.);
 }
-vec3 transmission(highp sampler2D lut,float h,float mu){return texture(lut,vec2(mu*.5+.5,clamp(h/100.,0.,1.))).rgb;}
+vec3 transmission(highp sampler2D lut,float h,float mu){
+ // These render targets have one mip level. Compute has no implicit
+ // derivatives; level zero preserves the fragment path's filtering.
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ return textureLod(lut,vec2(mu*.5+.5,clamp(h/100.,0.,1.)),0.).rgb;
+#else
+ return texture(lut,vec2(mu*.5+.5,clamp(h/100.,0.,1.))).rgb;
+#endif
+}
 float phaseR(float c){return 3.*(1.+c*c)/(16.*PI);}
 float phaseM(float c){float g=.8;return 3.*(1.-g*g)*(1.+c*c)/(8.*PI*(2.+g*g)*pow(max(.001,1.+g*g-2.*g*c),1.5));}
 vec2 skyUV(vec3 d){float a=atan(d.z,d.x)/(2.*PI)+.5;float e=asin(clamp(d.y,-1.,1.));return vec2(a,.5+.5*sign(e)*sqrt(abs(e)/(PI*.5)));}

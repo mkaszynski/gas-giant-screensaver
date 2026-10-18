@@ -263,13 +263,14 @@ int main() {
         balanced.replace("weather_sky_cache.glsl", " return true;",
                          " cacheUsed=true;return true;");
         const std::string background =
-            "vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),"
+            "vec3 "
+            "background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),"
             "0).rgb*(uExposure/uSceneScale);";
         balanced.replace("weather_sky_cache.glsl", background,
                          "vec3 background=vec3(.1)*uExposure;");
         balanced.append("weather.frag", R"(
  if(uWeatherSkyPass){
-  float t=.1+.8*mod(floor(gl_FragCoord.x),2.);
+  float t=.1+.8*mod(floor(weatherPixelPosition().x),2.);
   color=vec4(vec3(.1)*(1.-t)*uSceneScale,t);
  }else color=vec4(vec3(cacheUsed?1.:0.),1.);
 )");
@@ -330,7 +331,7 @@ int main() {
         Fixture unpruned;
         unpruned.copyShaders(anchored);
         unpruned.replace("weather_common.glsl",
-                         "if(shape<=threshold&&(uWeatherKind.y<=0.||z<=.72||"
+                         "if(shape<=threshold&&(weatherStorm<=0.||z<=.72||"
                          "n.r<=threshold-.12))return 0.;",
                          "");
         Renderer exhaustive(unpruned.root.string(), {}, {true, 0, 162000});

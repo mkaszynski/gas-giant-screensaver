@@ -354,6 +354,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   constexpr double far = 145000.;
   constexpr int inner = 32, detailEnd = 576;
   SurfaceMesh mesh;
+  mesh.pureLand = true;
   mesh.center = center;
   mesh.vertices.reserve((radial + 1) * angular);
   std::vector<Vec3> basePositions;
@@ -399,6 +400,7 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
              lon = std::atan2(direction.z, direction.x);
       auto v = world.sample(lat, lon);
       mesh.hasLand |= v.ground > 0;
+      mesh.pureLand &= v.ground >= 1.;
       mesh.hasWater |=
           i < visible && r < 60000. && v.ground < .65 && v.temperature > -5.;
       auto coordinates = v.relief;

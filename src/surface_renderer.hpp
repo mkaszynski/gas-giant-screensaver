@@ -8,7 +8,8 @@ namespace observatory {
 class SurfaceRenderer {
 public:
   explicit SurfaceRenderer(const std::string &root, bool reflections = false,
-                           bool culling = true, bool waterLod = true);
+                           bool culling = true, bool waterLod = true,
+                           bool weather = true);
   ~SurfaceRenderer();
   SurfaceRenderer(const SurfaceRenderer &) = delete;
   const SurfaceWorld &world() const { return terrain; }
@@ -44,7 +45,8 @@ private:
   bool reflectionsEnabled = true;
   bool cullingEnabled = true;
   bool waterLodEnabled = true;
-  GLuint waterIndices = 0;
+  bool weatherEnabled = true;
+  GLuint waterIndices = 0, waterProgram = 0, landProgram = 0;
   GLuint multisample = 0, colorBuffer = 0, depthBuffer = 0, distanceBuffer = 0,
          resolved = 0, texture = 0, distanceTextureId = 0;
   GLuint shadowFbo[4]{}, shadowTex[4]{};

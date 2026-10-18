@@ -47,12 +47,13 @@
     index = 0,
   ) {
     const view = new DataView(data);
+    const type = member.valueType || member.type;
     const components = matrix
       ? matrix * matrix
-      : Number(/vec(\d)/.exec(member.type)?.[1] || 1);
+      : Number(/vec(\d)/.exec(type)?.[1] || 1);
     const stride =
       member.array_stride || (matrix ? matrix * 16 : components * 4);
-    const integers = /^(u?int|[iu]vec|bool)/.test(member.type);
+    const integers = /^(u?int|[iu]vec|bool)/.test(type);
     for (let i = 0; i < length; ++i) {
       const element = Math.floor(i / components) + index,
         component = i % components;

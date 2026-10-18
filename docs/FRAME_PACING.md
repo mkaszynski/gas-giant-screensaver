@@ -39,6 +39,11 @@ the desktop lock.
 `scripts/benchmark_native.py` creates a private compositor runtime and one owned
 1920×1080 headless output at 60 Hz. It renders the packaged Hyprlock observatory,
 waits five seconds, then records twenty seconds of Wayland surface submissions.
+The parent Hyprland desktop must be awake with no other observatory running.
+The tool checks this before creating a compositor and again before writing a
+report, excluding only its own test lock. It recognizes Nix's dot-prefixed,
+truncated process names. A sleeping display, installed lock, another preview
+or unreadable host state rejects the run; no clean timing report is emitted.
 Each report retains every inter-submission interval and the immutable package
 and asset paths. Baseline and candidate use the same approved Phase 2 assets.
 

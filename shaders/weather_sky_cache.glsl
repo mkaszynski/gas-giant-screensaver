@@ -4,7 +4,12 @@ uniform highp sampler2D uWeatherSkyCache,uWeatherScene;
 bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  if(dot(direction,uSun)>.995)return false;
  ivec2 size=textureSize(uWeatherSkyCache,0);
- vec2 q=uv*vec2(size)-.5,f=fract(q);
+#ifdef OBSERVATORY_WEATHER_COMPUTE
+ vec2 q=weatherCachePixel;
+#else
+ vec2 q=uv*vec2(size)-.5;
+#endif
+ vec2 f=fract(q);
  ivec2 p=ivec2(floor(q));
  vec4 a=texelFetch(uWeatherSkyCache,clamp(p,ivec2(0),size-1),0);
  vec4 b=texelFetch(uWeatherSkyCache,clamp(p+ivec2(1,0),ivec2(0),size-1),0);
@@ -13,7 +18,7 @@ bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  vec4 low=min(min(a,b),min(c,e));
  // A negative transmission marks any ground coverage in the coarse draw.
  if(low.a<0.)return false;
- vec3 background=texelFetch(uWeatherScene,ivec2(gl_FragCoord.xy),0).rgb*(uExposure/uSceneScale);
+ vec3 background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),0).rgb*(uExposure/uSceneScale);
  // Tiny, intense sources need exact extinction even inside a smooth field.
  if(max(background.x,max(background.y,background.z))>16.)return false;
  // Project each emission/transmission pair together: their changes often

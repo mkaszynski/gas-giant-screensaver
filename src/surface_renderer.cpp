@@ -37,11 +37,20 @@ GLuint compile(GLenum type, const std::string &source) {
   }
   return s;
 }
+enum class SurfaceMaterial { general, deepWater, pureLand };
 GLuint link(const std::string &root, const char *vert, const char *frag,
-            bool reflection = false) {
+            bool reflection = false, bool weather = true,
+            SurfaceMaterial material = SurfaceMaterial::general) {
   auto fragment = shader(root, frag);
+  fragment.insert(fragment.find('\n') + 1,
+                  std::string("#define OBSERVATORY_WEATHER_MODE ") +
+                      (weather ? "1\n" : "0\n"));
   if (reflection)
     fragment.insert(fragment.find('\n') + 1, "#define SURFACE_REFLECTION\n");
+  if (material == SurfaceMaterial::deepWater)
+    fragment.insert(fragment.find('\n') + 1, "#define SURFACE_DEEP_WATER\n");
+  if (material == SurfaceMaterial::pureLand)
+    fragment.insert(fragment.find('\n') + 1, "#define SURFACE_PURE_LAND\n");
   GLuint v = compile(GL_VERTEX_SHADER, shader(root, vert)),
          f = compile(GL_FRAGMENT_SHADER, fragment), p = glCreateProgram();
   glAttachShader(p, v);
@@ -132,13 +141,19 @@ void check() {
 }
 } // namespace
 SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
-                                 bool culling, bool waterLod)
+                                 bool culling, bool waterLod, bool weather)
     : terrain(root + "/assets/world/moon.ggworld"),
       reflectionsEnabled(reflections), cullingEnabled(culling),
-      waterLodEnabled(waterLod) {
-  program = link(root, "surface.vert", "surface.frag");
+      waterLodEnabled(waterLod), weatherEnabled(weather) {
+  program = link(root, "surface.vert", "surface.frag", false, weather);
+  if (waterLodEnabled) {
+    waterProgram = link(root, "surface.vert", "surface.frag", false, weather,
+                        SurfaceMaterial::deepWater);
+    landProgram = link(root, "surface.vert", "surface.frag", false, weather,
+                       SurfaceMaterial::pureLand);
+  }
   if (reflectionsEnabled) {
-    reflectionProgram = link(root, "surface.vert", "surface.frag", true);
+    reflectionProgram = link(root, "surface.vert", "surface.frag", true, weather);
     glGenBuffers(1, &reflectionIndices);
   }
   shadowProgram = link(root, "surface_shadow.vert", "surface_shadow.frag");
@@ -281,6 +296,8 @@ SurfaceRenderer::~SurfaceRenderer() {
   glDeleteTextures(1, &reflectionTexture);
   glDeleteRenderbuffers(1, &reflectionDepth);
   glDeleteBuffers(1, &reflectionIndices);
+  glDeleteProgram(waterProgram);
+  glDeleteProgram(landProgram);
   glDeleteProgram(program);
   glDeleteProgram(shadowProgram);
   glDeleteBuffers(1, &vertices);
@@ -316,13 +333,15 @@ void SurfaceRenderer::resize(int w, int h) {
                                    GL_DEPTH_COMPONENT24, w, h);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                             GL_RENDERBUFFER, depthBuffer);
-  glGenRenderbuffers(1, &distanceBuffer);
-  glBindRenderbuffer(GL_RENDERBUFFER, distanceBuffer);
-  glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_R16F, w, h);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
-                            GL_RENDERBUFFER, distanceBuffer);
+  if (weatherEnabled) {
+    glGenRenderbuffers(1, &distanceBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, distanceBuffer);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_R16F, w, h);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1,
+                              GL_RENDERBUFFER, distanceBuffer);
+  }
   const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, outputs);
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   check();
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -336,17 +355,19 @@ void SurfaceRenderer::resize(int w, int h) {
   glBindFramebuffer(GL_FRAMEBUFFER, resolved);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                          texture, 0);
-  glGenTextures(1, &distanceTextureId);
-  glBindTexture(GL_TEXTURE_2D, distanceTextureId);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, w, h, 0, GL_RED, GL_HALF_FLOAT,
-               nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-                         distanceTextureId, 0);
-  glDrawBuffers(2, outputs);
+  if (weatherEnabled) {
+    glGenTextures(1, &distanceTextureId);
+    glBindTexture(GL_TEXTURE_2D, distanceTextureId);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R16F, w, h, 0, GL_RED, GL_HALF_FLOAT,
+                 nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+                           distanceTextureId, 0);
+  }
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   check();
 }
 void SurfaceRenderer::resizeReflection(int w, int h) {
@@ -490,11 +511,16 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
   // per-triangle CPU work occurs as the aircraft moves.
   std::array<SurfacePlane, 6> unrestricted{};
   bool waterBuffer = false;
+  const GLuint dryProgram = waterLod && mesh.pureLand ? landProgram : program;
+  if (waterLod && dryProgram != program)
+    glUseProgram(dryProgram);
   for (auto range : surfaceDrawRanges(
            mesh, cullingEnabled ? planes : unrestricted, waterLod)) {
     if (range.water != waterBuffer) {
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
                    range.water ? waterIndices : indices);
+      if (waterLod)
+        glUseProgram(range.water ? waterProgram : dryProgram);
       waterBuffer = range.water;
     }
     glDrawElements(
@@ -502,6 +528,8 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
         reinterpret_cast<void *>(size_t(range.firstIndex) * sizeof(uint32_t)));
   }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
+  if (waterLod && (waterBuffer || dryProgram != program))
+    glUseProgram(program);
 }
 void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
   Vec3 side = cross(Vec3{0, 1, 0}, sun);
@@ -825,12 +853,20 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glBindFramebuffer(GL_FRAMEBUFFER, multisample);
   glViewport(0, 0, w, h);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  uniforms(program, s, eye, w, h);
-  glActiveTexture(GL_TEXTURE14);
-  glBindTexture(GL_TEXTURE_2D, reflectedLand ? reflectionTexture : scene);
-  glUniform1i(glGetUniformLocation(program, "uLandReflection"), 14);
-  glUniform1i(glGetUniformLocation(program, "uLandReflectionEnabled"),
-              reflectedLand);
+  auto surfaceUniforms = [&](GLuint pass) {
+    uniforms(pass, s, eye, w, h);
+    glActiveTexture(GL_TEXTURE14);
+    glBindTexture(GL_TEXTURE_2D, reflectedLand ? reflectionTexture : scene);
+    glUniform1i(glGetUniformLocation(pass, "uLandReflection"), 14);
+    glUniform1i(glGetUniformLocation(pass, "uLandReflectionEnabled"),
+                reflectedLand);
+  };
+  if (waterProgram && mesh.hasWater)
+    surfaceUniforms(waterProgram);
+  if (landProgram && mesh.pureLand)
+    surfaceUniforms(landProgram);
+  else
+    surfaceUniforms(program);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   auto meshDirection = [&](Vec3 v) {
     return Vec3{frame[0] * v.x + frame[1] * v.y + frame[2] * v.z,
@@ -862,14 +898,16 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glReadBuffer(GL_COLOR_ATTACHMENT0);
   glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
                     GL_NEAREST);
-  const GLenum distanceOnly[] = {GL_NONE, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, distanceOnly);
-  glReadBuffer(GL_COLOR_ATTACHMENT1);
-  glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
-                    GL_NEAREST);
-  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  if (weatherEnabled) {
+    const GLenum distanceOnly[] = {GL_NONE, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, distanceOnly);
+    glReadBuffer(GL_COLOR_ATTACHMENT1);
+    glBlitFramebuffer(0, 0, w, height, 0, 0, w, height, GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+  }
   const GLenum outputs[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-  glDrawBuffers(2, outputs);
+  glDrawBuffers(weatherEnabled ? 2 : 1, outputs);
   return texture;
 }
 } // namespace observatory

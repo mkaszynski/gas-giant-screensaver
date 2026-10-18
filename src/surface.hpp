@@ -18,6 +18,7 @@ struct SurfaceOptions {
   bool waterLod = true;
   bool weather = true;
   bool weatherCache = true;
+  bool weatherCompute = true;
 };
 struct TravelLocation {
   double latitude, longitude;
@@ -80,7 +81,7 @@ struct SurfaceMesh {
     bool deepWater = true;
   };
   TravelLocation center{};
-  bool hasLand = false, hasWater = false;
+  bool hasLand = false, hasWater = false, pureLand = false;
   std::vector<SurfaceVertex> vertices;
   std::vector<uint32_t> indices;
   std::vector<uint32_t> waterIndices;

@@ -137,7 +137,8 @@ async function ready(page, frames = 1) {
   for (const fixture of [
     {name: 'night', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0'},
     {name: 'night-no-stars', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0&stars=0'},
-    {name: 'storm', time: 510, weather: 1260, travel: 162000}
+    {name: 'storm', time: 510, weather: 1260, travel: 162000},
+    {name: 'thin-clouds', time: 510, weather: 1790900000, travel: 162000, options: '&volumetric=0'}
   ]) {
     await page.goto(address(url, `paused=1&time=${fixture.time}&travel=${fixture.travel}&weather=${fixture.weather}${fixture.options || ''}`));
     await page.getByRole('button', {name: 'Launch preview'}).click();
