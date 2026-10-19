@@ -78,6 +78,7 @@ def programs():
             "fullscreen.vert",
             "#define GIANT_ATMOSPHERE\n#define GIANT_SLAB_LUT\n#define GIANT_LIMB\n",
         ),
+        ("debug.frag", "debug.vert", ""),
         ("stars.frag", "stars.vert", ""),
         ("emission.frag", "emission.vert", ""),
         ("meteors.frag", "meteors.vert", ""),
@@ -356,7 +357,7 @@ def convert_program(label, original, stage, varyings):
         original,
         stage,
         varyings,
-        post=name == "post.frag",
+        post=name in ("post.frag", "debug.frag"),
         points=name == "stars.frag",
     )
 

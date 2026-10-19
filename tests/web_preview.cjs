@@ -11,15 +11,17 @@ const captureDir = path.resolve(__dirname, '../captures');
 const mime = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.wasm': 'application/wasm', '.data': 'application/octet-stream' };
 const errors = [];
 const backend = process.env.PREVIEW_BACKEND || 'webgl2';
+const uiOnly = process.env.PREVIEW_UI_ONLY === '1';
 assert(['auto', 'webgpu', 'webgl2'].includes(backend));
 const expectedBackend = backend === 'auto' ? 'webgl2' : backend;
 function address(url, query) {
   const target = new URL(url);
   target.search = query;
   target.searchParams.set('backend', backend);
+  if (uiOnly) for (const feature of ['surface', 'volumetric', 'galaxy', 'stars']) target.searchParams.set(feature, '0');
   return target.href;
 }
-let browser, server;
+let browser, server, page;
 function imageStats(buffer) {
   const image = PNG.sync.read(buffer);
   let min = 255, max = 0, sum = 0;
@@ -37,6 +39,10 @@ async function ready(page, frames = 1) {
   await page.waitForFunction(n => window.previewMetrics?.frames >= n || document.querySelector('h2')?.textContent === 'Preview unavailable', frames, { timeout: 240000 });
   const failure = await page.locator('h2').textContent();
   assert.notEqual(failure, 'Preview unavailable', await page.locator('#status').textContent());
+}
+async function checkInitialFlightTime() {
+  assert(await page.evaluate(() => window.previewMetrics.samples[0].time >= 510 && window.previewMetrics.samples[0].time < 570),
+    'An unpaused flight must start at its requested scene time after runtime initialization');
 }
 (async () => {
   fs.mkdirSync(captureDir, { recursive: true });
@@ -60,8 +66,8 @@ async function ready(page, frames = 1) {
     args: ['--no-sandbox', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', '--use-angle=swiftshader',
       ...(backend === 'auto' ? ['--disable-webgpu'] : ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-vulkan=swiftshader'])]
   });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
-  const page = await context.newPage();
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2 });
+  page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
     if (message.type() === 'error' && !message.text().includes('404')) errors.push(message.text());
@@ -69,7 +75,19 @@ async function ready(page, frames = 1) {
   // First navigation installs the static worker and reloads into isolation.
   await page.goto(address(url, 'paused=1&time=510&travel=162000&weather=1790900000'));
   await page.waitForFunction(() => !document.querySelector('#launch').disabled, null, {timeout: 60000});
-  if (backend === 'webgpu') {
+  // Before launch these aspect/budget checks allocate no rendering context.
+  for (const [width, height] of [[390, 844], [2400, 600], [1280, 720]]) {
+    await page.setViewportSize({width, height});
+    await page.waitForFunction(({width, height}) => {
+      const canvas = document.querySelector('#scene');
+      return Math.abs(canvas.width / canvas.height - width / height) < 2 / canvas.height;
+    }, {width, height});
+    const size = await page.evaluate(() => ({width: scene.width, height: scene.height,
+      scroll: document.documentElement.scrollWidth, viewport: window.innerWidth}));
+    assert(size.width * size.height <= 1920 * 1080, 'Resize must respect the HiDPI-independent pixel budget');
+    assert.equal(size.scroll, size.viewport, 'The browser preview must not scroll');
+  }
+  if (backend === 'webgpu' && !uiOnly) {
     const failures = await page.evaluate(async () => {
       const adapter = await navigator.gpu.requestAdapter();
       if (!adapter) return ['No WebGPU adapter'];
@@ -103,11 +121,15 @@ async function ready(page, frames = 1) {
   assert(await page.evaluate(() => crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined'));
   await page.waitForFunction(() => window.previewMetrics.width === 320 && window.previewMetrics.height === 180);
   // Transfer keeps the HTML canvas attributes; the worker owns bitmap size.
+  assert(await page.locator('#debug-hint').isVisible(), 'First launch must explain the corner access');
+  assert(await page.locator('#browser-controls').isHidden(), 'The flight starts without browser chrome');
+  const bounds = await page.locator('#scene').boundingBox();
+  assert.equal(bounds.width, 1280); assert.equal(bounds.height, 720);
   const day = imageStats(await page.screenshot({ path: path.join(captureDir, `web-${backend}-day.png`) }));
   async function capturePixels(name) {
     const width = await page.evaluate(() => window.previewMetrics.width);
     const height = await page.evaluate(() => window.previewMetrics.height);
-    const style = await page.addStyleTag({content: `header,footer,#loading{visibility:hidden}#scene{width:${width}px;height:${height}px;object-fit:fill}`});
+    const style = await page.addStyleTag({content: `header,footer,#loading,#debug-open,#debug-hint,#browser-controls{visibility:hidden}#scene{width:${width}px;height:${height}px;object-fit:fill}`});
     await page.locator('#scene').screenshot({path: path.join(captureDir, `web-${backend}-${name}-pixels.png`)});
     await style.evaluate(node => node.remove());
   }
@@ -117,23 +139,88 @@ async function ready(page, frames = 1) {
     console.log('Automatic WebGL 2 fallback rendered successfully without WebGPU');
     return;
   }
+  async function nativeClick(group, index) {
+    const rect = await page.evaluate(({group, index}) => {
+      const value = window.previewControls.layout[group];
+      return index === undefined ? value : value[index];
+    }, {group, index});
+    await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+  async function openMenu() {
+    const size = page.viewportSize();
+    await page.mouse.move(size.width - 2, 2);
+    await page.waitForFunction(() => window.previewControls?.prompt);
+    await nativeClick('prompt');
+    await page.waitForFunction(() => window.previewControls?.open);
+    // Input state arrives before GPU completion; screenshots need the frame
+    // that actually contains the panel, rather than its preceding invitation.
+    await page.waitForFunction(() => window.previewMetrics.menuOpen, null, {timeout: 120000});
+  }
+  async function closeMenu() {
+    const before = await page.evaluate(() => window.previewMetrics.frames);
+    await nativeClick('close');
+    await page.waitForFunction(n => !window.previewControls.open && !window.previewMetrics.menuOpen && window.previewMetrics.frames > n, before, {timeout: 120000});
+  }
   const before = await page.evaluate(() => ({ ...window.previewMetrics, samples: undefined }));
   await page.waitForTimeout(250);
   assert.equal(await page.evaluate(() => window.previewMetrics.frames), before.frames, 'Pause must stop GPU redraws');
   assert.equal(await page.evaluate(() => window.previewMetrics.time), before.time, 'Paused timeline must stay fixed');
-  await page.getByRole('button', { name: 'Resume', exact: true }).click();
+  const menuFrame = await page.evaluate(() => window.previewMetrics.frames);
+  await openMenu();
+  await page.waitForFunction(n => window.previewMetrics.frames > n, menuFrame, {timeout: 120000});
+  await capturePixels('debug-menu');
+  assert(await page.locator('#debug-hint').isHidden());
+  await nativeClick('buttons', 0);
   await page.waitForFunction(time => window.previewMetrics.time > time, before.time);
-  await page.getByRole('button', { name: 'Pause', exact: true }).click();
-  await page.waitForFunction(() => window.previewMetrics.paused, null, { timeout: 120000 });
+  await nativeClick('buttons', 0);
+  await page.waitForFunction(() => window.previewMetrics.paused, null, {timeout: 120000});
+  await nativeClick('buttons', 1);
+  await page.waitForFunction(() => window.previewControls.span === 1800);
+  const slider = await page.evaluate(() => window.previewControls.layout.slider);
+  await page.mouse.move(slider.x + slider.width * .25, slider.y + slider.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(slider.x + slider.width * .5, slider.y + slider.height / 2);
+  await page.mouse.up();
+  await page.waitForFunction(() => Math.abs(window.previewControls.fraction - .5) < .01);
+  await nativeClick('weather', 5);
+  await page.waitForFunction(() => window.previewControls.weather === 5);
+  await nativeClick('weather', 0);
+  await page.waitForFunction(() => window.previewControls.weather === 0);
+  await nativeClick('meteorMode', 1);
+  await page.waitForFunction(() => window.previewControls.meteorMode === 1);
+  await nativeClick('meteorMode', 0);
+  await page.waitForFunction(() => window.previewControls.meteorMode === 0);
   await page.evaluate(() => { const select = document.querySelector('#resolution'); select.add(new Option('CI resize', '270')); });
   await page.locator('#resolution').selectOption('270');
   await page.waitForFunction(() => window.previewMetrics.width === 480 && window.previewMetrics.height === 270);
-  await page.locator('#time').fill('1200');
-  await page.locator('#time').dispatchEvent('change');
+  await page.evaluate(() => rendererWorker.postMessage({type: 'seek', value: 1200}));
   await page.waitForFunction(() => Math.abs(window.previewMetrics.time - 1200) < .01);
+  await closeMenu();
   const dusk = imageStats(await page.screenshot({ path: path.join(captureDir, `web-${backend}-dusk.png`) }));
   await capturePixels('dusk');
   assert(Math.abs(day - dusk) / day > .02, 'Seeking must visibly change the shared scene');
+  if (uiOnly) {
+    for (const [width, height] of [[390, 844], [2400, 600], [1280, 720]]) {
+      await page.setViewportSize({width, height});
+      await page.waitForFunction(({width, height}) => Math.abs(window.previewMetrics.width / window.previewMetrics.height - width / height) < 2 / window.previewMetrics.height, {width, height});
+      assert(await page.evaluate(() => window.previewMetrics.width * window.previewMetrics.height <= 480 * 270));
+      const bounds = await page.locator('#scene').boundingBox();
+      assert.equal(bounds.width, width); assert.equal(bounds.height, height);
+    }
+    await page.locator('#debug-open').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.previewControls.open);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !window.previewControls.open);
+    await page.goto(address(url, 'time=510&travel=162000&speed=1'));
+    await page.getByRole('button', {name: 'Launch preview'}).click();
+    await smallCanvas();
+    await ready(page);
+    await checkInitialFlightTime();
+    assert.deepEqual(errors, []);
+    console.log(backend + ' stripped-scene UI: native menu, scrub, weather/meteor controls, aspect, budget and keyboard access passed');
+    return;
+  }
   for (const fixture of [
     {name: 'night', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0'},
     {name: 'night-no-stars', time: 437625, weather: 1790900000, travel: 0, options: '&surface=0&stars=0'},
@@ -151,11 +238,13 @@ async function ready(page, frames = 1) {
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
+  await checkInitialFlightTime();
   await page.waitForFunction(() => window.previewMetrics.samples.some(frame => frame.pending), null, { timeout: 240000 });
   const builds = await page.evaluate(() => window.previewMetrics.builds);
   await page.waitForFunction(n => window.previewMetrics.frames > n, await page.evaluate(() => window.previewMetrics.frames) + 3, { timeout: 120000 });
   assert(builds >= 2, 'Moving terrain must continue streaming in WASM');
   // A second visit uses the established service worker without another reload.
+  await openMenu();
   await page.getByRole('button', { name: 'Stop preview' }).click();
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
@@ -164,7 +253,15 @@ async function ready(page, frames = 1) {
   assert.deepEqual(errors, []);
   fs.writeFileSync(path.join(captureDir, `web-${backend}-validation.json`), JSON.stringify({ url, day, dusk, builds, metrics: await page.evaluate(() => window.previewMetrics) }, null, 2));
   console.log(backend + ' static WASM preview: isolation, rendering, pause/resume, seek, HiDPI pixel budget, resize, terrain worker and stop/relaunch passed');
-})().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
+})().catch(async error => {
+  console.error(error);
+  console.error('Browser errors:', errors);
+  if (page) try {
+    console.error(await page.evaluate(() => ({status: document.querySelector('#status').textContent, controls: window.previewControls, metrics: {...window.previewMetrics, samples: undefined}})));
+    await page.screenshot({path: path.join(captureDir, `web-${backend}-failure.png`)});
+  } catch {}
+  process.exitCode = 1;
+}).finally(async () => {
   if (browser) await browser.close();
   if (server) await new Promise(resolve => server.close(resolve));
 });

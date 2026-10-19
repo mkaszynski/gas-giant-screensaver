@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
                                        : std::max(0., time - .65);
       std::unique_ptr<DebugOverlay> controls;
       if (interactive)
-        controls = std::make_unique<DebugOverlay>(time, day, debug);
+        controls = std::make_unique<DebugOverlay>(time, day, debug, data);
       if (controls)
         controls->menu.meteorOptions = meteorOptions;
       // Shader/asset loading is not part of the interactive timeline.

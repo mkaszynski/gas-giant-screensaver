@@ -33,12 +33,12 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 26)
+        self.assertEqual(len(programs), 27)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            26,
+            27,
         )
         for label, vertex, fragment in programs:
             self.assertNotIn("#include", vertex + fragment, label)
@@ -46,6 +46,13 @@ class ShaderBakeTests(unittest.TestCase):
         self.assertEqual(
             sum("SURFACE_REFLECTION" in label for label, _, _ in programs), 2
         )
+
+    def test_debug_overlay_uses_shared_shaders_and_swapchain_coordinates(self):
+        label, vertex, fragment = next(p for p in bake.programs() if p[0] == "debug.frag")
+        self.assertEqual(vertex, bake.source("debug.vert"))
+        self.assertEqual(fragment, bake.source("debug.frag"))
+        converted, _ = bake.convert_program(label, vertex, "vert", {"tint": 0})
+        self.assertNotIn("gl_Position.y=-gl_Position.y", converted)
 
     def test_surface_materials_cover_both_cloud_profiles(self):
         programs = [p for p in bake.programs() if p[0].startswith("surface.frag:")]
