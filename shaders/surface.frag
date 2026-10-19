@@ -39,9 +39,11 @@ vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude){
   unresolved+=(uWaves[i].w*uWaves[i].w*wind*wind-amplitude[i]*amplitude[i])*.5;
  }
  vec3 wn=normalize(normal+uMeshFrame*vec3(slope.x*uReliefLongitudeScale,0.,slope.y));
- vec3 reflected=reflect(d,wn);float z=dot(reflected,uForward);vec3 L=sky(reflected);
+ vec3 reflected=reflect(d,wn);float z=dot(reflected,uForward);vec3 L=vec3(0.);float sceneWeight=0.;
  if(z>0.){vec2 p=.5+.5*vec2(dot(reflected,uRight)/(z*uTanFov*uResolution.x/uResolution.y),dot(reflected,uUp)/(z*uTanFov));
-  if(all(greaterThanEqual(p,vec2(0)))&&all(lessThanEqual(p,vec2(1))))L=mix(L,texture(uScene,p).rgb/uSceneScale,frameConfidence(p));}
+  if(all(greaterThanEqual(p,vec2(0)))&&all(lessThanEqual(p,vec2(1)))){sceneWeight=frameConfidence(p);L=texture(uScene,p).rgb/uSceneScale;}}
+ // Interior scene samples completely replace the fallback atmospheric sky.
+ if(sceneWeight<1.)L=mix(sky(reflected),L,sceneWeight);
  // Solar energy is integrated by the filtered BRDF below. Remove the sharp
  // background solar disk from this sample to avoid counting it twice.
  if(dot(reflected,uSun)>cos(.006))L=sky(reflected);

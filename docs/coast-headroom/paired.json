@@ -1,0 +1,64 @@
+{
+  "scope": "ABBA GPU-stage diagnostic at native 1920x1080, coast 5600.390625, sky 1740, weather 1790900000, 720 frames per run after 30 prewarm frames; all 720 rows retained",
+  "baseline_binary_commit": "f949336",
+  "baseline_render_behavior": "ad3fe96",
+  "candidate_shader_sha256": {
+    "surface.frag": "ccc60f7ab8606de4241bddef22c5242f445f5160b836c5b2ff3f8e7659680922",
+    "weather_common.glsl": "b440dfbdf55a9dc151b52b42f986d5c3401f19f816cf6f2da62d93e827103ad3"
+  },
+  "effects": "No resolution, geometry, wave, shadow, cloud, emission, or quality setting reduction",
+  "controls": {
+    "background_cpu_cores_max": 1,
+    "external_gpu_fraction_max": 0.05,
+    "active_collection_ms_max": 10,
+    "stable_gpu_clients": true
+  },
+  "presentation_measured": false,
+  "strict_no_stall_acceptance": false,
+  "runs": [
+    {
+      "case": "coast-before-1",
+      "median_ms": 29.028281999999997,
+      "p95_ms": 31.194754,
+      "misses": 16,
+      "controls_pass": true,
+      "cpu": 0.34857380846500824,
+      "gpu": 5.840280310546816e-05,
+      "latency_ms": 7.375176006462425,
+      "raw_csv_sha256": "e8f1b14601027213b3828fd210fc7a939734d47d4ede354a6601e9a912be549f"
+    },
+    {
+      "case": "coast-after-1",
+      "median_ms": 28.237928,
+      "p95_ms": 31.083274,
+      "misses": 13,
+      "controls_pass": true,
+      "cpu": 0.3435808307155103,
+      "gpu": 4.414949051369681e-05,
+      "latency_ms": 5.878477008081973,
+      "raw_csv_sha256": "15d101958099f71960b4069def132e6f299fd6e3015596f172043229afe2c77a"
+    },
+    {
+      "case": "coast-after-2",
+      "median_ms": 27.958844499999998,
+      "p95_ms": 30.616098,
+      "misses": 12,
+      "controls_pass": true,
+      "cpu": 0.34336855189001503,
+      "gpu": 2.1836266091566416e-05,
+      "latency_ms": 6.473412999184802,
+      "raw_csv_sha256": "fd867994513709e6365fbd1f2c1c2dacb58730c77f168d25cc479772ca64a18d"
+    },
+    {
+      "case": "coast-before-2",
+      "median_ms": 29.5667835,
+      "p95_ms": 31.448351,
+      "misses": 11,
+      "controls_pass": true,
+      "cpu": 0.3499305888263231,
+      "gpu": 4.228570084860139e-05,
+      "latency_ms": 6.328040006337687,
+      "raw_csv_sha256": "513de3455cc0bd8c3071e7a595055a2fcbdc4cc1796eb6b9d0d68598491376ca"
+    }
+  ]
+}
