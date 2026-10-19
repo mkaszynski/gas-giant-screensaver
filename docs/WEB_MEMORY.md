@@ -92,6 +92,12 @@ The implementation addresses the measured costs:
 - Rendering retains one outstanding GPU frame, suspends while hidden, and
   excludes resource loading/reconfiguration from the browser scene clock.
 
+WASM linear memory grows but cannot shrink in place. Switching High to Low
+reuses the previous heap capacity and may not reach the cold-start Low figures
+above. **Stop preview**, then launch Low, to release the old worker heap.
+Driver caches have their own lifetimes too; stable live GPU allocation counts
+do not promise that all process RSS immediately returns to its cold-start level.
+
 ## Reproduce safely
 
 Run lightweight checks locally inside the envelope, with an unwrapped Chromium

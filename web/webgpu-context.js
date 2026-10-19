@@ -127,7 +127,9 @@
       this.endPass();
       if (!this.encoder) {
         const retired = this.retired.splice(0);
-        return this.device.queue.onSubmittedWorkDone().then(() => retired.forEach(resource => resource.destroy()));
+        return this.device.queue
+          .onSubmittedWorkDone()
+          .then(() => retired.forEach((resource) => resource.destroy()));
       }
       if (this.uniformCursor)
         this.device.queue.writeBuffer(
@@ -553,8 +555,9 @@
     }
     deleteBuffer(buffer) {
       if (buffer?.gpu) this.retired.push(buffer.gpu);
-      for (const [target,bound] of this.buffers) if (bound===buffer) this.buffers.delete(target);
-      if(buffer) buffer.gpu=null;
+      for (const [target, bound] of this.buffers)
+        if (bound === buffer) this.buffers.delete(target);
+      if (buffer) buffer.gpu = null;
     }
     createVertexArray() {
       return object({ attributes: new Map(), element: null });
@@ -655,6 +658,24 @@
         sampleCount,
         usage,
       });
+      // Older Dawn lazily clears an untouched renderable 3D texture through
+      // an invalid 2D view when it is first sampled. Night starts and settings
+      // rebuilds may not execute the solar-light passes at all. Initialize
+      // every mip explicitly so a dark light cache is valid before sampling.
+      if (dimension === '3d' && render3d) {
+        for (let level = 0; level < levels; ++level) {
+          const w = Math.max(1, width >> level),
+            h = Math.max(1, height >> level),
+            d = Math.max(1, depth >> level);
+          const bytesPerRow = w * texture.components * texture.bytes;
+          this.device.queue.writeTexture(
+            { texture: texture.gpu, mipLevel: level },
+            new Uint8Array(bytesPerRow * h * d),
+            { bytesPerRow, rowsPerImage: h },
+            [w, h, d],
+          );
+        }
+      }
       ++texture.generation;
       texture.views.clear();
     }
@@ -949,8 +970,13 @@
     }
     deleteTexture(texture) {
       if (texture?.gpu) this.retired.push(texture.gpu);
-      for(const units of this.textures) for(const [target,bound] of units) if(bound===texture) units.delete(target);
-      if(texture) { texture.gpu=null; texture.views.clear(); }
+      for (const units of this.textures)
+        for (const [target, bound] of units)
+          if (bound === texture) units.delete(target);
+      if (texture) {
+        texture.gpu = null;
+        texture.views.clear();
+      }
     }
     view(texture, dimension, level = 0, count = texture.levels, layer) {
       const key = [dimension, level, count, layer].join(':');

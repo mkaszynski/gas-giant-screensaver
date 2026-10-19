@@ -559,6 +559,7 @@ async function checkInitialFlightTime() {
       options: '&surface=0&stars=0',
     },
     { name: 'storm', time: 510, weather: 1260, travel: 162000 },
+    { name: 'night-clouds', time: 1200, weather: 1790900000, travel: 162000 },
     {
       name: 'thin-clouds',
       time: 510,
