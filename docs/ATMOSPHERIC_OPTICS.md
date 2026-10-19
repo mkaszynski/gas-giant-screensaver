@@ -45,7 +45,7 @@ integrated offline. The runtime multiplies RGB phase values by its existing
 atmospheric solar transmission. Liquid phase functions replace the broad direct
 scattering term, while ambient illumination is retained.
 
-No framebuffer, blur pass or additional cloud density samples are added.
+No framebuffer or blur pass is added; the cloud volume-march quadrature is unchanged.
 Cloud phase is evaluated once per view ray outside the volume march. Cirrus
 uses filtered angular lookups; precipitation retains four density samples,
 bounded to the rain layer so nearby curtains cannot fall between distant taps.
@@ -64,6 +64,8 @@ lighting system. Droplet populations and crystal mixtures are prescribed, not
 predicted microphysics. It does not solve polarization or full spectral multiple
 scattering. The coarse weather cache can soften small liquid-cloud features;
 ice halos are evaluated in the full-resolution weather composition.
+Water reflections retain the existing single-column cloud approximation;
+detailed angular optics are computed along direct view rays.
 
 ## Review and reproduction
 
