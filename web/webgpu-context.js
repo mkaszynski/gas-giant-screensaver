@@ -1478,6 +1478,8 @@
       const context = canvas.getContext('webgpu');
       if (!context) throw new Error('Cannot create a WebGPU canvas.');
       renderer = new ObservatoryGPU(canvas, device, context, shaders);
+      renderer.softwareAdapter =
+        ObservatoryGraphicsData.softwareAdapter(adapter);
     } catch (failure) {
       device.destroy();
       throw failure;

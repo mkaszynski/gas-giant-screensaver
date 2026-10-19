@@ -13,7 +13,7 @@ inline void reduceTexture(std::vector<unsigned char> &pixels, unsigned &width,
   if (!width || !height || !limit ||
       pixels.size() != std::size_t(width) * height * 4)
     throw std::runtime_error("Invalid decoded texture dimensions");
-  const unsigned step = (width - 1) / limit + 1;
+  const unsigned step = (std::max(width, height) - 1) / limit + 1;
   if (step <= 1)
     return;
   const unsigned w = std::max(1u, width / step),

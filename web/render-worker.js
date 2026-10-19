@@ -142,9 +142,11 @@ self.onmessage = async ({ data }) => {
             ?.UNMASKED_RENDERER_WEBGL || context.RENDERER,
         )
       : '';
-  data.options.software = /swiftshader|llvmpipe|softpipe/i.test(rendererName)
-    ? '1'
-    : '0';
+  data.options.software =
+    context.softwareAdapter ||
+    /swiftshader|llvmpipe|softpipe/i.test(rendererName)
+      ? '1'
+      : '0';
   self.postMessage({ type: 'backend', backend });
   self.Module = {
     preinitializedWebGLContext: context,

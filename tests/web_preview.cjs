@@ -518,7 +518,7 @@ async function checkInitialFlightTime() {
     await page.goto(
       address(
         url,
-        'time=510&travel=162000&speed=1&quality=-1&memoryGiB=0&cores=0',
+        'time=510&travel=162000&speed=1&quality=-1&memoryGiB=32&cores=16',
       ),
     );
     await page.getByRole('button', { name: 'Launch preview' }).click();

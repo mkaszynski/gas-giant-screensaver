@@ -48,6 +48,12 @@ int main() {
       color[c] = 200;
     reduceTexture(color, w, h, 1, false);
     require(color[0] == 50, "color texels use a filtered average");
+    w = 2;
+    h = 8;
+    color.assign(w * h * 4, 127);
+    reduceTexture(color, w, h, 2, false);
+    require(w == 1 && h == 2 && color[0] == 127,
+            "portrait textures respect the same maximum dimension");
     GraphicsSettings stripped;
     stripped.features.fill(false);
     require(stripped.assetGroups() == "[\"base\",\"terrain\"]",
