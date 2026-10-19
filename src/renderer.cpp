@@ -22,7 +22,7 @@
 #endif
 namespace observatory {
 #ifdef OBSERVATORY_WEATHER_PROFILE
-static void weatherProfileStage(int index) {
+void weatherProfileStage(int index) {
   if (index)
     glEndQuery(GL_TIME_ELAPSED_EXT);
   glBeginQuery(GL_TIME_ELAPSED_EXT, weatherProfileQueries[index]);
@@ -1151,13 +1151,17 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   drawMeteors(s, w, h, day);
   GLuint surfaceTexture = 0;
   WEATHER_PROFILE_STAGE(2);
-  if (surface)
+  if (surface) {
     surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds, day,
                                      scene.texture, [&](GLuint p) {
                                        common(p, s, w, h);
                                        cloudUniforms(p, s, seconds);
                                      });
-  WEATHER_PROFILE_STAGE(3);
+  } else {
+    WEATHER_PROFILE_STAGE(3);
+    WEATHER_PROFILE_STAGE(4);
+  }
+  WEATHER_PROFILE_STAGE(5);
   if (weatherProgram) {
     // Cache broad solar attenuation in a small geographic volume. Fine view
     // extinction stays at display resolution; repeated up-sun probes do not.
@@ -1180,7 +1184,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherLightProgram);
       }
     }
-    WEATHER_PROFILE_STAGE(4);
+    WEATHER_PROFILE_STAGE(6);
     // Preserve vertical sampling of long grazing columns. Wider horizontal
     // cells remove redundant smooth-sky rays without coarsening the horizon.
     if (surfaceOptions.weatherCache)
@@ -1237,7 +1241,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherProgram);
       }
     }
-    WEATHER_PROFILE_STAGE(5);
+    WEATHER_PROFILE_STAGE(7);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     if (weatherComputeProgram) {
@@ -1265,7 +1269,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     }
     revealMeteors(s, w, h, surfaceTexture);
   }
-  WEATHER_PROFILE_STAGE(6);
+  WEATHER_PROFILE_STAGE(8);
   glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);

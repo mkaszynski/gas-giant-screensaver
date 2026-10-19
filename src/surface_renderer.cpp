@@ -1,4 +1,7 @@
 #include "surface_renderer.hpp"
+#ifdef OBSERVATORY_WEATHER_PROFILE
+#include "weather_profile.hpp"
+#endif
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -745,7 +748,13 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
   glDepthFunc(GL_LESS);
   glDepthMask(GL_TRUE);
   glClearDepthf(1.);
+#ifdef OBSERVATORY_WEATHER_PROFILE
+  weatherProfileStage(3);
+#endif
   shadows(shadowScene, eye, seconds, daySeconds);
+#ifdef OBSERVATORY_WEATHER_PROFILE
+  weatherProfileStage(4);
+#endif
   glClearColor(0, 0, 0, 0);
   auto uniforms = [&](GLuint drawProgram, const Scene &view, Vec3 passEye,
                       int passWidth, int passHeight) {

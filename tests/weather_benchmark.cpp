@@ -50,7 +50,8 @@ int main(int argc, char **argv) {
     std::cout << "frame,scene_seconds,render_ms";
     for (auto name : weatherProfileNames)
       std::cout << ',' << name << "_ms";
-    std::cout << '\n' << std::setprecision(12);
+    std::cout << ",mesh_revision,shadow_revision,upload_bytes,mesh_build_pending,"
+                 "mesh_builds_started\n" << std::setprecision(12);
     {
       SurfaceWorld world(data + "/assets/world/moon.ggworld");
       SurfaceOptions options{true, 0, route};
@@ -81,7 +82,11 @@ int main(int argc, char **argv) {
             std::cout << ',' << ns / 1.e6;
         }
         if (frame >= 0)
-          std::cout << '\n';
+          std::cout << ',' << renderer.surfaceMeshRevision() << ','
+                    << renderer.surfaceShadowRevision() << ','
+                    << renderer.surfaceUploadBytes() << ','
+                    << renderer.surfaceBuildPending() << ','
+                    << renderer.surfaceBuildsStarted() << '\n';
         if (glGetError() != GL_NO_ERROR)
           throw std::runtime_error("GPU profiling error");
         std::this_thread::sleep_until(start + std::chrono::microseconds(33333));
