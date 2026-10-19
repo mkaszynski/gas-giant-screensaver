@@ -1,4 +1,5 @@
 #include "renderer.hpp"
+#include "optics.hpp"
 #include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
@@ -561,6 +562,18 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
         root, surfaceOptions.reflections, surfaceOptions.culling,
         surfaceOptions.waterLod, surfaceOptions.weather);
     if (surfaceOptions.weather) {
+      const auto phases =
+          readOpticsTable(root + "/assets/world/optics/phase.ggoptics");
+      glGenTextures(1, &opticsPhaseTexture);
+      textures.push_back(opticsPhaseTexture);
+      glBindTexture(GL_TEXTURE_2D, opticsPhaseTexture);
+      glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, opticsWidth, opticsHeight);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, opticsWidth, opticsHeight,
+                      GL_RGBA, GL_HALF_FLOAT, phases.data());
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       weatherProgram = program("weather.frag");
       if (surfaceOptions.weatherCompute) {
         try {
@@ -1175,6 +1188,13 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     auto prepareWeather = [&](GLuint p) {
       common(p, s, w, h);
       weatherUniforms(p, s);
+      bind(p, 10, "uAtmosphericOptics", opticsPhaseTexture);
+      integer(p, "uAtmosphericOpticsEnabled", surfaceOptions.atmosphericOptics);
+      glUniform2f(glGetUniformLocation(p, "uOpticsLiquid"),
+                  weatherState.cloudLiquid, weatherState.fogLiquid);
+      const double elevation = std::asin(std::clamp(s.sunLocal.y, -1., 1.));
+      glUniform2f(glGetUniformLocation(p, "uOpticsSun"), elevation,
+                  std::cos(elevation));
       glActiveTexture(GL_TEXTURE12);
       glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
       integer(p, "uWeatherLightCache", 12);

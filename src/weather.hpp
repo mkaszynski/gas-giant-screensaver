@@ -15,6 +15,7 @@ struct WeatherClimate {
 struct WeatherState {
   double cover = 0, storm = 0, stratus = 0, cirrus = 0;
   double base = 1, thickness = 1, fog = 0, fogTop = .4, rain = 0;
+  double cloudLiquid = 0, fogLiquid = 0;
   Vec3 noiseOffset{}, regionalOffset{}, cirrusOffset{};
   Vec3 flash{};
   double flashRadiance = 0;
@@ -185,6 +186,14 @@ inline WeatherState weatherAt(WeatherClimate c, TravelLocation location,
       w.flashRadiance = .30 * flash;
     }
   }
+  // Standard lapse-rate estimate with a gradual mixed-phase interval. Warm
+  // water clouds can show glories; frozen clouds retain the broad phase model.
+  w.cloudLiquid =
+      smooth(-20., -2.,
+             c.temperature -
+                 6.5 * std::max(0., w.base + .35 * w.thickness - c.elevation));
+  w.fogLiquid = smooth(
+      -20., -2., c.temperature - 6.5 * std::max(0., w.fogTop - c.elevation));
   return w;
 }
 constexpr int weatherNoiseSize = 64;

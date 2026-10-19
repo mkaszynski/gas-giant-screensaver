@@ -84,6 +84,8 @@ int main(int argc, char **argv) {
                "frame\n  --no-rings             Disable rings for comparison\n"
                "  --weather-time SECONDS  Independent cloud/storm clock\n"
                "  --no-weather           Previous thin-cloud comparison\n"
+               "  --no-atmospheric-optics Disable halos, sundogs and water "
+               "bows\n"
                "  --lightning-brightness N  Lightning multiplier, 0..1000000 "
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
@@ -136,6 +138,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-weather") {
         surface.weather = false;
+        continue;
+      }
+      if (a == "--no-atmospheric-optics") {
+        surface.atmosphericOptics = false;
         continue;
       }
       if (a == "--no-weather-cache") {

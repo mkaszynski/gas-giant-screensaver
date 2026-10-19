@@ -37,6 +37,9 @@ public:
     return {skyWeatherCache.width, skyWeatherCache.height};
   }
   void setWeatherPreset(WeatherPreset preset) { weatherPreset = preset; }
+  void setAtmosphericOptics(bool enabled) {
+    surfaceOptions.atmosphericOptics = enabled;
+  }
   // Diagnostic reference for detecting clipped filtering or atmospheric glow.
   void setCelestialScissor(bool enabled) { celestialScissor = enabled; }
   void setMeteorFrame(MeteorFrame frame) { meteorFrame = frame; }
@@ -112,7 +115,7 @@ private:
          terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
-         weatherLightFbo = 0;
+         weatherLightFbo = 0, opticsPhaseTexture = 0;
   Target trans, multi, sky, scene, weather, skyWeatherCache;
   Target weatherPixels, weatherSkyPixels;
   double lastSky = -1e30, lastDay = 0;
