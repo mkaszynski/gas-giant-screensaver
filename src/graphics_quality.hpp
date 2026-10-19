@@ -43,6 +43,15 @@ struct GraphicsSettings {
     return {std::max(1, int(double(outputHeight) * width / height_)),
             outputHeight};
   }
+  std::array<int, 2> presentationSize(int width, int height_,
+                                      bool menuOpen) const {
+    auto output = *this;
+    // Keep bitmap controls readable while the scene retains its own budget.
+    // Only the final presentation/overlay grows, and only while controls open.
+    if (menuOpen)
+      output.height = 1080;
+    return output.size(width, height_);
+  }
   std::string assetGroups() const {
     std::string groups = "[\"base\",\"";
     groups += features[0] ? "world" : "terrain";

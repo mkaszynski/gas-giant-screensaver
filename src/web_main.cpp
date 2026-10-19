@@ -24,7 +24,7 @@ SurfaceOptions surfaceBase{true};
 StarfieldOptions skyBase;
 GLsync submitted = nullptr;
 struct SubmittedFrame {
-  int count, width, height, builds, quality;
+  int count, width, height, sceneWidth, sceneHeight, builds, quality;
   double time, cost, started;
   bool pending, paused, menuOpen, graphicsOpen;
 } completed{};
@@ -38,9 +38,9 @@ EM_JS(double, option, (const char *name, double fallback, double low, double hig
 EM_JS(void, reportError, (const char *message), {
   globalThis.previewError(UTF8ToString(message));
 });
-EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height,
+EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height, int sceneWidth, int sceneHeight,
                          int builds, int pending, int paused, int menuOpen, int graphicsOpen, int quality, double latency, double allocated, double heap), {
-  globalThis.previewFrame({count, time, cost, width, height, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen, graphicsOpen: !!graphicsOpen, qualityRevision: quality, latency, allocated, heap, resources: Module.preinitializedWebGLContext?.memoryStats?.() || null});
+  globalThis.previewFrame({count, time, cost, width, height, sceneWidth, sceneHeight, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen, graphicsOpen: !!graphicsOpen, qualityRevision: quality, latency, allocated, heap, resources: Module.preinitializedWebGLContext?.memoryStats?.() || null});
 });
 EM_JS(void, reportControls, (const char *json), {
   globalThis.previewControls(JSON.parse(UTF8ToString(json)));
@@ -125,13 +125,15 @@ void frame() {
         return;
       glDeleteSync(submitted);
       submitted = nullptr;
-      if (!releasing)
+      if (!releasing) {
         reportFrame(completed.count, completed.time, completed.cost,
-                    completed.width, completed.height, completed.builds,
-                    completed.pending, completed.paused, completed.menuOpen,
+                    completed.width, completed.height, completed.sceneWidth,
+                    completed.sceneHeight, completed.builds, completed.pending,
+                    completed.paused, completed.menuOpen,
                     completed.graphicsOpen, completed.quality,
                     emscripten_get_now() - completed.started,
                     mallinfo().uordblks, emscripten_get_heap_size());
+      }
     }
     if (!controls || loadingAssets)
       return;
@@ -158,6 +160,13 @@ void frame() {
               activeTime);
     int width, height;
     emscripten_get_canvas_element_size("#scene", &width, &height);
+    const auto presentation = menu.graphics.applied.presentationSize(
+        logicalWidth, logicalHeight, menu.open());
+    if (width != presentation[0] || height != presentation[1]) {
+      width = presentation[0];
+      height = presentation[1];
+      emscripten_set_canvas_element_size("#scene", width, height);
+    }
     const bool prompt = menu.promptVisible(activeTime);
     if (!menu.timeline.playing() && !synchronize && !redraw &&
         width == drawnWidth && height == drawnHeight && prompt == drawnPrompt)
@@ -190,9 +199,12 @@ void frame() {
     drawnWidth = width;
     drawnHeight = height;
     drawnPrompt = prompt;
+    const auto sceneSize = menu.graphics.applied.size(width, height);
     completed = {++frames,
                  width,
                  height,
+                 sceneSize[0],
+                 sceneSize[1],
                  static_cast<int>(renderer->surfaceBuildsStarted()),
                  int(qualityRevision),
                  scene,
@@ -230,8 +242,8 @@ EMSCRIPTEN_KEEPALIVE void preview_assets_ready() {
     lastTick = emscripten_get_now();
     loadingAssets = false;
     redraw = true;
-    auto size =
-        controls->menu.graphics.applied.size(logicalWidth, logicalHeight);
+    auto size = controls->menu.graphics.applied.presentationSize(
+        logicalWidth, logicalHeight, controls->menu.open());
     emscripten_set_canvas_element_size("#scene", size[0], size[1]);
     publishControls();
   } catch (const std::exception &error) {
@@ -281,10 +293,7 @@ EMSCRIPTEN_KEEPALIVE void preview_viewport(int width, int height) {
     return;
   logicalWidth = width;
   logicalHeight = height;
-  if (controls) {
-    auto size = controls->menu.graphics.applied.size(width, height);
-    emscripten_set_canvas_element_size("#scene", size[0], size[1]);
-  }
+  // Resize only after the outstanding frame has completed, in frame().
   redraw = true;
   publishControls();
 }

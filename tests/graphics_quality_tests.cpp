@@ -20,6 +20,12 @@ int main() {
     require(recommendedGraphics(32, 16, false) == GraphicsPreset::High,
             "large native machine may start high");
     int previous = 0;
+    const auto low = GraphicsSettings::forPreset(GraphicsPreset::Low);
+    require(low.presentationSize(1280, 720, false) == std::array{640, 360} &&
+                low.presentationSize(1280, 720, true) ==
+                    std::array{1280, 720} &&
+                low.size(1280, 720) == std::array{640, 360},
+            "readable menu presentation preserves the low scene budget");
     for (int i = 0; i < 3; ++i) {
       auto q = GraphicsSettings::forPreset(GraphicsPreset(i));
       for (auto wh : {std::array{3840, 2160}, std::array{390, 844},

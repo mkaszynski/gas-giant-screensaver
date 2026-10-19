@@ -373,8 +373,8 @@ async function checkInitialFlightTime() {
   await page.locator('#resolution').selectOption('270');
   await page.waitForFunction(
     () =>
-      window.previewMetrics.width === 480 &&
-      window.previewMetrics.height === 270,
+      window.previewMetrics.sceneWidth === 480 &&
+      window.previewMetrics.sceneHeight === 270,
   );
   await page.evaluate(() =>
     rendererWorker.postMessage({ type: 'seek', value: 1200 }),
@@ -443,8 +443,14 @@ async function checkInitialFlightTime() {
   assert(
     await page.evaluate(
       () =>
-        window.previewMetrics.width * window.previewMetrics.height <= 640 * 360,
+        window.previewMetrics.sceneWidth * window.previewMetrics.sceneHeight <=
+        640 * 360,
     ),
+  );
+  assert.equal(
+    await page.evaluate(() => window.previewMetrics.height),
+    720,
+    'Low keeps the shared bitmap controls at a readable presentation resolution',
   );
   const resourceBaseline = await page.evaluate(
     () => window.previewMetrics.resources?.bytes,

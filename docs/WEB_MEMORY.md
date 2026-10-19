@@ -37,6 +37,10 @@ rings, giant emissions, meteors, and reflections. Resolution, texture size,
 cloud resolution and frame cap are adjustable. Volumetric clouds require the
 moving terrain/climate model. **Apply** commits the draft; dragging does not
 allocate resources. Both native hosts and WASM rebuild through the same renderer.
+While the browser menu is open, final presentation can use up to 1080p so bitmap
+labels remain readable. The scene and cloud targets retain the selected budget;
+closing the menu restores the smaller presentation. The memory readout reports
+scene dimensions and includes these temporary presentation allocations.
 
 ## Evidence and changes
 

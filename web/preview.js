@@ -51,14 +51,14 @@ window.previewFrame = (frame) => {
   pause.textContent = isPaused ? 'Resume' : 'Pause';
   const memory = `C++ heap ${(frame.allocated / 1024).toFixed(0)} KiB · WASM capacity ${mib(frame.heap)} MiB · GPU ${frame.resources ? mib(frame.resources.bytes) + ' MiB requested' : 'unmeasured'}`;
   if (frame.paused) {
-    performanceOutput.textContent = `Paused · ${frame.width} × ${frame.height} · ${frameCap} fps target · ${memory}`;
+    performanceOutput.textContent = `Paused · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
   } else if (frame.count === 1 || frame.count % 15 === 0) {
     const recent = samples.slice(-30).filter((item) => item.interval > 0);
     const fps = recent.length
       ? (recent.length * 1000) /
         recent.reduce((sum, item) => sum + item.interval, 0)
       : 0;
-    performanceOutput.textContent = `${fps.toFixed(1)} fps · ${frame.width} × ${frame.height} · ${frameCap} fps target · ${memory}`;
+    performanceOutput.textContent = `${fps.toFixed(1)} fps · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
   }
 };
 function setPause(value) {
