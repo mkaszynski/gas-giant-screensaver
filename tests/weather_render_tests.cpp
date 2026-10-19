@@ -413,10 +413,11 @@ int main() {
       {
         Fixture original;
         original.replace("weather.frag",
-                         "vec3 lighting=solar*(lightingTerms.forward*shadow.x+"
+                         "vec3 lighting=solar*(dropletPhase*shadow.x+"
                          ".032*(.35+.65*shadow.y))+lightingTerms.ambient;",
                          "vec3 lighting=weatherLightTrans(d,weatherHeight(p,"
-                         "uObserverHeight),shadow);");
+                         "uObserverHeight),shadow)+solar*(dropletPhase-"
+                         "vec3(lightingTerms.forward))*shadow.x;");
         Renderer scalar(original.root.string(), {}, {true, 0, 162000});
         for (auto [sky, clock, route] :
              {std::array<double, 3>{510., 1790900000., 162000.},
