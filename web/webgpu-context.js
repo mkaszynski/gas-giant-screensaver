@@ -746,6 +746,16 @@
           offset,
         );
     }
+    texStorage2D(target, levels, internal, width, height) {
+      this.allocate(
+        this.texture(target),
+        internal,
+        width,
+        height,
+        target === G.TEXTURE_CUBE_MAP ? 6 : 1,
+        levels,
+      );
+    }
     texStorage3D(target, levels, internal, width, height, depth) {
       this.allocate(
         this.texture(target),
