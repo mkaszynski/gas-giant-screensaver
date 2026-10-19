@@ -26,6 +26,7 @@ private:
   double realElapsed = 0;
   Vector2D viewport;
   std::string output;
+  unsigned qualityRevision = 0;
   int fps = 30, day = 1800;
   observatory::FramePacer framePacer;
   bool failed = false;

@@ -43,6 +43,7 @@
     constructor(canvas, device, context, shaders) {
       this.canvas = canvas;
       this.device = device;
+      this.memoryStats = ObservatoryGPUMemory.instrument(device);
       this.context = context;
       this.shaders = shaders;
       this.format = navigator.gpu.getPreferredCanvasFormat();
@@ -124,7 +125,10 @@
     }
     submit() {
       this.endPass();
-      if (!this.encoder) return Promise.resolve();
+      if (!this.encoder) {
+        const retired = this.retired.splice(0);
+        return this.device.queue.onSubmittedWorkDone().then(() => retired.forEach(resource => resource.destroy()));
+      }
       if (this.uniformCursor)
         this.device.queue.writeBuffer(
           this.uniformBuffer,
@@ -433,6 +437,8 @@
       this.program = program;
     }
     deleteProgram(program) {
+      // Pipelines retain program layouts. Reconfiguration must release them.
+      this.pipelineCache.clear();
       program.groups.clear();
     }
     uniform(
@@ -547,6 +553,8 @@
     }
     deleteBuffer(buffer) {
       if (buffer?.gpu) this.retired.push(buffer.gpu);
+      for (const [target,bound] of this.buffers) if (bound===buffer) this.buffers.delete(target);
+      if(buffer) buffer.gpu=null;
     }
     createVertexArray() {
       return object({ attributes: new Map(), element: null });
@@ -941,6 +949,8 @@
     }
     deleteTexture(texture) {
       if (texture?.gpu) this.retired.push(texture.gpu);
+      for(const units of this.textures) for(const [target,bound] of units) if(bound===texture) units.delete(target);
+      if(texture) { texture.gpu=null; texture.views.clear(); }
     }
     view(texture, dimension, level = 0, count = texture.levels, layer) {
       const key = [dimension, level, count, layer].join(':');

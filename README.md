@@ -76,15 +76,25 @@ background terrain worker. Rendering runs in an OffscreenCanvas worker to keep
 page controls responsive during shader compilation and slow frames. C++ owns the
 scene, simulation, meshes and passes; browser bindings submit those passes to
 WebGPU or WebGL 2. There is no application server or lock-screen integration.
-The live renderer starts only after **Launch preview**; the initial asset
-bundle is about 100 MB. The flight fills the browser viewport at its actual aspect ratio. Move to the
-upper-right corner (or focus the corner button with Tab) and open the shared
-native debug panel for time, biome weather and meteor controls. A hint identifies
-the corner on launch. Browser display controls provide Pause, Stop preview,
-720p/1080p and optional Fullscreen. Rendering suspends in a hidden tab. The default render budget is
-**30 fps with at most 1920×1080 pixels**, preserving the viewport aspect
-ratio independently of device pixel ratio;
-720p is an explicit option, with no automatic fidelity reduction.
+The live renderer starts only after **Launch preview** and downloads only the
+assets selected by its graphics settings. Auto starts constrained or unknown
+machines on Low; larger reported memory/core budgets select Medium or High.
+Low uses the static landscape, smaller textures and thin clouds (about 7 MiB of
+assets). Medium uses moving terrain and half-resolution volumetric clouds;
+High retains native scene fidelity, targeting **30 fps at up to 1080p**.
+The viewport aspect is preserved independently of device pixel ratio.
+
+Move to the upper-right corner (or focus the corner button with Tab) to open the
+shared native debug panel. Choose **Graphics** for the overall Low–High slider
+and Custom feature switches, resolution, texture size, cloud resolution and
+frame cap. Edits take effect with **Apply**. Browser controls also provide Stop,
+Pause, display resolution and Fullscreen. Hidden tabs suspend rendering.
+Native preview users can select the same presets with `--quality auto|low|medium|high`.
+
+The debug output separates C++ heap use, WASM capacity and requested GPU storage.
+WASM growth is capped at 768 MiB and requested browser GPU resources at 512 MiB;
+these figures exclude browser/driver overhead. See [memory findings, bounded
+profiling and quality policy](docs/WEB_MEMORY.md).
 
 **WebGPU is preferred**, with WebGL 2 compatibility when WebGPU is unavailable.
 Choose Graphics before launching, or use `?backend=webgpu` / `?backend=webgl2`.
@@ -104,20 +114,20 @@ Build with Emscripten **4.0.12**, CMake, Ninja, Python 3, Node, glslang and SPIR
 
 ```sh
 emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build-web --parallel 2
+python3 scripts/browser_budget.py --report captures/web-build-budget.json -- cmake --build build-web --parallel 1
 python3 -m http.server 8000 --directory build-web
 # Open http://localhost:8000/ and select Launch preview.
 npm ci --prefix web
 npx --prefix web playwright install chromium
-PREVIEW_BACKEND=webgl2 npm test --prefix web
-PREVIEW_BACKEND=webgpu npm test --prefix web
+python3 scripts/browser_budget.py --report captures/webgl-budget.json -- env PREVIEW_BACKEND=webgl2 npm test --prefix web
+python3 scripts/browser_budget.py --report captures/webgpu-budget.json -- env PREVIEW_BACKEND=webgpu npm test --prefix web
 node tests/web_backend_parity.cjs
 ```
 
 On Nix, use `nix shell nixpkgs#emscripten nixpkgs#cmake nixpkgs#ninja nixpkgs#glslang nixpkgs#spirv-cross nixpkgs#python3 nixpkgs#nodejs` and
 writable `EM_CACHE` / `EM_PORTS` directories outside the Nix store. The Pages
 workflow builds and runs browser behavior checks on PRs, then publishes and checks the live site. It deploys only
-HTML, CSS, JavaScript, WASM, the asset bundle and license from `main`.
+HTML, CSS, JavaScript, WASM, native runtime assets and licenses from `main`.
 Heavy browser/software-renderer tests should run on CI, especially on machines
 with little free memory. Run native and browser performance checks sequentially.
 
@@ -344,24 +354,13 @@ The frame cap and output suspension matter more for power than peak FPS.
 ## Build and test
 
 ```sh
-nix develop
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-./build/render-tests
-./build/ring-render-tests
-./build/edge-render-tests
-./build/atmosphere-render-tests
-./build/scattering-edge-tests
-./build/emission-render-tests
-./build/sky-render-tests
-./build/terrain-render-tests
-nix flake check
+python3 scripts/browser_budget.py --report captures/native-build-budget.json -- \
+  nix develop -c bash -c 'cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel 1 && ctest --test-dir build --output-on-failure'
 ```
 
 Use `--no-rings` for a direct visual or performance comparison.
 
-GPU tests need a display and GLES 3. CI runs them using Mesa llvmpipe and Xvfb.
+Full native GPU suites and `nix flake check` run in CI. For a focused local UI check, use the resource wrapper with `xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 LP_NUM_THREADS=1 ./build/debug-render-tests`. GPU tests need GLES 3; keep them in the background and run checks sequentially.
 They check opaque mountain occlusion, deterministic resize, visible bodies,
 and day/night contrast. Unit tests verify orbital geometry and eclipse cases.
 

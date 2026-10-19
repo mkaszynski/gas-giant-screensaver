@@ -37,7 +37,7 @@
         cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture,surface,surface_renderer}.{cpp,hpp} src/observatory/
         mkdir -p src/observatory/third_party
         cp ${./src}/third_party/bcdec.h src/observatory/third_party/
-        cp ${./src}/{frame_pacing,weather,weather_control,debug_timeline,debug_menu,projection}.hpp src/observatory/
+        cp ${./src}/{graphics_quality,texture_quality,frame_pacing,weather,weather_control,debug_timeline,debug_menu,projection}.hpp src/observatory/
         cp ${./src}/debug_overlay.{cpp,hpp} src/observatory/
         cp ${./src}/{meteors,meteor_control}.hpp src/observatory/
         cp ${./src}/meteor_renderer.cpp src/observatory/

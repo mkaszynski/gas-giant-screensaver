@@ -30,6 +30,9 @@ jobs:
         run: |
           python3 tests/test_webgpu_shaders.py
           node tests/webgpu_data.cjs
+          node tests/gpu_memory.cjs
+          python3 tests/test_web_assets.py
+          python3 tests/test_browser_budget.py
       - name: Build the shared C++ renderer
         run: |
           emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -48,7 +51,13 @@ jobs:
       - name: Package only static runtime assets
         run: |
           mkdir -p site
-          cp build-web/observatory.{js,wasm,data} build-web/index.html build-web/preview.{js,css} build-web/isolation-worker.js build-web/render-worker.js build-web/graphics-data.js build-web/webgpu-context.js build-web/webgpu-shaders.json build-web/LICENSE site/
+          cp build-web/observatory.{js,wasm,data} build-web/index.html build-web/preview.{js,css} build-web/isolation-worker.js build-web/render-worker.js build-web/graphics-data.js build-web/gpu-memory.js build-web/webgpu-context.js build-web/webgpu-shaders.json build-web/assets.json build-web/LICENSE site/
+          cp -r build-web/assets site/assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-runtime
+          path: site
+          retention-days: 3
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
@@ -58,9 +67,68 @@ jobs:
         with:
           name: browser-validation
           path: captures/web-*
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+  memory:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '4.0.12'
+          actions-cache-folder: emsdk-cache
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install shader and headless browser tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y glslang-tools spirv-cross
+          npm ci --prefix web
+          cd web && npx playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-runtime
+          path: build-web
+      - name: Build the pre-change renderer for comparison
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+        run: |
+          git worktree add --detach /tmp/observatory-before "$BASE_SHA"
+          emcmake cmake -S /tmp/observatory-before -B build-before -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-before --parallel 2
+      - name: Verify the kernel memory ceiling
+        run: |
+          mkdir -p captures
+          if sudo python3 scripts/browser_budget.py --report captures/web-budget-oom-check.json --memory-mib 128 --seconds 20 -- "$(command -v node)" -e 'new Uint8Array(256*1024*1024).fill(1)'; then
+            echo "The resource ceiling did not stop an oversized allocation"
+            exit 1
+          fi
+          python3 -c 'import json; assert "Result=oom-kill" in json.load(open("captures/web-budget-oom-check.json"))["summary"]'
+      - name: Sequential feature isolation under hard resource limits
+        run: |
+          for backend in webgl2 webgpu; do
+            for version in before after; do
+              if [ "$version" = before ]; then profile_build=build-before; else profile_build=build-web; fi
+              sudo python3 scripts/browser_budget.py --report "captures/web-budget-$version-$backend.json" --memory-mib 3072 --cpu-percent 200 --seconds 900 -- env PREVIEW_BACKEND="$backend" PROFILE_VERSION="$version" PROFILE_BUILD="$profile_build" PROFILE_REPORT="captures/web-memory-$version-$backend.json" "$(command -v node)" tests/web_memory_profile.cjs
+            done
+          done
+      - name: Validate and summarize memory contracts
+        run: |
+          python3 scripts/summarize_web_memory.py > captures/web-memory-summary.md
+          cat captures/web-memory-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bounded-memory-profiles
+          path: |
+            captures/web-*.json
+            captures/web-memory-summary.md
+  deploy:
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && needs.web.result == 'success' && (needs.memory.result == 'success' || needs.memory.result == 'skipped')
+    needs: [web, memory]
     runs-on: ubuntu-24.04
     permissions:
       pages: write

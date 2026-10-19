@@ -1,11 +1,13 @@
 #pragma once
 #include "emissions.hpp"
+#include "graphics_quality.hpp"
 #include "meteors.hpp"
 #include "surface_renderer.hpp"
 #include "system.hpp"
 #include "weather.hpp"
 #include <GLES3/gl3.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 namespace observatory {
@@ -16,7 +18,7 @@ struct StarfieldOptions {
 class Renderer {
 public:
   explicit Renderer(std::string dataDirectory, StarfieldOptions = {},
-                    SurfaceOptions = {});
+                    SurfaceOptions = {}, std::optional<GraphicsSettings> = {});
   ~Renderer();
   Renderer(const Renderer &) = delete;
   Renderer &operator=(const Renderer &) = delete;
@@ -79,6 +81,7 @@ private:
     GLenum format = 0;
     bool immutable = false;
   };
+  std::optional<GraphicsSettings> graphics;
   std::string root;
   StarfieldOptions starfield;
   SurfaceOptions surfaceOptions;
