@@ -784,6 +784,21 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   target(sky, 256, 128);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+bool Renderer::releaseSizeTargetsFor(int width, int height) {
+  const auto size =
+      graphics ? graphics->size(width, height) : std::array{width, height};
+  if (!scene.width || (scene.width == size[0] && scene.height == size[1]))
+    return false;
+  release(scene);
+  release(composite);
+  release(weather);
+  release(skyWeatherCache);
+  release(weatherPixels);
+  release(weatherSkyPixels);
+  if (surface)
+    surface->releaseSizeTargets();
+  return true;
+}
 Renderer::~Renderer() {
   release(trans);
   release(multi);

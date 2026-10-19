@@ -6,6 +6,8 @@ const http = require('node:http');
 const path = require('node:path');
 const { chromium } = require('../web/node_modules/playwright');
 const { PNG } = require('../web/node_modules/pngjs');
+const fixtures = require('./scene_fixtures.cjs');
+const { difference, matches } = require('./web_native_parity.cjs');
 const root = path.resolve(__dirname, '../build-web');
 const captureDir = path.resolve(__dirname, '../captures');
 const mime = {
@@ -26,7 +28,8 @@ function address(url, query) {
   target.searchParams.set('backend', backend);
   if (!target.searchParams.has('quality'))
     target.searchParams.set('quality', '2');
-  target.searchParams.set('height', '180');
+  if (!target.searchParams.has('height'))
+    target.searchParams.set('height', '180');
   if (uiOnly)
     for (const feature of ['surface', 'volumetric', 'galaxy', 'stars'])
       target.searchParams.set(feature, '0');
@@ -137,7 +140,7 @@ async function checkInitialFlightTime() {
   });
   // First navigation installs the static worker and reloads into isolation.
   await page.goto(
-    address(url, 'paused=1&time=510&travel=162000&weather=1790900000'),
+    address(url, 'paused=1&time=510&travel=162000&weather=1790900000&speed=0'),
   );
   await page.waitForFunction(
     () => !document.querySelector('#launch').disabled,
@@ -210,13 +213,13 @@ async function checkInitialFlightTime() {
     Number(await page.locator('#scene').getAttribute('width')) <= 640,
     'Launch placeholder must remain small until C++ selects a budget',
   );
-  async function smallCanvas() {
-    await page.evaluate(() => {
+  async function smallCanvas(height = 180) {
+    await page.evaluate((height) => {
       const select = document.querySelector('#resolution');
-      select.add(new Option('CI diagnostic', '180'));
-      select.value = '180';
+      select.add(new Option('CI diagnostic', String(height)));
+      select.value = String(height);
       select.dispatchEvent(new Event('change'));
-    });
+    }, height);
   }
   await smallCanvas();
   await ready(page);
@@ -239,6 +242,8 @@ async function checkInitialFlightTime() {
     await page.locator('#debug-hint').isVisible(),
     'First launch must explain the corner access',
   );
+  assert.match(await page.locator('#graphics-hint').textContent(),
+    uiOnly ? /High quality · static landscape/ : /High quality · moving terrain/);
   assert(
     await page.locator('#browser-controls').isHidden(),
     'The flight starts without browser chrome',
@@ -254,8 +259,11 @@ async function checkInitialFlightTime() {
   async function capturePixels(name) {
     const width = await page.evaluate(() => window.previewMetrics.width);
     const height = await page.evaluate(() => window.previewMetrics.height);
+    const dpr = await page.evaluate(() => window.devicePixelRatio);
+    // One framebuffer texel per physical screenshot pixel. CSS-size capture
+    // at DPR 2 would otherwise filter the scene twice and hide real fidelity.
     const style = await page.addStyleTag({
-      content: `header,footer,#loading,#debug-open,#debug-hint,#browser-controls{visibility:hidden}#scene{width:${width}px;height:${height}px;object-fit:fill}`,
+      content: `header,footer,#loading,#debug-open,#debug-hint,#browser-controls{visibility:hidden}#scene{width:${width / dpr}px;height:${height / dpr}px;object-fit:fill}`,
     });
     await page.locator('#scene').screenshot({
       path: path.join(captureDir, `web-${backend}-${name}-pixels.png`),
@@ -272,6 +280,31 @@ async function checkInitialFlightTime() {
       'Automatic WebGL 2 fallback rendered successfully without WebGPU',
     );
     return;
+  }
+  if (backend === 'webgpu' && !uiOnly) {
+    const first = PNG.sync.read(fs.readFileSync(
+      path.join(captureDir, `web-${backend}-day-pixels.png`),
+    ));
+    const submitted = await page.evaluate(() => window.previewControls.submittedFrames);
+    await page.evaluate(() => rendererWorker.postMessage({ type: 'seek', value: 1200 }));
+    await page.waitForFunction((n) => window.previewControls.submittedFrames > n,
+      submitted, { timeout: 120000 });
+    assert.equal(await page.evaluate(() => window.previewMetrics.frames), submitted,
+      'The software GPU should still be rendering the first queued scene');
+    await page.evaluate(() => rendererWorker.postMessage({ type: 'seek', value: 510 }));
+    await page.waitForFunction((n) => window.previewControls.submittedFrames >= n + 2,
+      submitted, { timeout: 120000 });
+    assert.equal(await page.evaluate(() => window.previewControls.inFlight), 2,
+      'The next scene must encode without waiting for the prior GPU frame');
+    await page.waitForFunction((n) => window.previewMetrics.frames >= n + 2 &&
+      Math.abs(window.previewMetrics.time - 510) < .01,
+      submitted, { timeout: 240000 });
+    await capturePixels('queued-return');
+    const returned = PNG.sync.read(fs.readFileSync(
+      path.join(captureDir, `web-${backend}-queued-return-pixels.png`),
+    ));
+    assert(matches(difference(first, returned)),
+      'Overlapping day/night/day frames must preserve per-frame uniforms and image fidelity');
   }
   async function nativeClick(group, index) {
     const rect = await page.evaluate(
@@ -489,33 +522,43 @@ async function checkInitialFlightTime() {
   await page.waitForFunction(() => window.previewMetrics.height === 270, null, {
     timeout: 180000,
   });
+  const resizeBaseline = await page.evaluate(() => ({
+    bytes: window.previewMetrics.resources.bytes,
+    assets: window.previewMetrics.assetDownloaded,
+    builds: window.previewMetrics.builds,
+  }));
+  for (const [width, height] of [
+    [390, 844],
+    [2400, 600],
+    [1280, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForFunction(
+      ({ width, height }) =>
+        Math.abs(
+          window.previewMetrics.width / window.previewMetrics.height -
+            width / height,
+        ) <
+        2 / window.previewMetrics.height,
+      { width, height },
+    );
+    assert(
+      await page.evaluate(
+        () =>
+          window.previewMetrics.width * window.previewMetrics.height <=
+          480 * 270,
+      ),
+    );
+    const bounds = await page.locator('#scene').boundingBox();
+    assert.equal(bounds.width, width);
+    assert.equal(bounds.height, height);
+  }
+  assert.deepEqual(await page.evaluate(() => ({
+    bytes: window.previewMetrics.resources.bytes,
+    assets: window.previewMetrics.assetDownloaded,
+    builds: window.previewMetrics.builds,
+  })), resizeBaseline, 'Aspect round trip must reuse assets and return to the same GPU budget');
   if (uiOnly) {
-    for (const [width, height] of [
-      [390, 844],
-      [2400, 600],
-      [1280, 720],
-    ]) {
-      await page.setViewportSize({ width, height });
-      await page.waitForFunction(
-        ({ width, height }) =>
-          Math.abs(
-            window.previewMetrics.width / window.previewMetrics.height -
-              width / height,
-          ) <
-          2 / window.previewMetrics.height,
-        { width, height },
-      );
-      assert(
-        await page.evaluate(
-          () =>
-            window.previewMetrics.width * window.previewMetrics.height <=
-            480 * 270,
-        ),
-      );
-      const bounds = await page.locator('#scene').boundingBox();
-      assert.equal(bounds.width, width);
-      assert.equal(bounds.height, height);
-    }
     await page.locator('#debug-open').focus();
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.previewControls.open);
@@ -536,6 +579,9 @@ async function checkInitialFlightTime() {
       0,
       'Software adapter must start Low despite generous memory/core hints',
     );
+    assert.match(await page.locator('#graphics-hint').textContent(),
+      /Low quality · static landscape/,
+      'Auto must disclose the applied quality and missing terrain');
     assert(
       await page.evaluate(
         () => window.previewMetrics.assetDownloaded < 8 * 1024 * 1024,
@@ -549,31 +595,7 @@ async function checkInitialFlightTime() {
     );
     return;
   }
-  for (const fixture of [
-    {
-      name: 'night',
-      time: 437625,
-      weather: 1790900000,
-      travel: 0,
-      options: '&surface=0',
-    },
-    {
-      name: 'night-no-stars',
-      time: 437625,
-      weather: 1790900000,
-      travel: 0,
-      options: '&surface=0&stars=0',
-    },
-    { name: 'storm', time: 510, weather: 1260, travel: 162000 },
-    { name: 'night-clouds', time: 1200, weather: 1790900000, travel: 162000 },
-    {
-      name: 'thin-clouds',
-      time: 510,
-      weather: 1790900000,
-      travel: 162000,
-      options: '&volumetric=0',
-    },
-  ]) {
+  for (const fixture of fixtures.filter((fixture) => fixture.name !== 'day')) {
     await page.goto(
       address(
         url,
@@ -581,8 +603,13 @@ async function checkInitialFlightTime() {
       ),
     );
     await page.getByRole('button', { name: 'Launch preview' }).click();
-    await smallCanvas();
+    await smallCanvas(fixture.height);
     await ready(page);
+    assert.equal(
+      await page.evaluate(() => window.previewMetrics.sceneHeight),
+      fixture.height || 180,
+      'Fidelity fixtures must render at their requested scene resolution',
+    );
     await capturePixels(fixture.name);
   }
   // Force a terrain rebase and a worker build during moving flight.
@@ -602,6 +629,15 @@ async function checkInitialFlightTime() {
     (await page.evaluate(() => window.previewMetrics.frames)) + 3,
     { timeout: 120000 },
   );
+  assert(
+    await page.evaluate(() => window.previewMetrics.maxInFlight <= 2),
+    'GPU work must remain bounded to two submissions',
+  );
+  if (backend === 'webgpu')
+    assert.equal(
+      await page.evaluate(() => window.previewMetrics.maxInFlight), 2,
+      'CPU must encode another frame while the software GPU is busy',
+    );
   assert(builds >= 2, 'Moving terrain must continue streaming in WASM');
   // A second visit uses the established service worker without another reload.
   await openMenu();

@@ -17,6 +17,11 @@ struct GraphicsSettings {
   double clouds = 1;
   GraphicsPreset preset = GraphicsPreset::High;
   bool operator==(const GraphicsSettings &) const = default;
+  std::string_view name() const {
+    constexpr std::array<std::string_view, 4> names{"Low", "Medium", "High",
+                                                    "Custom"};
+    return names.at(int(preset));
+  }
   static GraphicsSettings forPreset(GraphicsPreset p) {
     GraphicsSettings q;
     q.preset = p;

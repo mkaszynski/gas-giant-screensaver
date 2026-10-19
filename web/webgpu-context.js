@@ -141,11 +141,13 @@
         );
       this.device.queue.submit([this.encoder.finish()]);
       this.encoder = null;
+      // writeBuffer captures the CPU bytes and is ordered after the preceding
+      // submission. The next frame can encode into the same bounded arena now.
+      this.uniformCursor = 0;
       const retired = this.retired.splice(0);
       this.swapTexture = null;
       return this.device.queue.onSubmittedWorkDone().then(() => {
         retired.forEach((resource) => resource.destroy());
-        this.uniformCursor = 0;
       });
     }
     getSupportedExtensions() {
@@ -1457,7 +1459,7 @@
     let adapter, device;
     try {
       adapter = await navigator.gpu.requestAdapter({
-        powerPreference: 'low-power',
+        powerPreference: 'high-performance',
       });
       if (!adapter) throw new Error('No WebGPU adapter is available.');
       const requiredFeatures = ['texture-compression-bc'].filter((feature) =>

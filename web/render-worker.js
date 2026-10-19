@@ -122,6 +122,7 @@ self.onmessage = async ({ data }) => {
         alpha: false,
         antialias: false,
         depth: false,
+        powerPreference: 'high-performance',
       });
       if (!context) throw new Error('WebGL 2 is unavailable.');
       ObservatoryGPUMemory.instrumentGL(context);

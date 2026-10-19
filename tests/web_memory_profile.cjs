@@ -229,6 +229,7 @@ function percentile(a, p) {
     });
     await session.detach();
     const timings = metrics.samples.slice(2);
+    const intervals = timings.map((f) => f.interval).filter((ms) => ms > 0);
     const stage = {
       name,
       firstFrameMs,
@@ -244,6 +245,11 @@ function percentile(a, p) {
         timings.map((f) => f.latency || f.interval),
         0.95,
       ),
+      // Queue latency includes waiting behind another GPU frame. Completed
+      // throughput separately measures whether overlap improves delivery.
+      completedFps: intervals.length * 1000 / intervals.reduce((sum, ms) => sum + ms, 0),
+      completionIntervalMedianMs: percentile(intervals, .5),
+      maxInFlight: metrics.maxInFlight ?? 1,
       allocated: metrics.allocated,
       heap: metrics.heap,
       resources: metrics.resources,

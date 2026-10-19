@@ -1,12 +1,14 @@
 #include "debug_overlay.hpp"
 #include "renderer.hpp"
 #include <algorithm>
+#include <deque>
 #include <emscripten.h>
 #include <emscripten/heap.h>
 #include <emscripten/html5.h>
 #include <exception>
 #include <malloc.h>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 using namespace observatory;
@@ -17,17 +19,32 @@ double sceneStart = 510, weatherOffset = 0, activeTime = 0, lastTick = 0;
 double lastRender = -1e6;
 bool synchronize = false, hidden = false, redraw = true, drawnPrompt = false;
 int drawnWidth = 0, drawnHeight = 0, logicalWidth = 1280, logicalHeight = 720;
-int frames = 0, keyMask = 0;
-bool loadingAssets = false, releasing = false;
+int frames = 0, keyMask = 0, maxInFlight = 0;
+bool loadingAssets = false, releasing = false, resizing = false;
 unsigned qualityRevision = 0;
 SurfaceOptions surfaceBase{true};
 StarfieldOptions skyBase;
-GLsync submitted = nullptr;
 struct SubmittedFrame {
   int count, width, height, sceneWidth, sceneHeight, builds, quality;
   double time, cost, started;
   bool pending, paused, menuOpen, graphicsOpen;
-} completed{};
+};
+struct Submission {
+  GLsync fence;
+  std::optional<SubmittedFrame> frame;
+};
+constexpr unsigned frameQueueLimit = 2;
+std::deque<Submission> submitted;
+void submit(std::optional<SubmittedFrame> frame = {}) {
+  if (submitted.size() >= frameQueueLimit)
+    throw std::runtime_error("GPU frame queue exceeded its bound.");
+  const auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (!fence)
+    throw std::runtime_error("Cannot track GPU completion.");
+  submitted.push_back({fence, frame});
+  maxInFlight = std::max(maxInFlight, int(submitted.size()));
+  glFlush();
+}
 
 // clang-format off: EM_JS bodies contain JavaScript operators, not C++ tokens.
 EM_JS(double, option, (const char *name, double fallback, double low, double high), {
@@ -39,8 +56,8 @@ EM_JS(void, reportError, (const char *message), {
   globalThis.previewError(UTF8ToString(message));
 });
 EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height, int sceneWidth, int sceneHeight,
-                         int builds, int pending, int paused, int menuOpen, int graphicsOpen, int quality, double latency, double allocated, double heap), {
-  globalThis.previewFrame({count, time, cost, width, height, sceneWidth, sceneHeight, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen, graphicsOpen: !!graphicsOpen, qualityRevision: quality, latency, allocated, heap, resources: Module.preinitializedWebGLContext?.memoryStats?.() || null});
+                         int builds, int pending, int paused, int menuOpen, int graphicsOpen, int quality, int maxInFlight, double latency, double allocated, double heap), {
+  globalThis.previewFrame({count, time, cost, width, height, sceneWidth, sceneHeight, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen, graphicsOpen: !!graphicsOpen, qualityRevision: quality, maxInFlight, latency, allocated, heap, resources: Module.preinitializedWebGLContext?.memoryStats?.() || null});
 });
 EM_JS(void, reportControls, (const char *json), {
   globalThis.previewControls(JSON.parse(UTF8ToString(json)));
@@ -52,7 +69,7 @@ EM_JS(void, consumedAssets, (), { globalThis.previewAssetsConsumed(); });
 // clang-format on
 void advanceClock() {
   const double now = emscripten_get_now();
-  if (lastTick > 0 && !hidden && !loadingAssets && !releasing)
+  if (lastTick > 0 && !hidden && !loadingAssets && !releasing && !resizing)
     activeTime += std::max(0., (now - lastTick) / 1000.);
   lastTick = now;
 }
@@ -75,6 +92,8 @@ void publishControls() {
   };
   std::ostringstream out;
   out << "{\"open\":" << (menu.open() ? "true" : "false")
+      << ",\"submittedFrames\":" << frames
+      << ",\"inFlight\":" << submitted.size()
       << ",\"prompt\":" << (menu.promptVisible(activeTime) ? "true" : "false")
       << ",\"playing\":" << (menu.timeline.playing() ? "true" : "false")
       << ",\"weather\":" << int(menu.weather())
@@ -85,6 +104,7 @@ void publishControls() {
       << ",\"span\":" << menu.timeline.span()
       << ",\"graphics\":{\"open\":" << (menu.graphics.open ? "true" : "false")
       << ",\"preset\":" << int(menu.graphics.draft.preset)
+      << ",\"name\":\"" << menu.graphics.applied.name() << "\""
       << ",\"height\":" << menu.graphics.applied.height
       << ",\"fps\":" << menu.graphics.applied.fps
       << ",\"revision\":" << menu.graphics.revision << ",\"features\":[";
@@ -117,35 +137,39 @@ void frame() {
     advanceClock();
     if (hidden)
       return;
-    if (submitted) {
-      const GLenum state = glClientWaitSync(submitted, 0, 0);
+    while (!submitted.empty()) {
+      const auto &entry = submitted.front();
+      const GLenum state = glClientWaitSync(entry.fence, 0, 0);
       if (state == GL_WAIT_FAILED)
         throw std::runtime_error("Cannot track GPU frame completion.");
       if (state == GL_TIMEOUT_EXPIRED)
-        return;
-      glDeleteSync(submitted);
-      submitted = nullptr;
-      if (!releasing) {
+        break;
+      glDeleteSync(entry.fence);
+      if (entry.frame) {
+        const auto &completed = *entry.frame;
         reportFrame(completed.count, completed.time, completed.cost,
                     completed.width, completed.height, completed.sceneWidth,
                     completed.sceneHeight, completed.builds, completed.pending,
                     completed.paused, completed.menuOpen,
-                    completed.graphicsOpen, completed.quality,
+                    completed.graphicsOpen, completed.quality, maxInFlight,
                     emscripten_get_now() - completed.started,
                     mallinfo().uordblks, emscripten_get_heap_size());
-      }
+      } else
+        resizing = false;
+      submitted.pop_front();
     }
     if (!controls || loadingAssets)
       return;
     auto &menu = controls->menu;
     if (!renderer || qualityRevision != menu.graphics.revision) {
+      if (!submitted.empty())
+        return;
       if (renderer) {
         renderer.reset();
         // Submit deletion-only work too. Await retirement before allocating a
         // replacement, so old/new terrain and GPU targets never overlap.
         releasing = true;
-        submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-        glFlush();
+        submit();
         return;
       }
       if (releasing)
@@ -158,10 +182,25 @@ void frame() {
     menu.keys({bool(keyMask & 1), bool(keyMask & 2), bool(keyMask & 4),
                bool(keyMask & 8)},
               activeTime);
+    if (submitted.size() >= frameQueueLimit)
+      return;
     int width, height;
     emscripten_get_canvas_element_size("#scene", &width, &height);
     const auto presentation = menu.graphics.applied.presentationSize(
         logicalWidth, logicalHeight, menu.open());
+    const auto requestedScene =
+        menu.graphics.applied.size(presentation[0], presentation[1]);
+    if (!submitted.empty() &&
+        (renderer->renderResolution() != requestedScene ||
+         width != presentation[0] || height != presentation[1]))
+      return;
+    if (renderer->releaseSizeTargetsFor(presentation[0], presentation[1])) {
+      // Keep world/mesh/shaders, but never overlap old and new frame targets.
+      resizing = true;
+      redraw = true;
+      submit();
+      return;
+    }
     if (width != presentation[0] || height != presentation[1]) {
       width = presentation[0];
       height = presentation[1];
@@ -200,25 +239,26 @@ void frame() {
     drawnHeight = height;
     drawnPrompt = prompt;
     const auto sceneSize = menu.graphics.applied.size(width, height);
-    completed = {++frames,
-                 width,
-                 height,
-                 sceneSize[0],
-                 sceneSize[1],
-                 static_cast<int>(renderer->surfaceBuildsStarted()),
-                 int(qualityRevision),
-                 scene,
-                 emscripten_get_now() - start,
-                 start,
-                 renderer->surfaceBuildPending(),
-                 !menu.timeline.playing(),
-                 menu.open(),
-                 menu.graphics.open};
-    // At most one outstanding frame, including debug draws. Never spin-wait.
-    submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    if (!submitted)
-      throw std::runtime_error("Cannot track the rendered GPU frame.");
-    glFlush();
+    const SubmittedFrame completed{
+        ++frames,
+        width,
+        height,
+        sceneSize[0],
+        sceneSize[1],
+        static_cast<int>(renderer->surfaceBuildsStarted()),
+        int(qualityRevision),
+        scene,
+        emscripten_get_now() - start,
+        start,
+        renderer->surfaceBuildPending(),
+        !menu.timeline.playing(),
+        menu.open(),
+        menu.graphics.open};
+    // Bounded overlap lets CPU encoding run while the previous frame renders.
+    // GPU commands reuse the same targets in submission order, without a second
+    // scene or a growing queue. Reconfiguration above always drains both
+    // frames.
+    submit(completed);
     publishControls();
   } catch (const std::exception &error) {
     emscripten_cancel_main_loop();

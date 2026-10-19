@@ -31,6 +31,26 @@ Browser memory hints are coarse and often capped at 8 GiB; Auto deliberately
 avoids a startup stress test or a claim to know free RAM/VRAM. Native preview
 users opt in with `--quality auto`, or choose a named preset explicitly.
 
+The browser requests a high-performance adapter on both graphics APIs; the
+browser/OS still chooses the device. This preference does not increase the
+selected quality or its memory ceilings. The corner hint and performance
+readout disclose the applied C++ preset and whether the landscape is moving.
+Auto Low is a reduced preview, not a fidelity comparison with the desktop's
+default full renderer.
+
+CI compares browser pixels directly with the unmodified native CLI at identical
+dimensions, scene/weather clocks, route position and feature state. Daylight
+includes a 960×540 fixture in addition to the small diagnostic captures. Night,
+storm and cloud fixtures cover both browser APIs. The full image stays within
+one average 8-bit code, with at most 0.1% of channels
+differing by more than eight codes. The landscape allows two average codes
+and 0.5% outliers, with detail energy within 5% of native. Mesa/SwiftShader
+baseline captures measured at most 1.43 average landscape codes, 0.315%
+outliers and 2.04% detail-energy difference; isolated raster/texture-filter
+differences must not hide lost landscape detail. Raw captures and
+`web-native-parity.json` accompany the browser artifacts. Image agreement does
+not establish equivalent accelerated-GPU frame rates.
+
 Open the corner debug menu and choose **Graphics**. The overall slider selects
 a preset. Custom switches control terrain, volumetric clouds, galaxy, stars,
 rings, giant emissions, meteors, and reflections. Resolution, texture size,
@@ -95,12 +115,18 @@ The implementation addresses the measured costs:
 - Apply waits for the outstanding frame, deletes the old renderer, and waits
   for resource retirement before constructing a replacement. WebGPU handles
   deletion-only submissions and clears obsolete pipeline references.
+- Viewport/aspect changes retire only size-dependent frame targets before
+  allocating their replacements. World data, terrain meshes, shadows, programs
+  and assets remain loaded. This avoids old/new target overlap near the GPU
+  ceiling during fullscreen or window resizing, without repeating world builds.
 - Both browser APIs track requested buffer/texture/renderbuffer storage and
   reject allocations exceeding **512 MiB before issuing them**. Driver shader
   caches, browser processes, and physical VRAM overhead are outside this ledger.
   A limit failure stops the worker and offers Low/another backend on reload.
-- Rendering retains one outstanding GPU frame, suspends while hidden, and
-  excludes resource loading/reconfiguration from the browser scene clock.
+- Rendering retains at most two outstanding GPU submissions, allowing CPU
+  encoding to overlap GPU rendering while reusing the same targets and bounded
+  uniform arena. Reconfiguration drains both before releasing resources. Hidden
+  tabs suspend rendering; loading/reconfiguration is excluded from scene time.
 
 WASM linear memory grows but cannot shrink in place. Switching High to Low
 reuses the previous heap capacity and may not reach the cold-start Low figures
@@ -135,6 +161,10 @@ Every feature stage has a
 deadline. `bounded-memory-profiles` contains raw samples, per-process RSS/PSS and
 CPU time, source/heap/GPU counters, and a Markdown comparison. No full-scene
 stress or hardware-GPU test runs on the development desktop.
+Completed-frame throughput is reported separately from queue-completion
+latency: with bounded overlap, latency includes time behind an earlier frame.
+Each stage also records the maximum submissions in flight and validates the
+two-submission ceiling. Software throughput is not an accelerated-GPU FPS claim.
 
 `scripts/summarize_web_memory.py` checks that every stage completed, consumed
 files were released, unused groups stayed absent from the minimal scene, and

@@ -288,14 +288,19 @@ void SurfaceRenderer::releaseTargets() {
   distanceTextureId = 0;
   multisample = resolved = colorBuffer = depthBuffer = texture = 0;
 }
-SurfaceRenderer::~SurfaceRenderer() {
-  if (pending.valid())
-    pending.wait();
+void SurfaceRenderer::releaseSizeTargets() {
   releaseTargets();
-  glDeleteProgram(reflectionProgram);
   glDeleteFramebuffers(1, &reflectionFbo);
   glDeleteTextures(1, &reflectionTexture);
   glDeleteRenderbuffers(1, &reflectionDepth);
+  reflectionFbo = reflectionTexture = reflectionDepth = 0;
+  width = height = reflectionWidth = reflectionHeight = 0;
+}
+SurfaceRenderer::~SurfaceRenderer() {
+  if (pending.valid())
+    pending.wait();
+  releaseSizeTargets();
+  glDeleteProgram(reflectionProgram);
   glDeleteBuffers(1, &reflectionIndices);
   glDeleteProgram(waterProgram);
   glDeleteProgram(landProgram);

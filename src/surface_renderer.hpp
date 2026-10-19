@@ -24,6 +24,7 @@ public:
     return pending.valid() && pending.wait_for(std::chrono::seconds(0)) !=
                                   std::future_status::ready;
   }
+  void releaseSizeTargets();
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
 

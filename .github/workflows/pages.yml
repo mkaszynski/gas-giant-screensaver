@@ -25,15 +25,17 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install offline shader tools
-        run: sudo apt-get update && sudo apt-get install -y glslang-tools spirv-cross
+        run: sudo apt-get update && sudo apt-get install -y glslang-tools spirv-cross libglfw3-dev libgles2-mesa-dev libpng-dev xvfb
       - name: Shader conversion and uniform data tests
         run: |
           python3 tests/test_webgpu_shaders.py
           node tests/webgpu_data.cjs
           node tests/webgpu_context.cjs
+          node tests/render_worker.cjs
           node tests/gpu_memory.cjs
           python3 tests/test_web_assets.py
           python3 tests/test_browser_budget.py
+          python3 tests/test_web_memory_summary.py
       - name: Build the shared C++ renderer
         run: |
           emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -43,12 +45,19 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Build the native image reference
+        run: |
+          cmake -S . -B build-native -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-native --target gas-giant-screensaver --parallel 2
+          node tests/web_native_parity_test.cjs
       - name: Exercise both graphics backends and automatic fallback
         run: |
           PREVIEW_BACKEND=webgl2 npm test --prefix web
           PREVIEW_BACKEND=webgpu npm test --prefix web
           node tests/web_backend_parity.cjs
           PREVIEW_BACKEND=auto npm test --prefix web
+      - name: Compare WASM against the full desktop renderer
+        run: node tests/web_native_parity.cjs
       - name: Package only static runtime assets
         run: |
           mkdir -p site
@@ -67,7 +76,9 @@ jobs:
         if: always()
         with:
           name: browser-validation
-          path: captures/web-*
+          path: |
+            captures/web-*
+            captures/native-*
   memory:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: web

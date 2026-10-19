@@ -78,6 +78,25 @@ int main() {
         throw std::runtime_error("Presentation must not enlarge cloud targets");
       if (glGetError() != GL_NO_ERROR)
         throw std::runtime_error("Scaled presentation GL error");
+      std::vector<unsigned char> before(320 * 180 * 4), after(before.size());
+      glReadPixels(0, 0, 320, 180, GL_RGBA, GL_UNSIGNED_BYTE, before.data());
+      const auto mesh = renderer.surfaceMeshRevision();
+      const auto shadows = renderer.surfaceShadowRevision();
+      glFinish();
+      if (renderer.releaseSizeTargetsFor(640, 360))
+        throw std::runtime_error("Same scene budget must retain frame targets");
+      if (!renderer.releaseSizeTargetsFor(320, 240) ||
+          renderer.weatherResolution() != std::array{0, 0} ||
+          renderer.releaseSizeTargetsFor(320, 240))
+        throw std::runtime_error("Resize must release frame targets once");
+      renderer.render(320, 180, 510, 1800, 1, true, true, {}, 1260);
+      glReadPixels(0, 0, 320, 180, GL_RGBA, GL_UNSIGNED_BYTE, after.data());
+      if (before != after || mesh != renderer.surfaceMeshRevision() ||
+          shadows != renderer.surfaceShadowRevision())
+        throw std::runtime_error(
+            "Retiring frame targets must preserve image, mesh and shadows");
+      if (glGetError() != GL_NO_ERROR)
+        throw std::runtime_error("Target retirement GL error");
     }
     glfwDestroyWindow(window);
     glfwTerminate();
