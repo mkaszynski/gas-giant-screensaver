@@ -534,7 +534,7 @@ async function checkInitialFlightTime() {
     assert.equal(
       await page.evaluate(() => window.previewControls.graphics.preset),
       0,
-      'Unknown machine must start Low',
+      'Software adapter must start Low despite generous memory/core hints',
     );
     assert(
       await page.evaluate(

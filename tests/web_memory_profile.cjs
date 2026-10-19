@@ -70,7 +70,8 @@ const all = [
   ['complete', {}],
   ...(process.env.PROFILE_VERSION === 'before'
     ? []
-    : [['auto-low', { quality: -1, height: 360, memoryGiB: 0, cores: 0 }]]),
+    // Generous hints must not override the software-adapter safety default.
+    : [['auto-low', { quality: -1, height: 360, memoryGiB: 32, cores: 16 }]]),
 ];
 const selected = process.env.PROFILE_STAGES?.split(',');
 const report = {
