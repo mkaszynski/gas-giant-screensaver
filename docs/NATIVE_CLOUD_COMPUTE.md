@@ -8,6 +8,54 @@ attenuation, independent weather clock, fog, rain, cirrus, and MSAA edge columns
 remain shared with the fragment path. There is no temporal reconstruction,
 resolution reduction, or new approximation to cloud density.
 
+## Complete columns over opaque terrain (performance validation pending)
+
+The native cache can reuse a dense cloud interior over fully opaque terrain
+when the entire cloud column ends before the terrain. A column clipped by a
+mountain, a partially covered silhouette, a clear column or a thin wisp keeps
+its original display-resolution trace. No new pass, texture or resolution
+change is introduced. The 16×4 workgroups remain unchanged.
+
+The coarse native pass integrates complete columns even over terrain. The sign
+of its half-float transmission records terrain coverage, including negative
+zero; the magnitude retains the original transmission precision. Sky rays still
+reject every footprint touching terrain. Opaque-ground reuse is enabled only
+when both native compute passes are available, and decodes that sign before
+interpolation. Fragment/browser paths and unavailable-compute fallbacks retain
+the previous cache behavior.
+
+Ground reuse requires all four cached transmissions to be at most 0.2. This
+protects clear gaps and thin skins between cache rays. Validation uses the
+actual shaded terrain background and additionally restricts projected neighbor
+contrast to `0.5/255` relative to the minimum (with a `1e-6` dark floor).
+For the existing ACES rational response followed by gamma, `x*f'(x) < 2/2.2`;
+positive foreground fog cannot increase relative contrast. Ground paths that
+could intersect cirrus remain exact: height is convex along a ray, so checking
+both endpoint heights against 9.5 km conservatively excludes that layer.
+These bounds supplement rendered comparisons; they do not prove that every
+unsampled feature lies between the four sampled values.
+
+All 45 hardware compute/fragment comparisons pass with at most one display-code
+difference (maximum case mean 0.00205 codes). A homogeneous opaque-slab test
+observes 34,905 complete ground columns actually reused, 499 partial pixels
+traced directly, and 1,004 rejected sky footprints touching terrain. A second
+slab clips the columns at 1.5 km and verifies that interrupted ground rays never
+reuse the cache. The sign mask is exercised with transmissions that round to
+half-float negative zero. The full weather behavior program passes its existing
+cache, opacity, altitude, shadow, lightning, continuity and MSAA checks.
+
+Software, package/native, memory and controlled timing validation are pending.
+The timing trial stopped after its first baseline run exceeded unchanged host
+controls (1.66 background CPU cores and 16.2 ms monitoring latency); no candidate
+timing or sustained-30-fps claim is made. Preserve the frozen Phase 1 baseline
+and the outstanding acceptance gates in `LANDSCAPE_PHASE2.md`.
+
+Two earlier experiments are not retained in the active implementation. A 32×2
+layout passed image comparisons but did not establish a speed benefit. Splitting
+integration/composition reduced register pressure and preserved images, but
+added 63.28 MiB and showed no measured benefit before its paired trial failed
+background-load controls. The original single-pass solver and buffers remain.
+
 The coarse sky cache can also execute the same solver as a specialized compute
 program, keeping its original resolution and display-pixel ray footprint.
 Native compute

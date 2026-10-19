@@ -18,6 +18,10 @@ uniform highp sampler2D uSurface;
 #include "atmospheric_optics.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+uniform bool uWeatherCompleteColumns;
+bool weatherGroundColumn=false;
+#endif
 #ifdef OBSERVATORY_WEATHER_COMPUTE
 #ifdef OBSERVATORY_WEATHER_SKY_PASS
 const bool uWeatherSkyPass=true;
@@ -87,6 +91,16 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  if(uWeatherSkyPass&&span<=0.)return vec4(0.,0.,0.,1.);
  vec3 viewSky=sky(d);
  bool reused=false;
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+ if(!uWeatherSkyPass&&uWeatherCompleteColumns&&weatherGroundColumn&&uWeatherCacheEnabled){
+  float completeFinish=min(100.,outer.y);
+  if(uObserverHeight>uWeatherLayer.x&&inner.x>0.)completeFinish=min(completeFinish,inner.x);
+  // Cache only a complete cloud column before the terrain, with no cirrus
+  // intersection. Height is convex along the ray, so endpoint maxima suffice.
+  bool belowCirrus=max(uObserverHeight,weatherHeight(d*end,uObserverHeight))<9.5;
+  allowSkyCache=end>=completeFinish&&belowCirrus;
+ }
+#endif
  if(span>0.&&allowSkyCache){
   vec4 cached;
   reused=cachedSkyWeather(d,cached);
@@ -207,15 +221,32 @@ void main(){
  float coverage=0.;
  if(uv.y<uSurfaceFraction)coverage=texelFetch(uSurface,ivec2(uv*uResolution),0).a;
  bool edge=coverage>0.&&coverage<1.;
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+ weatherGroundColumn=coverage>=1.;
+#endif
 #ifdef OBSERVATORY_WEATHER_COMPUTE
  weatherNeedsSkyOutput=edge;
 #endif
  float distance=weatherDepth(uv,d,coverage);
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+ if(uWeatherSkyPass&&uWeatherCompleteColumns)distance=100.;
+#endif
  bool reused=false;
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+ if(uWeatherSkyPass&&coverage>0.&&!uWeatherCompleteColumns){color=vec4(0.,0.,0.,-1.);reused=true;}
+#else
  if(uWeatherSkyPass&&coverage>0.){color=vec4(0.,0.,0.,-1.);reused=true;}
+#endif
  if(!reused)color=integrateWeather(d,min(100.,distance),!uWeatherSkyPass&&uWeatherCacheEnabled&&coverage==0.);
  // Only partially covered pixels need both paths. The post pass combines their
  // original MSAA coverage, so opaque land cannot erase the cloudy sky beside it.
  skyWeather=vec4(0.,0.,0.,1.);
  if(edge&&!uWeatherSkyPass)skyWeather=integrateWeather(d,100.,false);
+#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
+ // Retain ground coverage in the transmission sign, including negative zero.
+ // Its magnitude has the original half-float precision; sky rays still reject
+ // any cache footprint touching terrain. Opaque ground may decode the column.
+ if(uWeatherSkyPass&&coverage>0.&&uWeatherCompleteColumns)
+  color.a=uintBitsToFloat(floatBitsToUint(color.a)|0x80000000u);
+#endif
 }

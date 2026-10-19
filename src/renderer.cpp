@@ -263,6 +263,7 @@ GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
   // the entry-point boundary avoids maintaining a second cloud algorithm.
   source.replace(0, versionLine.size(),
                  "#version 310 es\n#define OBSERVATORY_WEATHER_COMPUTE\n"
+                 "#define OBSERVATORY_WEATHER_COMPLETE_COLUMNS\n"
                  "#define main weatherPixel\n");
   if (calm)
     source.insert(source.find('\n') + 1, "#define OBSERVATORY_WEATHER_CALM\n");
@@ -271,7 +272,7 @@ GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
                   "#define OBSERVATORY_WEATHER_SKY_PASS\n");
   source += R"(
 #undef main
-layout(local_size_x=32,local_size_y=2)in;
+layout(local_size_x=16,local_size_y=4)in;
 uniform highp sampler2D uWeatherPixels;
 layout(rgba16f,binding=0)writeonly uniform highp image2D uWeatherImage;
 layout(rgba16f,binding=1)writeonly uniform highp image2D uWeatherSkyImage;
@@ -827,7 +828,7 @@ void Renderer::dispatchWeather(GLuint p, const Target &pixels,
   if (output.skyTexture)
     glBindImageTexture(1, output.skyTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
                        GL_RGBA16F);
-  glDispatchCompute((output.width + 31) / 32, (output.height + 1) / 2, 1);
+  glDispatchCompute((output.width + 15) / 16, (output.height + 3) / 4, 1);
   glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT |
                   GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
@@ -1230,6 +1231,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       bind(p, 14, "uWeatherScene", scene.texture);
       bind(p, 13, "uWeatherSkyCache", mountains);
       integer(p, "uWeatherCacheEnabled", surfaceOptions.weatherCache);
+      integer(p, "uWeatherCompleteColumns",
+              surfaceOptions.weatherCache && weatherComputeProgram &&
+                  weatherSkyComputeProgram);
     };
     if (surfaceOptions.weatherCache) {
       if (weatherSkyComputeProgram) {
