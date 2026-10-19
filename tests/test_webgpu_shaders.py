@@ -33,12 +33,12 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 26)
+        self.assertEqual(len(programs), 27)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            26,
+            27,
         )
         for label, vertex, fragment in programs:
             self.assertNotIn("#include", vertex + fragment, label)
@@ -79,14 +79,21 @@ class ShaderBakeTests(unittest.TestCase):
             .startswith("#define OBSERVATORY_WEATHER_MODE 1\n")
         )
 
-    def test_post_variants_keep_swapchain_coordinate_conversion(self):
+    def test_post_variants_keep_scene_target_coordinates(self):
         programs = [p for p in bake.programs() if p[0].startswith("post.frag:")]
         self.assertEqual(len(programs), 2)
         for label, vertex, fragment in programs:
             vert, _ = bake.convert_program(label, vertex, "vert", {"uv": 0})
             frag, _ = bake.convert_program(label, fragment, "frag", {"uv": 0})
-            self.assertNotIn("gl_Position.y=-gl_Position.y", vert)
-            self.assertIn("uResolution.y-gl_FragCoord.y", frag)
+            self.assertIn("gl_Position.y=-gl_Position.y", vert)
+            self.assertNotIn("uResolution.y-gl_FragCoord.y", frag)
+            self.assertIn("weatherPixel", frag)
+
+    def test_presentation_uses_shared_shader_and_swapchain_coordinates(self):
+        label, vertex, fragment = next(p for p in bake.programs() if p[0] == "presentation.frag")
+        self.assertEqual(fragment, bake.source("presentation.frag"))
+        vert, _ = bake.convert_program(label, vertex, "vert", {"uv": 0})
+        self.assertNotIn("gl_Position.y=-gl_Position.y", vert)
 
     def test_meteor_shader_uses_shared_optical_kernel_and_hdr_scaling(self):
         _, vertex, fragment = next(
