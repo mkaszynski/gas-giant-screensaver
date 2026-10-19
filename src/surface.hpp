@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 namespace observatory {
@@ -75,6 +76,18 @@ struct SurfaceVertex {
   float x, y, z, nx, ny, nz, ground, moisture, temperature, materialX,
       materialZ, reliefX, reliefZ, reliefStrength, aridWeight, coastalWeight;
 };
+// Connectivity is independent of biome, location and height. Share one
+// immutable lattice instead of rebuilding large index arrays on every flight
+// update and comparing them on the rendering thread.
+struct SurfaceTopology {
+  struct Block {
+    int row, column, columns;
+    uint32_t firstIndex, indexCount, waterFirstIndex, waterIndexCount;
+    bool deepWaterEligible;
+  };
+  std::vector<uint32_t> indices, waterIndices;
+  std::vector<Block> blocks;
+};
 struct SurfaceMesh {
   struct Bounds {
     Vec3 minimum, maximum;
@@ -85,8 +98,7 @@ struct SurfaceMesh {
   TravelLocation center{};
   bool hasLand = false, hasWater = false, pureLand = false;
   std::vector<SurfaceVertex> vertices;
-  std::vector<uint32_t> indices;
-  std::vector<uint32_t> waterIndices;
+  std::shared_ptr<const SurfaceTopology> topology;
   std::vector<Bounds> bounds;
 };
 // One exclusively owned workspace per active builder. Retain temporary
