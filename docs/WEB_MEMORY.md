@@ -161,6 +161,10 @@ Every feature stage has a
 deadline. `bounded-memory-profiles` contains raw samples, per-process RSS/PSS and
 CPU time, source/heap/GPU counters, and a Markdown comparison. No full-scene
 stress or hardware-GPU test runs on the development desktop.
+Completed-frame throughput is reported separately from queue-completion
+latency: with bounded overlap, latency includes time behind an earlier frame.
+Each stage also records the maximum submissions in flight and validates the
+two-submission ceiling. Software throughput is not an accelerated-GPU FPS claim.
 
 `scripts/summarize_web_memory.py` checks that every stage completed, consumed
 files were released, unused groups stayed absent from the minimal scene, and
