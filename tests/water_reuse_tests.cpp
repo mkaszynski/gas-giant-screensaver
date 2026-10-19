@@ -31,6 +31,13 @@ struct Reference {
     std::filesystem::create_directory_symlink(root / "assets", path / "assets");
     auto file = path / "shaders/surface.frag";
     auto code = read(file);
+    const std::string foam = " float foam=oceanFoamCoverage(phase,footprint);\n";
+    if (auto at = code.find(foam); at != std::string::npos) {
+      code.erase(at, foam.size());
+      const auto late = code.find(" vec3 base=L*fresnel");
+      require(late != std::string::npos, "late foam preparation reference");
+      code.insert(late, foam);
+    }
     const auto begin = code.find(" vec3 reflected=reflect(d,wn);");
     const auto end = code.find(" // Solar energy", begin);
     require(begin != std::string::npos && end != std::string::npos,

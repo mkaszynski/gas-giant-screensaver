@@ -33,6 +33,7 @@ float frameConfidence(vec2 p){return smoothstep(0.,.04,min(min(p.x,1.-p.x),min(p
 float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0);
 #include "ocean_foam.glsl"
 vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude,vec4 footprint){
+ float foam=oceanFoamCoverage(phase,footprint);
  vec2 slope=vec2(0.);float unresolved=0.;
  for(int i=0;i<4;++i){
   slope+=normalize(uWaves[i].xy)*sin(mod(phase[i],2.*PI)+uWaves[i].z)*amplitude[i];
@@ -71,7 +72,6 @@ vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude,vec4 footprint){
  vec3 glint=seaSolar*max(dot(wn,uSun),0.)*spec;
  // Attenuating imperceptible highlights would spend five cloud lookups on
  // nearly every water pixel. Keep the BRDF tail, skip only its tiny shadow term.
- float foam=oceanFoamCoverage(phase,footprint);
  vec3 base=L*fresnel+body*(1.-fresnel),direct=glint;
  if(foam>0.){
   // Age-averaged visible whitecap reflectance; red absorption is slightly higher.
