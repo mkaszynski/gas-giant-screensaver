@@ -1,4 +1,5 @@
 #include "surface.hpp"
+#include "surface_sampling.hpp"
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -6,6 +7,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -37,6 +39,42 @@ struct RouteFixture {
 };
 int main() {
   try {
+    std::mt19937_64 random(0x715ab3);
+    for (int extent : {1, 2, 3, 63, 64, 72, 127, 128, 4095, 4096, 8192}) {
+      for (int index : {-extent, -extent + 1, -1, 0, 1, extent - 1, extent})
+        require(detail::wrapAdjacentGridIndex(index, extent) ==
+                    (index % extent + extent) % extent,
+                "bounded grid wrap preserves periodic corner indices");
+      auto compareCell = [&](double coordinate) {
+        const auto cell = detail::periodicGridCell(coordinate, extent);
+        const int old =
+            int(std::floor(std::remainder(coordinate, double(extent))));
+        auto wrap = [&](int i) { return (i % extent + extent) % extent; };
+        const double fraction = coordinate - std::floor(coordinate);
+        require(cell.first == wrap(old) && cell.next == wrap(old + 1) &&
+                    std::memcmp(&cell.fraction, &fraction, sizeof(double)) == 0,
+                "periodic cells preserve original entries and fraction bits");
+      };
+      for (double coordinate :
+           {0., -0., .5, -.5, double(extent), -double(extent),
+            double(std::numeric_limits<int>::min()) - .5,
+            double(std::numeric_limits<int>::min()),
+            double(std::numeric_limits<int>::max()) + .5,
+            double(std::numeric_limits<int>::max()) + 1., 1.e20, -1.e20, 1.e100,
+            -1.e100, std::numeric_limits<double>::max(),
+            -std::numeric_limits<double>::max()}) {
+        compareCell(coordinate);
+        if (std::isfinite(std::nextafter(coordinate, INFINITY)))
+          compareCell(std::nextafter(coordinate, INFINITY));
+        if (std::isfinite(std::nextafter(coordinate, -INFINITY)))
+          compareCell(std::nextafter(coordinate, -INFINITY));
+      }
+      for (int i = 0; i < 20000; ++i) {
+        const double scale = i % 2 ? 1.e7 : 1.e12;
+        compareCell(
+            std::uniform_real_distribution<double>(-scale, scale)(random));
+      }
+    }
     SurfaceWorld w(SURFACE_ASSET_DIR "/moon.ggworld");
     for (double lat : {-pi * .5 + 1.e-8, -.8, 0., .8, pi * .5 - 1.e-8})
       for (double lon : {-pi - .01, -pi + 1.e-9, -.3, 0., pi - .01, pi + .01}) {

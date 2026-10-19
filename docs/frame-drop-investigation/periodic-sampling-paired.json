@@ -1,0 +1,120 @@
+{
+  "scope": "CPU mesh construction only, same Release compiler environment; not GPU or frame-deadline acceptance. Timing excludes export and hashing. All vertices, indices, bounds, center and flags match all bytes. Recycled vertex storage and scratch are exercised.",
+  "records": [
+    {
+      "binary_sha256": "e1c38ab3d22dd678607cdd9a4ad9255a7597616b8f81fc8f5322ae34c81efa7c",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.6330041409819387,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "version": "before",
+      "order": 1,
+      "timings_ms": {
+        "0.0": 321.712,
+        "5600.39": 294.245,
+        "162000.0": 228.591,
+        "210600.0": 238.317,
+        "259199.0": 293.586
+      }
+    },
+    {
+      "binary_sha256": "ffe8e35334ec07373b23279a4ff6b8c14e90610d283f0780b84f45bb9c650fd5",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.4531810710032005,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "version": "after",
+      "order": 2,
+      "timings_ms": {
+        "0.0": 277.84,
+        "5600.39": 250.53,
+        "162000.0": 202.364,
+        "210600.0": 211.987,
+        "259199.0": 255.975
+      }
+    },
+    {
+      "binary_sha256": "ffe8e35334ec07373b23279a4ff6b8c14e90610d283f0780b84f45bb9c650fd5",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.4267818079970311,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "version": "after",
+      "order": 3,
+      "timings_ms": {
+        "0.0": 277.179,
+        "5600.39": 248.713,
+        "162000.0": 202.338,
+        "210600.0": 211.08,
+        "259199.0": 248.084
+      }
+    },
+    {
+      "binary_sha256": "e1c38ab3d22dd678607cdd9a4ad9255a7597616b8f81fc8f5322ae34c81efa7c",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.622301236988278,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "version": "before",
+      "order": 4,
+      "timings_ms": {
+        "0.0": 322.712,
+        "5600.39": 297.652,
+        "162000.0": 229.309,
+        "210600.0": 238.112,
+        "259199.0": 293.798
+      }
+    }
+  ],
+  "routes": {
+    "0.0": {
+      "before": 322.212,
+      "after": 277.5095
+    },
+    "5600.39": {
+      "before": 295.94849999999997,
+      "after": 249.6215
+    },
+    "162000.0": {
+      "before": 228.95,
+      "after": 202.351
+    },
+    "210600.0": {
+      "before": 238.2145,
+      "after": 211.5335
+    },
+    "259199.0": {
+      "before": 293.692,
+      "after": 252.02949999999998
+    }
+  },
+  "before_source_commit": "d9086486312bc4661de4d5ed52a7c5a633baf89b",
+  "source_sha256": {
+    "src/surface.cpp": "a1f880645782af22ead2aa8f4da0c28349076f8f6c9ab5f3aa431be1b4d43677",
+    "src/surface_sampling.hpp": "d292f4cb35abe13abcdf706082cefbe7d13426ef0dbdf7af40695400be750369"
+  }
+}
