@@ -144,6 +144,7 @@ jobs:
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-live:
+    if: always() && needs.deploy.result == 'success'
     needs: deploy
     runs-on: ubuntu-24.04
     timeout-minutes: 25
