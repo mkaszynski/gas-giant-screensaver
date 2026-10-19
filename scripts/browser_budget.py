@@ -22,6 +22,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--memory-mib", type=int, default=1100)
+    parser.add_argument("--memory-high-percent", type=int, default=82,
+                        help="Soft reclaim threshold; 100 isolates hard-ceiling enforcement in CI")
     parser.add_argument("--cpu-percent", type=int, default=90)
     parser.add_argument("--seconds", type=int, default=1200)
     parser.add_argument("--reserve-mib", type=int, default=768)
@@ -30,6 +32,8 @@ def main():
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
     if not command or min(args.memory_mib, args.cpu_percent, args.seconds, args.reserve_mib) <= 0:
         parser.error("A command and positive resource limits are required")
+    if not 1 <= args.memory_high_percent <= 100:
+        parser.error("The memory high percentage must be between 1 and 100")
     if available_kib(Path('/proc/meminfo').read_text()) < (args.memory_mib + args.reserve_mib) * 1024:
         parser.error("Insufficient available memory for the requested cap and reserve")
     unit = 'observatory-check-' + uuid.uuid4().hex[:10]
@@ -41,10 +45,10 @@ def main():
         identity = ['--uid=' + str(user.pw_uid), '--setenv=HOME=' + user.pw_dir]
     launch = ['systemd-run', *mode, '--wait', '--pipe', '--remain-after-exit', '--unit=' + unit,
               '--working-directory=' + str(Path.cwd()), *identity,
-              '-p', f'MemoryMax={args.memory_mib}M', '-p', f'MemoryHigh={int(args.memory_mib*.82)}M',
+              '-p', f'MemoryMax={args.memory_mib}M', '-p', f'MemoryHigh={max(1, int(args.memory_mib*args.memory_high_percent/100))}M',
               '-p', 'MemorySwapMax=0', '-p', f'CPUQuota={args.cpu_percent}%', '-p', 'TasksMax=192',
               '-p', f'RuntimeMaxSec={args.seconds}', '-p', 'OOMPolicy=kill', *command]
-    report = {'unit': unit, 'memory_mib': args.memory_mib, 'cpu_percent': args.cpu_percent, 'samples': []}
+    report = {'unit': unit, 'memory_mib': args.memory_mib, 'memory_high_percent': args.memory_high_percent, 'cpu_percent': args.cpu_percent, 'samples': []}
     started = time.monotonic()
     process = subprocess.Popen(launch)
     try:

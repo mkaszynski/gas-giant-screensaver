@@ -103,7 +103,7 @@ jobs:
       - name: Verify the kernel memory ceiling
         run: |
           mkdir -p captures
-          if sudo python3 scripts/browser_budget.py --report captures/web-budget-oom-check.json --memory-mib 128 --seconds 20 -- "$(command -v node)" -e 'new Uint8Array(256*1024*1024).fill(1)'; then
+          if sudo python3 scripts/browser_budget.py --report captures/web-budget-oom-check.json --memory-mib 128 --memory-high-percent 100 --seconds 20 -- "$(command -v node)" -e 'new Uint8Array(256*1024*1024).fill(1)'; then
             echo "The resource ceiling did not stop an oversized allocation"
             exit 1
           fi

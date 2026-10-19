@@ -127,7 +127,11 @@ The PR/manual workflow builds the previous revision and the candidate. Separate
 headless browser processes isolate minimal, stars, galaxy, terrain, clouds, and
 complete scenes on WebGL 2 and WebGPU; the candidate also checks Auto Low. CI
 uses a 3 GiB process-tree cap and two CPU equivalents, and verifies the kernel
-ceiling with an isolated oversized-allocation test. Every feature stage has a
+ceiling with an isolated oversized-allocation test. The ceiling self-test puts
+its soft threshold at the same 128 MiB
+hard limit so reclaim throttling cannot hide an OOM kill behind a timeout;
+normal profiling retains the 82% soft threshold and the same hard caps.
+Every feature stage has a
 deadline. `bounded-memory-profiles` contains raw samples, per-process RSS/PSS and
 CPU time, source/heap/GPU counters, and a Markdown comparison. No full-scene
 stress or hardware-GPU test runs on the development desktop.
