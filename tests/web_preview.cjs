@@ -226,6 +226,8 @@ async function ready(page, frames = 1) {
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
+  assert(await page.evaluate(() => window.previewMetrics.samples[0].time >= 510 && window.previewMetrics.samples[0].time < 570),
+    'An unpaused flight must start at its requested scene time after runtime initialization');
   await page.waitForFunction(() => window.previewMetrics.samples.some(frame => frame.pending), null, { timeout: 240000 });
   const builds = await page.evaluate(() => window.previewMetrics.builds);
   await page.waitForFunction(n => window.previewMetrics.frames > n, await page.evaluate(() => window.previewMetrics.frames) + 3, { timeout: 120000 });

@@ -42,7 +42,7 @@ EM_JS(void, reportControls, (const char *json), {
 // clang-format on
 void advanceClock() {
   const double now = emscripten_get_now();
-  if (!hidden)
+  if (lastTick > 0 && !hidden)
     activeTime += std::max(0., (now - lastTick) / 1000.);
   lastTick = now;
 }
@@ -252,6 +252,9 @@ int main() {
     renderer = std::make_unique<Renderer>("/", sky, surface);
     controls = std::make_unique<DebugOverlay>(sceneStart, 1800, false, "/");
     controls->menu.timeline.play(option("paused", 0, 0, 1) == 0, 0);
+    // Runtime-initialization messages arrive before main. Start the scene's
+    // clock here, after asset loading, independently of the worker clock epoch.
+    activeTime = 0;
     lastTick = emscripten_get_now();
     publishControls();
     emscripten_set_main_loop(frame, 0, false);
