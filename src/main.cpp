@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
                "  --no-weather           Previous thin-cloud comparison\n"
                "  --no-atmospheric-optics Disable halos, sundogs and water "
                "bows\n"
+               "  --no-whitecaps         Disable wind-driven ocean foam\n"
                "  --lightning-brightness N  Lightning multiplier, 0..1000000 "
                "(default 5)\n"
                "  --aurora-brightness N     Aurora multiplier, 0..1000000 "
@@ -142,6 +143,10 @@ int main(int argc, char **argv) {
       }
       if (a == "--no-atmospheric-optics") {
         surface.atmosphericOptics = false;
+        continue;
+      }
+      if (a == "--no-whitecaps") {
+        surface.whitecaps = false;
         continue;
       }
       if (a == "--no-weather-cache") {

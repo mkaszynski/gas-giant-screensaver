@@ -20,6 +20,7 @@ struct SurfaceOptions {
   bool weatherCache = true;
   bool weatherCompute = true;
   bool atmosphericOptics = true;
+  bool whitecaps = true;
 };
 struct TravelLocation {
   double latitude, longitude;

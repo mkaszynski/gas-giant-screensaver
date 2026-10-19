@@ -245,6 +245,7 @@ int main() {
     SurfaceOptions surface{option("surface", 1, 0, 1) != 0};
     surface.weather = option("volumetric", 1, 0, 1) != 0;
     surface.atmosphericOptics = option("optics", 1, 0, 1) != 0;
+    surface.whitecaps = option("whitecaps", 1, 0, 1) != 0;
     StarfieldOptions sky;
     sky.stars = option("stars", 1, 0, 1) != 0;
     sky.galaxy = option("galaxy", 1, 0, 1) != 0;

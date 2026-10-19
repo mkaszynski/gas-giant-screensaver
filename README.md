@@ -6,6 +6,9 @@
 
 A smooth three-day flight across oceans, forests and mountains on a synchronously rotating moon.
 
+Weather-driven ocean whitecaps use filtered breaking-wave groups and measured
+wind-dependent coverage. See [the model and comparison guide](docs/OCEAN_WHITECAPS.md).
+
 Weather-dependent atmospheric optics include ice halos and sundogs, cloud-top
 glories, rainbows and fogbows. Spectral scattering is computed offline and reused
 in the existing weather passes. See [the model and review guide](docs/ATMOSPHERIC_OPTICS.md).

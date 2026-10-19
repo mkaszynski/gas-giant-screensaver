@@ -801,7 +801,8 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
     constexpr double wavelengths[] = {48., 19., 7., 2.5};
     constexpr double angles[] = {.27, -1.05, 2.62, .89};
     constexpr double slopes[] = {.032, .024, .016, .010};
-    float waves[16];
+    float waves[16], foamPhases[3];
+    constexpr double foamWavelengths[] = {192., 310., 470.};
     for (int i = 0; i < 4; ++i) {
       double k = 2 * pi / wavelengths[i], kx = std::cos(angles[i]) * k,
              kz = std::sin(angles[i]) * k;
@@ -811,8 +812,18 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
           globalX * kx + globalZ * kz - seconds * std::sqrt(9.81 * k) + i * 1.7,
           2 * pi);
       waves[4 * i + 3] = slopes[i];
+      if (i < 3) {
+        const double foamK = 2 * pi / foamWavelengths[i];
+        foamPhases[i] = std::remainder(
+            globalX * std::cos(angles[i]) * foamK +
+                globalZ * std::sin(angles[i]) * foamK -
+                seconds * std::sqrt(9.81 * foamK) + i * 1.7,
+            2 * pi);
+      }
     }
     glUniform4fv(glGetUniformLocation(program, "uWaves[0]"), 4, waves);
+    glUniform3f(glGetUniformLocation(program, "uFoamPhase"), foamPhases[0],
+                 foamPhases[1], foamPhases[2]);
     glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 4,
                        GL_FALSE, shadowMatrices[0]);
 

@@ -38,6 +38,7 @@
         mkdir -p src/observatory/third_party
         cp ${./src}/third_party/bcdec.h src/observatory/third_party/
         cp ${./src}/{frame_pacing,weather,weather_control,debug_timeline,debug_menu,projection}.hpp src/observatory/
+        cp ${./src}/ocean_{foam,quantiles}.hpp src/observatory/
         cp ${./src}/debug_overlay.{cpp,hpp} src/observatory/
         cp ${./src}/{meteors,meteor_control}.hpp src/observatory/
         cp ${./src}/meteor_renderer.cpp src/observatory/

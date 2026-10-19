@@ -31,7 +31,8 @@ in vec2 vRelief;
 in float vReliefStrength;
 float frameConfidence(vec2 p){return smoothstep(0.,.04,min(min(p.x,1.-p.x),min(p.y,1.-p.y)));}
 float dielectricSpecular(vec3 N,vec3 V,vec3 L,float roughness,float f0);
-vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude){
+#include "ocean_foam.glsl"
+vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude,vec4 footprint){
  vec2 slope=vec2(0.);float unresolved=0.;
  for(int i=0;i<4;++i){
   slope+=normalize(uWaves[i].xy)*sin(mod(phase[i],2.*PI)+uWaves[i].z)*amplitude[i];
@@ -62,15 +63,26 @@ vec3 oceanRadiance(vec3 d,vec3 normal,vec4 phase,vec4 amplitude){
  float depth=max(0.,-vProperties.x);
  vec3 attenuation=exp(-vec3(.45,.14,.08)*depth);
  vec3 seaSolar=transmission(uTrans,0.,uSun.y)*uEclipse;
- vec3 illumination=sky(vec3(0,1,0))+seaSolar*max(0.,uSun.y)/PI+vec3(.00003)/uDarkGain;
+ vec3 skyZenith=sky(vec3(0,1,0));
+ vec3 illumination=skyZenith+seaSolar*max(0.,uSun.y)/PI+vec3(.00003)/uDarkGain;
  vec3 body=mix(vec3(.003,.013,.016),vec3(.18,.145,.09),attenuation)*illumination;
  float roughness=max(.09,pow(max(0.,unresolved),.25));
  float spec=dielectricSpecular(wn,-d,uSun,roughness,.0204);
  vec3 glint=seaSolar*max(dot(wn,uSun),0.)*spec;
  // Attenuating imperceptible highlights would spend five cloud lookups on
  // nearly every water pixel. Keep the BRDF tail, skip only its tiny shadow term.
- if(max(max(glint.r,glint.g),glint.b)*uExposure>.0001)glint*=cloudTransmission(vPosition/1000.);
- return L*fresnel+body*(1.-fresnel)+glint;
+ float foam=oceanFoamCoverage(phase,footprint);
+ vec3 base=L*fresnel+body*(1.-fresnel),direct=glint;
+ if(foam>0.){
+  // Age-averaged visible whitecap reflectance; red absorption is slightly higher.
+  const vec3 foamAlbedo=vec3(.205,.22,.22);
+  direct=glint*(1.-foam)+foam*foamAlbedo*seaSolar*max(dot(normal,uSun),0.)/PI;
+  vec3 foamAmbient=foamAlbedo*(skyZenith+vec3(.00003)/uDarkGain+
+                        vec3(.97,.98,1.)*uPlanetLight/PI*max(0.,dot(normal,uPlanetDirection)));
+  base=base*(1.-foam)+foam*foamAmbient;
+ }
+ if(max(max(direct.r,direct.g),direct.b)*uExposure>.0001)direct*=cloudTransmission(vPosition/1000.);
+ return base+direct;
 }
 vec3 aerialTransmission(float distance){
  float meanHeight=max(0.,uObserverHeight+.0005*vPosition.y+dot(vPosition.xz,vPosition.xz)/(4.*6371000000.));
@@ -156,7 +168,7 @@ vec3 preparedOcean(vec3 d,vec4 foot){
  if(uWeatherEnabled)amplitude*=1.+.7*uWeatherKind.y;
  // Sphere normal avoids coastal land slopes tilting the sea reflection.
  vec3 waterNormal=normalize(vec3(vPosition.x/6371000.,1.,vPosition.z/6371000.));
- return oceanRadiance(d,waterNormal,phase,amplitude);
+ return oceanRadiance(d,waterNormal,phase,amplitude,foot);
 }
 void main(){
  vec3 d=normalize(vPosition);float distance=length(vPosition);

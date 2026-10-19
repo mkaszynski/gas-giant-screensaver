@@ -40,6 +40,7 @@ public:
   void setAtmosphericOptics(bool enabled) {
     surfaceOptions.atmosphericOptics = enabled;
   }
+  void setWhitecaps(bool enabled) { surfaceOptions.whitecaps = enabled; }
   // Diagnostic reference for detecting clipped filtering or atmospheric glow.
   void setCelestialScissor(bool enabled) { celestialScissor = enabled; }
   void setMeteorFrame(MeteorFrame frame) { meteorFrame = frame; }
@@ -89,6 +90,7 @@ private:
   TravelLocation surfaceLocation{};
   double lastAltitude = -1e30;
   WeatherState weatherState;
+  std::array<float, 2> whitecapState{0.f, 1.f};
   WeatherPreset weatherPreset = WeatherPreset::Auto;
   MeteorFrame meteorFrame;
   Vec3 previewRadiant{};

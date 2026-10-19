@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 #include "optics.hpp"
+#include "ocean_foam.hpp"
 #include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
@@ -876,6 +877,8 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
 }
 void Renderer::weatherUniforms(GLuint p, const Scene &s) {
   integer(p, "uWeatherEnabled", bool(weatherProgram));
+  glUniform2f(glGetUniformLocation(p, "uWhitecaps"), whitecapState[0],
+              whitecapState[1]);
   glActiveTexture(GL_TEXTURE15);
   glBindTexture(GL_TEXTURE_3D, weatherNoiseTexture);
   integer(p, "uWeatherNoise", 15);
@@ -958,6 +961,12 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     weatherState =
         weatherAt(weatherClimate(surface->world(), surfaceLocation),
                   surfaceLocation, clock, emission.exposure, weatherPreset);
+    const double coverage = surfaceOptions.whitecaps
+                                ? whitecapFraction(marineWind(weatherState.cover,
+                                                             weatherState.storm,
+                                                             weatherState.fog))
+                                : 0.;
+    whitecapState = {float(coverage), float(whitecapThreshold(coverage))};
   }
   const GLState state;
   WEATHER_PROFILE_STAGE(0);
