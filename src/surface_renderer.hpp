@@ -69,7 +69,6 @@ private:
   void releaseTargets();
   void shadows(const Scene &, Vec3, double, double);
   void shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye);
-  void draw(const std::array<SurfacePlane, 6> &, bool waterLod = false,
-            bool materialPrograms = true);
+  void draw(const std::array<SurfacePlane, 6> &, bool waterLod = false);
 };
 } // namespace observatory
