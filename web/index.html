@@ -21,17 +21,19 @@
     <label>Graphics <select id="backend"><option value="auto">Auto (prefer WebGPU)</option><option value="webgpu">WebGPU</option><option value="webgl2">WebGL 2</option></select></label>
     <button id="launch" disabled>Launch preview</button>
   </main>
-  <footer>
+  <button id="debug-open" hidden aria-label="Open debug menu" aria-expanded="false" aria-controls="browser-controls">Menu</button>
+  <button id="debug-hint" hidden>Move to the upper-right corner ↗<br>to open the debug menu</button>
+  <aside id="browser-controls" aria-label="Browser display controls" hidden>
     <div class="controls">
       <button id="pause" disabled>Pause</button>
-      <button id="stop" hidden>Stop preview</button>
-      <label>Time of day <input id="time" type="range" min="0" max="1800" value="510" step="1" disabled></label>
+      <button id="stop">Stop preview</button>
       <label>Resolution <select id="resolution"><option value="1080">1080p</option><option value="720">720p</option></select></label>
       <button id="fullscreen">Fullscreen</button>
-      <output id="performance">30 fps target · 1920 × 1080</output>
+      <button id="debug-close">Close debug menu</button>
+      <output id="performance">30 fps target</output>
     </div>
-    <p>Live C++ / WebAssembly · <span id="backend-status">WebGPU / WebGL 2</span> · <a href="https://github.com/mkaszynski/gas-giant-screensaver/blob/main/docs/ASSETS.md" target="_blank" rel="noopener">Credits &amp; asset licenses</a> · <a href="LICENSE">MIT</a></p>
-  </footer>
+    <p><span id="backend-status">WebGPU / WebGL 2</span> · <a href="https://github.com/mkaszynski/gas-giant-screensaver" target="_blank" rel="noopener">Source</a> · <a href="https://github.com/mkaszynski/gas-giant-screensaver/blob/main/docs/ASSETS.md" target="_blank" rel="noopener">Credits &amp; asset licenses</a> · <a href="LICENSE">MIT</a></p>
+  </aside>
   <noscript>This live preview requires JavaScript, WebAssembly and WebGPU or WebGL 2.</noscript>
 </body>
 </html>

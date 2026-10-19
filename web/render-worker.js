@@ -12,14 +12,20 @@ self.previewError = message => {
   self.postMessage({type: 'error', message});
 };
 self.previewFrame = frame => self.postMessage({type: 'frame', frame});
+self.previewControls = controls => self.postMessage({type: 'controls', controls});
 function command(data) {
   if (data.type === 'resize') {
     canvas.width = data.width;
     canvas.height = data.height;
+    if (data.logicalWidth) command({type: 'viewport', width: data.logicalWidth, height: data.logicalHeight});
     return;
   }
   if (!ready) { pending.push(data); return; }
-  if (data.type === 'pause') Module._preview_pause(data.value ? 1 : 0);
+  if (data.type === 'viewport') Module._preview_viewport(data.width, data.height);
+  else if (data.type === 'pointer') Module._preview_pointer(data.x, data.y, data.down ? 1 : 0, data.present ? 1 : 0);
+  else if (data.type === 'keys') Module._preview_keys(data.mask);
+  else if (data.type === 'menu') Module._preview_menu(data.open ? 1 : 0);
+  else if (data.type === 'pause') Module._preview_pause(data.value ? 1 : 0);
   else if (data.type === 'seek') Module._preview_seek(data.value);
   else if (data.type === 'visibility') Module._preview_visibility(data.value ? 1 : 0);
 }
@@ -66,6 +72,7 @@ self.onmessage = async ({data}) => {
     onRuntimeInitialized() {
       ready = true;
       command({type: 'visibility', value: data.hidden});
+      command({type: 'viewport', width: data.logicalWidth, height: data.logicalHeight});
       pending.splice(0).forEach(command);
     },
     setStatus(message) { if (message) self.postMessage({type: 'status', message}); },

@@ -28,11 +28,7 @@ public:
     if (!open_) {
       if (clicked && promptVisible(real) &&
           layout.prompt(width).contains(x, y)) {
-        if (!initialized) {
-          timeline.range(route, real);
-          initialized = true;
-        }
-        open_ = true;
+        show(true, real);
       }
     } else if (clicked) {
       if (layout.close().contains(x, y))
@@ -115,6 +111,13 @@ public:
       previousKeys[i] = pressed[i];
     }
     syncMeteors(previous, real);
+  }
+  void show(bool open, double real) {
+    if (open && !initialized) {
+      timeline.range(route, real);
+      initialized = true;
+    }
+    open_ = open;
   }
   bool open() const { return open_; }
   bool promptVisible(double real) const { return !open_ && real < promptUntil; }

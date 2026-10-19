@@ -1,6 +1,8 @@
 #include "debug_overlay.hpp"
+#include "renderer.hpp"
 #include "surface.hpp"
 #include <array>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -61,21 +63,23 @@ std::array<unsigned char, 5> glyph(char c) {
   }
 }
 } // namespace
-DebugOverlay::DebugOverlay(double start, double daySeconds, bool open)
+DebugOverlay::DebugOverlay(double start, double daySeconds, bool open,
+                           std::string dataDirectory)
     : menu(start, daySeconds,
            stellarYearSeconds / simulationTimeScale(daySeconds), travelPeriod,
-           open) {}
+           open),
+      root(dataDirectory.empty() ? Renderer::defaultDataDirectory()
+                                 : std::move(dataDirectory)) {}
 void DebugOverlay::initialize() {
-  GLuint vertex =
-      compile(GL_VERTEX_SHADER,
-              "#version 300 es\nlayout(location=0) in vec2 "
-              "p;layout(location=1) in vec4 c;"
-              "uniform vec2 size;out vec4 tint;void main(){tint=c;"
-              "gl_Position=vec4(p.x/size.x*2.-1.,1.-p.y/size.y*2.,0.,1.);}");
-  GLuint fragment = compile(
-      GL_FRAGMENT_SHADER,
-      "#version 300 es\nprecision highp float;in vec4 tint;out vec4 color;"
-      "void main(){color=tint;}");
+  auto source = [&](const char *file) {
+    std::ifstream input(root + "/shaders/" + file);
+    if (!input)
+      throw std::runtime_error(std::string("Cannot load debug shader: ") +
+                               file);
+    return std::string(std::istreambuf_iterator<char>(input), {});
+  };
+  GLuint vertex = compile(GL_VERTEX_SHADER, source("debug.vert").c_str());
+  GLuint fragment = compile(GL_FRAGMENT_SHADER, source("debug.frag").c_str());
   program = glCreateProgram();
   glAttachShader(program, vertex);
   glAttachShader(program, fragment);
@@ -281,6 +285,7 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
   glViewport(0, 0, w, h);
   glUseProgram(program);
   glUniform2f(glGetUniformLocation(program, "size"), ww, wh);
+  glUniform2f(glGetUniformLocation(program, "pixels"), w, h);
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
   glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),

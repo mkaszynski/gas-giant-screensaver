@@ -7,7 +7,8 @@ namespace observatory {
 // Shared drawing only; hosts supply input without sharing authentication state.
 class DebugOverlay {
 public:
-  DebugOverlay(double start, double daySeconds, bool open = true);
+  DebugOverlay(double start, double daySeconds, bool open = true,
+               std::string dataDirectory = {});
   ~DebugOverlay();
   DebugOverlay(const DebugOverlay &) = delete;
   DebugOverlay &operator=(const DebugOverlay &) = delete;
@@ -30,6 +31,7 @@ private:
   bool statistics = false;
   double fps = 0;
   int cap = 30;
+  std::string root;
   void initialize();
   void rectangle(DebugRect, float r, float g, float b, float a = 1);
   void text(double x, double y, double scale, const std::string &);

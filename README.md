@@ -1,6 +1,6 @@
-# Gas Giant Observatory
+![Gas Giant Observatory screensaver preview](assets/preview.webp)
 
-![Animated observatory preview](assets/preview.webp)
+# Gas Giant Observatory
 
 [Live browser preview](https://mkaszynski.github.io/gas-giant-screensaver/) · [MP4](assets/preview.mp4)
 
@@ -77,9 +77,13 @@ page controls responsive during shader compilation and slow frames. C++ owns the
 scene, simulation, meshes and passes; browser bindings submit those passes to
 WebGPU or WebGL 2. There is no application server or lock-screen integration.
 The live renderer starts only after **Launch preview**; the initial asset
-bundle is about 100 MB. Use Pause, Stop preview, the time-of-day slider, 720p/1080p or
-Fullscreen. Rendering suspends in a hidden tab. The default render budget is
-**30 fps at 1920×1080**, independent of browser size and device pixel ratio;
+bundle is about 100 MB. The flight fills the browser viewport at its actual aspect ratio. Move to the
+upper-right corner (or focus the corner button with Tab) and open the shared
+native debug panel for time, biome weather and meteor controls. A hint identifies
+the corner on launch. Browser display controls provide Pause, Stop preview,
+720p/1080p and optional Fullscreen. Rendering suspends in a hidden tab. The default render budget is
+**30 fps with at most 1920×1080 pixels**, preserving the viewport aspect
+ratio independently of device pixel ratio;
 720p is an explicit option, with no automatic fidelity reduction.
 
 **WebGPU is preferred**, with WebGL 2 compatibility when WebGPU is unavailable.

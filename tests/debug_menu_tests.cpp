@@ -109,6 +109,17 @@ int main() {
                       prompt.y + 10 * layout.scale, true, 10);
       require(stalled.open(),
               "visible invitation remains clickable after a long frame");
+      DebugMenu accessible(900, 1800, 1772928, 259200);
+      accessible.timeline.play(false, 0);
+      accessible.show(true, 100);
+      near(accessible.time(100), 900,
+           "accessible opening preserves paused time");
+      accessible.timeline.seek(.25, 101);
+      accessible.show(false, 102);
+      accessible.show(true, 103);
+      require(accessible.open(), "accessible opener shows the native menu");
+      near(accessible.timeline.fraction(103), .25,
+           "reopening through keyboard access preserves the selected range");
       DebugMenu immediate(900, 1800, 1772928, 259200, true);
       require(immediate.open(), "--debug opens directly");
     }
