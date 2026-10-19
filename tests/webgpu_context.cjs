@@ -9,7 +9,8 @@ const constants = {};
 for (const [, name] of source.matchAll(/\bG\.([A-Z][A-Z_0-9]*)/g))
   constants[name] ??= Object.keys(constants).length + 100;
 const descriptors = [],
-  writes = [];
+  writes = [],
+  adapterRequests = [];
 const device = {
   features: new Set(),
   createBuffer: () => ({ destroy() {} }),
@@ -47,7 +48,10 @@ const context = vm.createContext({
   GPUBufferUsage: { UNIFORM: 1, COPY_DST: 2 },
   navigator: {
     gpu: {
-      requestAdapter: async () => adapter,
+      requestAdapter: async (options) => {
+        adapterRequests.push(options);
+        return adapter;
+      },
       getPreferredCanvasFormat: () => 'bgra8unorm',
     },
   },
@@ -71,6 +75,11 @@ for (const name of ['graphics-data.js', 'gpu-memory.js', 'webgpu-context.js'])
   assert(
     gl.softwareAdapter,
     'Software capability reaches the worker-facing context',
+  );
+  assert.equal(
+    adapterRequests[0].powerPreference,
+    'high-performance',
+    'The preview must not steer dual-GPU machines to their low-power adapter',
   );
   const baseline = gl.memoryStats().bytes;
   const color = gl.createTexture();

@@ -29,6 +29,7 @@ window.previewError = (message) => {
 };
 const samples = [];
 let frameCap = 30;
+let graphicsSummary = '';
 const mib = (n) => (n / 1048576).toFixed(0);
 window.previewMetrics = { frames: 0, samples };
 let previousFrame = 0;
@@ -51,14 +52,14 @@ window.previewFrame = (frame) => {
   pause.textContent = isPaused ? 'Resume' : 'Pause';
   const memory = `C++ heap ${(frame.allocated / 1024).toFixed(0)} KiB · WASM capacity ${mib(frame.heap)} MiB · GPU ${frame.resources ? mib(frame.resources.bytes) + ' MiB requested' : 'unmeasured'}`;
   if (frame.paused) {
-    performanceOutput.textContent = `Paused · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
+    performanceOutput.textContent = `Paused · ${graphicsSummary} · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
   } else if (frame.count === 1 || frame.count % 15 === 0) {
     const recent = samples.slice(-30).filter((item) => item.interval > 0);
     const fps = recent.length
       ? (recent.length * 1000) /
         recent.reduce((sum, item) => sum + item.interval, 0)
       : 0;
-    performanceOutput.textContent = `${fps.toFixed(1)} fps · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
+    performanceOutput.textContent = `${fps.toFixed(1)} fps · ${graphicsSummary} · ${frame.sceneWidth} × ${frame.sceneHeight} · ${frameCap} fps target · ${memory}`;
   }
 };
 function setPause(value) {
@@ -99,6 +100,8 @@ window.previewMenu = (state) => {
   )
     document.querySelector('#quality-status').hidden = false;
   window.previewControls = state;
+  graphicsSummary = `${state.graphics.name} quality · ${state.graphics.features[0] ? 'moving terrain' : 'static landscape'}`;
+  document.querySelector('#graphics-hint').textContent = graphicsSummary;
   frameCap = state.graphics.fps;
   const resolution = document.querySelector('#resolution');
   if (

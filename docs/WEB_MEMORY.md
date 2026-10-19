@@ -31,6 +31,22 @@ Browser memory hints are coarse and often capped at 8 GiB; Auto deliberately
 avoids a startup stress test or a claim to know free RAM/VRAM. Native preview
 users opt in with `--quality auto`, or choose a named preset explicitly.
 
+The browser requests a high-performance adapter on both graphics APIs; the
+browser/OS still chooses the device. This preference does not increase the
+selected quality or its memory ceilings. The corner hint and performance
+readout disclose the applied C++ preset and whether the landscape is moving.
+Auto Low is a reduced preview, not a fidelity comparison with the desktop's
+default full renderer.
+
+CI compares browser pixels directly with the unmodified native CLI at identical
+dimensions, scene/weather clocks, route position and feature state. Daylight
+includes a 960×540 fixture in addition to the small diagnostic captures. Night,
+storm and cloud fixtures cover both browser APIs. The full image and bottom
+landscape region must independently stay within one average 8-bit code, with
+at most 0.1% of channels differing by more than eight codes. Raw captures and
+`web-native-parity.json` accompany the browser artifacts. Image agreement does
+not establish equivalent accelerated-GPU frame rates.
+
 Open the corner debug menu and choose **Graphics**. The overall slider selects
 a preset. Custom switches control terrain, volumetric clouds, galaxy, stars,
 rings, giant emissions, meteors, and reflections. Resolution, texture size,

@@ -1457,7 +1457,7 @@
     let adapter, device;
     try {
       adapter = await navigator.gpu.requestAdapter({
-        powerPreference: 'low-power',
+        powerPreference: 'high-performance',
       });
       if (!adapter) throw new Error('No WebGPU adapter is available.');
       const requiredFeatures = ['texture-compression-bc'].filter((feature) =>

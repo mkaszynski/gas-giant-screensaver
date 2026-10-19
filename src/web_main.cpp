@@ -85,6 +85,7 @@ void publishControls() {
       << ",\"span\":" << menu.timeline.span()
       << ",\"graphics\":{\"open\":" << (menu.graphics.open ? "true" : "false")
       << ",\"preset\":" << int(menu.graphics.draft.preset)
+      << ",\"name\":\"" << menu.graphics.applied.name() << "\""
       << ",\"height\":" << menu.graphics.applied.height
       << ",\"fps\":" << menu.graphics.applied.fps
       << ",\"revision\":" << menu.graphics.revision << ",\"features\":[";

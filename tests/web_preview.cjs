@@ -6,6 +6,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { chromium } = require('../web/node_modules/playwright');
 const { PNG } = require('../web/node_modules/pngjs');
+const fixtures = require('./scene_fixtures.cjs');
 const root = path.resolve(__dirname, '../build-web');
 const captureDir = path.resolve(__dirname, '../captures');
 const mime = {
@@ -26,7 +27,8 @@ function address(url, query) {
   target.searchParams.set('backend', backend);
   if (!target.searchParams.has('quality'))
     target.searchParams.set('quality', '2');
-  target.searchParams.set('height', '180');
+  if (!target.searchParams.has('height'))
+    target.searchParams.set('height', '180');
   if (uiOnly)
     for (const feature of ['surface', 'volumetric', 'galaxy', 'stars'])
       target.searchParams.set(feature, '0');
@@ -210,13 +212,13 @@ async function checkInitialFlightTime() {
     Number(await page.locator('#scene').getAttribute('width')) <= 640,
     'Launch placeholder must remain small until C++ selects a budget',
   );
-  async function smallCanvas() {
-    await page.evaluate(() => {
+  async function smallCanvas(height = 180) {
+    await page.evaluate((height) => {
       const select = document.querySelector('#resolution');
-      select.add(new Option('CI diagnostic', '180'));
-      select.value = '180';
+      select.add(new Option('CI diagnostic', String(height)));
+      select.value = String(height);
       select.dispatchEvent(new Event('change'));
-    });
+    }, height);
   }
   await smallCanvas();
   await ready(page);
@@ -239,6 +241,8 @@ async function checkInitialFlightTime() {
     await page.locator('#debug-hint').isVisible(),
     'First launch must explain the corner access',
   );
+  assert.match(await page.locator('#graphics-hint').textContent(),
+    uiOnly ? /High quality · static landscape/ : /High quality · moving terrain/);
   assert(
     await page.locator('#browser-controls').isHidden(),
     'The flight starts without browser chrome',
@@ -259,6 +263,7 @@ async function checkInitialFlightTime() {
     });
     await page.locator('#scene').screenshot({
       path: path.join(captureDir, `web-${backend}-${name}-pixels.png`),
+      scale: 'css',
     });
     await style.evaluate((node) => node.remove());
   }
@@ -536,6 +541,9 @@ async function checkInitialFlightTime() {
       0,
       'Software adapter must start Low despite generous memory/core hints',
     );
+    assert.match(await page.locator('#graphics-hint').textContent(),
+      /Low quality · static landscape/,
+      'Auto must disclose the applied quality and missing terrain');
     assert(
       await page.evaluate(
         () => window.previewMetrics.assetDownloaded < 8 * 1024 * 1024,
@@ -549,31 +557,7 @@ async function checkInitialFlightTime() {
     );
     return;
   }
-  for (const fixture of [
-    {
-      name: 'night',
-      time: 437625,
-      weather: 1790900000,
-      travel: 0,
-      options: '&surface=0',
-    },
-    {
-      name: 'night-no-stars',
-      time: 437625,
-      weather: 1790900000,
-      travel: 0,
-      options: '&surface=0&stars=0',
-    },
-    { name: 'storm', time: 510, weather: 1260, travel: 162000 },
-    { name: 'night-clouds', time: 1200, weather: 1790900000, travel: 162000 },
-    {
-      name: 'thin-clouds',
-      time: 510,
-      weather: 1790900000,
-      travel: 162000,
-      options: '&volumetric=0',
-    },
-  ]) {
+  for (const fixture of fixtures.filter((fixture) => fixture.name !== 'day')) {
     await page.goto(
       address(
         url,
@@ -581,8 +565,13 @@ async function checkInitialFlightTime() {
       ),
     );
     await page.getByRole('button', { name: 'Launch preview' }).click();
-    await smallCanvas();
+    await smallCanvas(fixture.height);
     await ready(page);
+    assert.equal(
+      await page.evaluate(() => window.previewMetrics.sceneHeight),
+      fixture.height || 180,
+      'Fidelity fixtures must render at their requested scene resolution',
+    );
     await capturePixels(fixture.name);
   }
   // Force a terrain rebase and a worker build during moving flight.
