@@ -123,8 +123,10 @@ The implementation addresses the measured costs:
   reject allocations exceeding **512 MiB before issuing them**. Driver shader
   caches, browser processes, and physical VRAM overhead are outside this ledger.
   A limit failure stops the worker and offers Low/another backend on reload.
-- Rendering retains one outstanding GPU frame, suspends while hidden, and
-  excludes resource loading/reconfiguration from the browser scene clock.
+- Rendering retains at most two outstanding GPU submissions, allowing CPU
+  encoding to overlap GPU rendering while reusing the same targets and bounded
+  uniform arena. Reconfiguration drains both before releasing resources. Hidden
+  tabs suspend rendering; loading/reconfiguration is excluded from scene time.
 
 WASM linear memory grows but cannot shrink in place. Switching High to Low
 reuses the previous heap capacity and may not reach the cold-start Low figures

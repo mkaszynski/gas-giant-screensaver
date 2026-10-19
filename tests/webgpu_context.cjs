@@ -126,8 +126,35 @@ for (const name of ['graphics-data.js', 'gpu-memory.js', 'webgpu-context.js'])
   gl.deleteTexture(light);
   await gl.submit();
   assert.equal(gl.memoryStats().bytes, baseline);
+  // A completed older submission must never reset the next CPU frame's arena.
+  const completions = [], uploads = [], submissions = [];
+  device.createCommandEncoder = () => ({ finish: () => ({}) });
+  device.queue.submit = (commands) => submissions.push(commands);
+  device.queue.onSubmittedWorkDone = () => new Promise((resolve) => completions.push(resolve));
+  device.queue.writeBuffer = (buffer, offset, data, start, length) =>
+    uploads.push(Uint8Array.from(new Uint8Array(data, start, length)));
+  new Uint8Array(gl.uniformBytes).fill(11, 0, 16);
+  gl.uniformCursor = 16;
+  gl.commands();
+  const first = gl.submit();
+  assert.equal(gl.uniformCursor, 0, 'Submission frees the bounded CPU arena immediately');
+  new Uint8Array(gl.uniformBytes).fill(22, 0, 32);
+  gl.uniformCursor = 32;
+  gl.commands();
+  const second = gl.submit();
+  assert.equal(submissions.length, 2, 'CPU encodes the next frame before GPU completion');
+  assert(uploads[0].every((byte) => byte === 11));
+  assert(uploads[1].every((byte) => byte === 22));
+  gl.uniformCursor = 64;
+  completions.shift()();
+  await first;
+  assert.equal(gl.uniformCursor, 64, 'Older completion cannot clobber current-frame offsets');
+  completions.shift()();
+  await second;
+  assert.equal(gl.uniformCursor, 64);
+  assert.equal(gl.memoryStats().bytes, baseline, 'Overlap needs no extra GPU uniform buffer');
   console.log(
-    'WebGPU adapter: immutable targets, zeroed light cache, software hints and retirement passed',
+    'WebGPU adapter: targets, light cache, software hints, retirement and overlapping uniform frames passed',
   );
 })().catch((error) => {
   console.error(error);

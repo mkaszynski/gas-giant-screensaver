@@ -141,11 +141,13 @@
         );
       this.device.queue.submit([this.encoder.finish()]);
       this.encoder = null;
+      // writeBuffer captures the CPU bytes and is ordered after the preceding
+      // submission. The next frame can encode into the same bounded arena now.
+      this.uniformCursor = 0;
       const retired = this.retired.splice(0);
       this.swapTexture = null;
       return this.device.queue.onSubmittedWorkDone().then(() => {
         retired.forEach((resource) => resource.destroy());
-        this.uniformCursor = 0;
       });
     }
     getSupportedExtensions() {

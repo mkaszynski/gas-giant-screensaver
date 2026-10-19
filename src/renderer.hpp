@@ -34,6 +34,9 @@ public:
   // A host can retire viewport-dependent storage before allocating a new size.
   // Wait for previous GPU work before calling, then retire deletions before draw.
   bool releaseSizeTargetsFor(int width, int height);
+  std::array<int, 2> renderResolution() const {
+    return {scene.width, scene.height};
+  }
   static std::string defaultDataDirectory();
   std::array<int, 2> weatherResolution() const {
     return {weather.width, weather.height};

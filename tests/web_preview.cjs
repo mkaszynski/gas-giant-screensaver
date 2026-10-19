@@ -7,6 +7,7 @@ const path = require('node:path');
 const { chromium } = require('../web/node_modules/playwright');
 const { PNG } = require('../web/node_modules/pngjs');
 const fixtures = require('./scene_fixtures.cjs');
+const { difference, matches } = require('./web_native_parity.cjs');
 const root = path.resolve(__dirname, '../build-web');
 const captureDir = path.resolve(__dirname, '../captures');
 const mime = {
@@ -139,7 +140,7 @@ async function checkInitialFlightTime() {
   });
   // First navigation installs the static worker and reloads into isolation.
   await page.goto(
-    address(url, 'paused=1&time=510&travel=162000&weather=1790900000'),
+    address(url, 'paused=1&time=510&travel=162000&weather=1790900000&speed=0'),
   );
   await page.waitForFunction(
     () => !document.querySelector('#launch').disabled,
@@ -279,6 +280,31 @@ async function checkInitialFlightTime() {
       'Automatic WebGL 2 fallback rendered successfully without WebGPU',
     );
     return;
+  }
+  if (backend === 'webgpu' && !uiOnly) {
+    const first = PNG.sync.read(fs.readFileSync(
+      path.join(captureDir, `web-${backend}-day-pixels.png`),
+    ));
+    const submitted = await page.evaluate(() => window.previewControls.submittedFrames);
+    await page.evaluate(() => rendererWorker.postMessage({ type: 'seek', value: 1200 }));
+    await page.waitForFunction((n) => window.previewControls.submittedFrames > n,
+      submitted, { timeout: 120000 });
+    assert.equal(await page.evaluate(() => window.previewMetrics.frames), submitted,
+      'The software GPU should still be rendering the first queued scene');
+    await page.evaluate(() => rendererWorker.postMessage({ type: 'seek', value: 510 }));
+    await page.waitForFunction((n) => window.previewControls.submittedFrames >= n + 2,
+      submitted, { timeout: 120000 });
+    assert.equal(await page.evaluate(() => window.previewControls.inFlight), 2,
+      'The next scene must encode without waiting for the prior GPU frame');
+    await page.waitForFunction((n) => window.previewMetrics.frames >= n + 2 &&
+      Math.abs(window.previewMetrics.time - 510) < .01,
+      submitted, { timeout: 240000 });
+    await capturePixels('queued-return');
+    const returned = PNG.sync.read(fs.readFileSync(
+      path.join(captureDir, `web-${backend}-queued-return-pixels.png`),
+    ));
+    assert(matches(difference(first, returned)),
+      'Overlapping day/night/day frames must preserve per-frame uniforms and image fidelity');
   }
   async function nativeClick(group, index) {
     const rect = await page.evaluate(
@@ -603,6 +629,15 @@ async function checkInitialFlightTime() {
     (await page.evaluate(() => window.previewMetrics.frames)) + 3,
     { timeout: 120000 },
   );
+  assert(
+    await page.evaluate(() => window.previewMetrics.maxInFlight <= 2),
+    'GPU work must remain bounded to two submissions',
+  );
+  if (backend === 'webgpu')
+    assert.equal(
+      await page.evaluate(() => window.previewMetrics.maxInFlight), 2,
+      'CPU must encode another frame while the software GPU is busy',
+    );
   assert(builds >= 2, 'Moving terrain must continue streaming in WASM');
   // A second visit uses the established service worker without another reload.
   await openMenu();

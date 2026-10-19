@@ -53,9 +53,15 @@ Floating-point cloud noise avoids a synchronous readback precision probe, which 
 support. BC6H sky compression is used when the adapter supports BC textures;
 the existing HDR decoder handles other devices.
 
-Only one frame is outstanding. A 4 MiB uniform arena preserves each draw's
-state; dynamic offsets and cached bind groups avoid allocating a uniform buffer
-per draw. Pipeline caches are capped at 256 entries, texture bind groups at 64
+At most two submissions are outstanding. CPU encoding can overlap the previous
+GPU frame, rather than adding CPU and GPU costs in series. Both frames reuse the
+same targets and 4 MiB GPU uniform arena: queue-ordered
+[`writeBuffer`](https://www.w3.org/TR/webgpu/#dom-gpuqueue-writebuffer) uploads
+capture each frame before its commands. Submission immediately resets CPU
+offsets; an older completion never changes a newer frame's offsets. Quality and
+size changes drain all submissions before retiring resources. Dynamic offsets
+and cached bind groups avoid allocating a uniform buffer per draw.
+Pipeline caches are capped at 256 entries, texture bind groups at 64
 per program. Resources replaced during a frame retire after queue completion.
 Both browser backends request a high-performance adapter; the browser and OS
 choose the actual device. Hidden tabs suspend rendering. The shared C++ presets
@@ -92,7 +98,7 @@ capture. A separate landscape-region check catches differences hidden by the
 large sky region. Captures avoid browser/DPR resampling.
 Software GPU checks establish behavior and visual agreement, **not hardware performance**.
 Normal `cost` metrics measure CPU command submission; callbacks wait for GPU
-completion before another frame is submitted. Synchronous `benchmark=1` remains
+completion for metrics and bounded queue backpressure. Synchronous `benchmark=1` remains
 available with `backend=webgl2`; WebGPU reports an explicit error for that mode
 because it cannot implement a synchronous `glFinish` wait. Chromium is validated
 locally and in CI; Safari and Firefox hardware testing remains future work.
