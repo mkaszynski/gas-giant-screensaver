@@ -49,6 +49,12 @@ No framebuffer, blur pass or additional cloud density samples are added.
 Cloud phase is evaluated once per view ray outside the volume march. Cirrus
 uses filtered angular lookups; precipitation retains four density samples,
 bounded to the rain layer so nearby curtains cannot fall between distant taps.
+The parent-cloud rain field is evaluated once in additional channels of the
+existing cloud-light pass. Sixteen overlapping tiles in that texture's depth
+slices provide a continuous 504-square field over 64 km; beyond it the shader
+uses direct sampling. This adds 2 MiB to the existing light-cache allocation
+and avoids repeating cloud-density calculations at every precipitation sample.
+The solar-transmission channels retain their original grid and values.
 Existing terrain detail, resolution, cloud quadrature and effects remain intact.
 Actual full-scene timing must be measured on the target GPU; texture size alone
 does not establish a frame-rate guarantee.

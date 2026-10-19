@@ -56,6 +56,19 @@ vec2 cloudSunTransmission(vec3 p,float density,float lod){
  // wider solar column is filtered through the quarter-kilometre light cache.
  return column*exp(-stepLength*density*.35*vec2(1.,.2));
 }
+float weatherRainDensity(vec3 column){
+ float edge=smoothstep(24.,32.,max(abs(column.x),abs(column.z)));
+ float density=0.;
+ if(edge<1.){
+  vec2 cell=(column.xz/64.+.5)*504.;
+  vec2 tile=clamp(floor(cell/126.),vec2(0.),vec2(3.));
+  vec2 point=(cell-tile*126.+1.)/128.;
+  float slice=(tile.x+4.*tile.y+.5)/32.;
+  density=textureLod(uWeatherLightCache,vec3(point,slice),0.).b;
+ }
+ if(edge>0.)density=mix(density,weatherDensity(column,uObserverHeight,2.),edge);
+ return density;
+}
 
 // No per-frame dither or stochastic reprojection: bounded, stable quadrature
 // produces clean screenshots and avoids temporal trails on moons and ridges.
@@ -174,7 +187,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
    // Distant precipitation curtains descend from the same cloud cells. From
    // airplane height these are volumes, not large raindrops on the camera.
    vec3 column=p+vec3(0.,uWeatherLayer.x+uWeatherLayer.y*.38-h,0.);
-   float rain=weatherDensity(column,uObserverHeight,2.);
+   float rain=weatherRainDensity(column);
    float weight=rain*smoothstep(0.,.20,h)*rainSpan/max(.001,end);
    rainColumn+=weight;rainMoment+=p*weight;
   }

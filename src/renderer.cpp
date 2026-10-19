@@ -611,7 +611,7 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
       glGenTextures(1, &weatherLightTexture);
       textures.push_back(weatherLightTexture);
       glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
-      glTexImage3D(GL_TEXTURE_3D, 0, GL_RG16F, 128, 128, 32, 0, GL_RG,
+      glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, 128, 128, 32, 0, GL_RGBA,
                    GL_HALF_FLOAT, nullptr);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1158,12 +1158,13 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   if (weatherProgram) {
     // Cache broad solar attenuation in a small geographic volume. Fine view
     // extinction stays at display resolution; repeated up-sun probes do not.
-    if (s.sunLocal.y > -.08 && s.sunVisibility > 0.) {
+    const bool solarCache = s.sunLocal.y > -.08 && s.sunVisibility > 0.;
+    if (solarCache || weatherState.rain > .02) {
       glBindFramebuffer(GL_FRAMEBUFFER, weatherLightFbo);
       glViewport(0, 0, 128, 128);
       common(weatherLightProgram, s, w, h);
       weatherUniforms(weatherLightProgram, s);
-      for (int layer = 0; layer < 32; ++layer) {
+      for (int layer = 0; layer < (solarCache ? 32 : 16); ++layer) {
         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                   weatherLightTexture, 0, layer);
         scalar(weatherLightProgram, "uWeatherCacheSlice", (layer + .5) / 32.);
