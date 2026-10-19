@@ -285,6 +285,7 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
   glViewport(0, 0, w, h);
   glUseProgram(program);
   glUniform2f(glGetUniformLocation(program, "size"), ww, wh);
+  glUniform2f(glGetUniformLocation(program, "pixels"), w, h);
   glBindVertexArray(vao);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
   glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
