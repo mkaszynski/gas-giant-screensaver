@@ -496,43 +496,43 @@ async function checkInitialFlightTime() {
   await page.waitForFunction(() => window.previewMetrics.height === 270, null, {
     timeout: 180000,
   });
+  const resizeBaseline = await page.evaluate(() => ({
+    bytes: window.previewMetrics.resources.bytes,
+    assets: window.previewMetrics.assetDownloaded,
+    builds: window.previewMetrics.builds,
+  }));
+  for (const [width, height] of [
+    [390, 844],
+    [2400, 600],
+    [1280, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForFunction(
+      ({ width, height }) =>
+        Math.abs(
+          window.previewMetrics.width / window.previewMetrics.height -
+            width / height,
+        ) <
+        2 / window.previewMetrics.height,
+      { width, height },
+    );
+    assert(
+      await page.evaluate(
+        () =>
+          window.previewMetrics.width * window.previewMetrics.height <=
+          480 * 270,
+      ),
+    );
+    const bounds = await page.locator('#scene').boundingBox();
+    assert.equal(bounds.width, width);
+    assert.equal(bounds.height, height);
+  }
+  assert.deepEqual(await page.evaluate(() => ({
+    bytes: window.previewMetrics.resources.bytes,
+    assets: window.previewMetrics.assetDownloaded,
+    builds: window.previewMetrics.builds,
+  })), resizeBaseline, 'Aspect round trip must reuse assets and return to the same GPU budget');
   if (uiOnly) {
-    const resizeBaseline = await page.evaluate(() => ({
-      bytes: window.previewMetrics.resources.bytes,
-      assets: window.previewMetrics.assetDownloaded,
-      builds: window.previewMetrics.builds,
-    }));
-    for (const [width, height] of [
-      [390, 844],
-      [2400, 600],
-      [1280, 720],
-    ]) {
-      await page.setViewportSize({ width, height });
-      await page.waitForFunction(
-        ({ width, height }) =>
-          Math.abs(
-            window.previewMetrics.width / window.previewMetrics.height -
-              width / height,
-          ) <
-          2 / window.previewMetrics.height,
-        { width, height },
-      );
-      assert(
-        await page.evaluate(
-          () =>
-            window.previewMetrics.width * window.previewMetrics.height <=
-            480 * 270,
-        ),
-      );
-      const bounds = await page.locator('#scene').boundingBox();
-      assert.equal(bounds.width, width);
-      assert.equal(bounds.height, height);
-    }
-    assert.deepEqual(await page.evaluate(() => ({
-      bytes: window.previewMetrics.resources.bytes,
-      assets: window.previewMetrics.assetDownloaded,
-      builds: window.previewMetrics.builds,
-    })), resizeBaseline, 'Aspect round trip must reuse assets and return to the same GPU budget');
     await page.locator('#debug-open').focus();
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.previewControls.open);
