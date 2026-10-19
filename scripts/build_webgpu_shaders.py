@@ -64,6 +64,7 @@ def programs():
                 "rings",
                 "weather",
                 "weather-light",
+                "weather-rain",
                 "weather-filter-probe",
             )
         ],

@@ -608,10 +608,12 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
         }
       }
       weatherLightProgram = program("weather-light.frag");
+      weatherRainProgram = program("weather-rain.frag");
+      target(rainDensityCache, 512, 512, false, false, GL_R16F, true);
       glGenTextures(1, &weatherLightTexture);
       textures.push_back(weatherLightTexture);
       glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
-      glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, 128, 128, 32, 0, GL_RGBA,
+      glTexImage3D(GL_TEXTURE_3D, 0, GL_RG16F, 128, 128, 32, 0, GL_RG,
                    GL_HALF_FLOAT, nullptr);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -778,6 +780,7 @@ Renderer::~Renderer() {
   release(scene);
   release(weather);
   release(skyWeatherCache);
+  release(rainDensityCache);
   release(weatherPixels);
   release(weatherSkyPixels);
   glDeleteFramebuffers(1, &weatherLightFbo);
@@ -1158,13 +1161,19 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   if (weatherProgram) {
     // Cache broad solar attenuation in a small geographic volume. Fine view
     // extinction stays at display resolution; repeated up-sun probes do not.
-    const bool solarCache = s.sunLocal.y > -.08 && s.sunVisibility > 0.;
-    if (solarCache || weatherState.rain > .02) {
+    if (weatherState.rain > .02) {
+      glBindFramebuffer(GL_FRAMEBUFFER, rainDensityCache.framebuffer);
+      glViewport(0, 0, 512, 512);
+      common(weatherRainProgram, s, w, h);
+      weatherUniforms(weatherRainProgram, s);
+      quad(weatherRainProgram);
+    }
+    if (s.sunLocal.y > -.08 && s.sunVisibility > 0.) {
       glBindFramebuffer(GL_FRAMEBUFFER, weatherLightFbo);
       glViewport(0, 0, 128, 128);
       common(weatherLightProgram, s, w, h);
       weatherUniforms(weatherLightProgram, s);
-      for (int layer = 0; layer < (solarCache ? 32 : 16); ++layer) {
+      for (int layer = 0; layer < 32; ++layer) {
         glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                   weatherLightTexture, 0, layer);
         scalar(weatherLightProgram, "uWeatherCacheSlice", (layer + .5) / 32.);
@@ -1190,6 +1199,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       common(p, s, w, h);
       weatherUniforms(p, s);
       bind(p, 10, "uAtmosphericOptics", opticsPhaseTexture);
+      bind(p, 3, "uWeatherRainCache", rainDensityCache.texture);
       integer(p, "uAtmosphericOpticsEnabled", surfaceOptions.atmosphericOptics);
       glUniform2f(glGetUniformLocation(p, "uOpticsLiquid"),
                   weatherState.cloudLiquid, weatherState.fogLiquid);

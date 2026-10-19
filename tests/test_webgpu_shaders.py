@@ -33,12 +33,12 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 25)
+        self.assertEqual(len(programs), 26)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            25,
+            26,
         )
         for label, vertex, fragment in programs:
             self.assertNotIn("#include", vertex + fragment, label)

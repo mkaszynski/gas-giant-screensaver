@@ -45,16 +45,16 @@ integrated offline. The runtime multiplies RGB phase values by its existing
 atmospheric solar transmission. Liquid phase functions replace the broad direct
 scattering term, while ambient illumination is retained.
 
-No framebuffer or blur pass is added; the cloud volume-march quadrature is unchanged.
+The cloud volume-march quadrature is unchanged; no blur pass is added.
 Cloud phase is evaluated once per view ray outside the volume march. Cirrus
 uses filtered angular lookups; precipitation retains four density samples,
 bounded to the rain layer so nearby curtains cannot fall between distant taps.
-The parent-cloud rain field is evaluated once in additional channels of the
-existing cloud-light pass. Sixteen overlapping tiles in that texture's depth
-slices provide a continuous 504-square field over 64 km; beyond it the shader
-uses direct sampling. This adds 2 MiB to the existing light-cache allocation
-and avoids repeating cloud-density calculations at every precipitation sample.
-The solar-transmission channels retain their original grid and values.
+The parent-cloud rain field is evaluated once into a 512-square R16F texture
+over 64 km, using one small draw when rain is present, including at night and
+during eclipses. Beyond it the shader uses direct sampling, with a continuous
+transition at the boundary. The cache costs 0.5 MiB and avoids repeating
+cloud-density calculations at every precipitation sample. The original compact
+RG16F solar-transmission volume retains its grid, values and update schedule.
 Existing terrain detail, resolution, cloud quadrature and effects remain intact.
 Actual full-scene timing must be measured on the target GPU; texture size alone
 does not establish a frame-rate guarantee.

@@ -29,6 +29,7 @@ uniform bool uWeatherCacheEnabled;
 uniform bool uWeatherSkyPass,uWeatherCacheEnabled;
 #endif
 uniform highp sampler3D uWeatherLightCache;
+uniform highp sampler2D uWeatherRainCache;
 vec2 weatherPixelPosition(){
 #ifdef OBSERVATORY_WEATHER_COMPUTE
  return vec2(gl_GlobalInvocationID.xy)+.5;
@@ -60,11 +61,7 @@ float weatherRainDensity(vec3 column){
  float edge=smoothstep(24.,32.,max(abs(column.x),abs(column.z)));
  float density=0.;
  if(edge<1.){
-  vec2 cell=(column.xz/64.+.5)*504.;
-  vec2 tile=clamp(floor(cell/126.),vec2(0.),vec2(3.));
-  vec2 point=(cell-tile*126.+1.)/128.;
-  float slice=(tile.x+4.*tile.y+.5)/32.;
-  density=textureLod(uWeatherLightCache,vec3(point,slice),0.).b;
+  density=textureLod(uWeatherRainCache,column.xz/64.+.5,0.).r;
  }
  if(edge>0.)density=mix(density,weatherDensity(column,uObserverHeight,2.),edge);
  return density;
