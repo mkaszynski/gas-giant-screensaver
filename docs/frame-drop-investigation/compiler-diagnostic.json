@@ -1,0 +1,51 @@
+{
+  "scope": "Driver/compiler correlation diagnostic, not performance acceptance. Same renderer/assets with Mesa uniform inlining explicitly on/off in ABBA order; 30 static prewarm frames then 180 moving frames; thread sampling adds overhead. Normal scene geometry and all visual effects remain enabled.",
+  "source_commit": "a724d5058ff6725c32423e76b9034e5e73211f32",
+  "resolution": [
+    1920,
+    1080
+  ],
+  "scene_seconds": 510,
+  "route_seconds": 162000,
+  "weather_seconds": 1790900000,
+  "performance_acceptance": false,
+  "records": [
+    {
+      "run": "inline-on-1",
+      "median_ms": 29.756826500000003,
+      "p95_ms": 32.151747,
+      "misses": 6,
+      "max_ms": 38.355063,
+      "performance_acceptance": false,
+      "optimized_compiler_cpu_seconds": 0.53
+    },
+    {
+      "run": "inline-off-1",
+      "median_ms": 30.360253999999998,
+      "p95_ms": 32.165382,
+      "misses": 1,
+      "max_ms": 33.440246,
+      "performance_acceptance": false,
+      "optimized_compiler_cpu_seconds": 0.0
+    },
+    {
+      "run": "inline-off-2",
+      "median_ms": 30.0431945,
+      "p95_ms": 32.177104,
+      "misses": 0,
+      "max_ms": 33.280767,
+      "performance_acceptance": false,
+      "optimized_compiler_cpu_seconds": 0.0
+    },
+    {
+      "run": "inline-on-2",
+      "median_ms": 30.053278499999998,
+      "p95_ms": 35.4132,
+      "misses": 17,
+      "max_ms": 39.056109,
+      "performance_acceptance": false,
+      "optimized_compiler_cpu_seconds": 0.52
+    }
+  ],
+  "interpretation": "Disabling uniform specialization eliminated observed optimized-compiler CPU activity and reduced spikes in this small diagnostic. A disabled run still missed one deadline. Controlled full-renderer/native/cost gates remain open."
+}

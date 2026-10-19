@@ -50,7 +50,8 @@
         CMAKE
       '';
       postFixup = (old.postFixup or "") + ''
-        wrapProgram "$out/bin/hyprlock" --set FONTCONFIG_FILE ${lockFonts}
+        wrapProgram "$out/bin/hyprlock" --set FONTCONFIG_FILE ${lockFonts} \
+          --set-default radeonsi_inline_uniforms false
       '';
     });
     lockReview = pkgs.writeShellScriptBin "gas-giant-lock" ''
