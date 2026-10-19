@@ -245,17 +245,14 @@ int main() {
     auto mesh = buildSurfaceMesh(w, center);
     {
       auto sameMesh = [&](const SurfaceMesh &other) {
-        require(other.topology == mesh.topology,
-                "fresh and recycled meshes share canonical immutable connectivity");
         require(other.center.latitude == mesh.center.latitude &&
                     other.center.longitude == mesh.center.longitude &&
                     other.vertices.size() == mesh.vertices.size() &&
                     std::memcmp(other.vertices.data(), mesh.vertices.data(),
                                 mesh.vertices.size() * sizeof(SurfaceVertex)) ==
                         0 &&
-                    other.topology->indices == mesh.topology->indices &&
-                    other.topology->waterIndices ==
-                        mesh.topology->waterIndices &&
+                    other.indices == mesh.indices &&
+                    other.waterIndices == mesh.waterIndices &&
                     other.hasLand == mesh.hasLand &&
                     other.hasWater == mesh.hasWater &&
                     other.pureLand == mesh.pureLand &&
@@ -284,8 +281,8 @@ int main() {
               "vertex and block work expose frequent scheduling checkpoints");
       sameMesh(sliced);
       const std::array<const void *, 4> storage{
-          sliced.vertices.data(), sliced.topology->indices.data(),
-          sliced.topology->waterIndices.data(), sliced.bounds.data()};
+          sliced.vertices.data(), sliced.indices.data(),
+          sliced.waterIndices.data(), sliced.bounds.data()};
       // Stale location, flags and contents must never survive a reused build.
       sliced.center = w.location(0.);
       sliced.hasLand = !mesh.hasLand;
@@ -294,22 +291,16 @@ int main() {
       sliced.vertices.front().x = std::numeric_limits<float>::quiet_NaN();
       sliced.vertices.back().coastalWeight =
           std::numeric_limits<float>::quiet_NaN();
-      auto poisonedTopology =
-          std::make_shared<SurfaceTopology>(*sliced.topology);
-      poisonedTopology->indices.front() = std::numeric_limits<uint32_t>::max();
-      poisonedTopology->waterIndices.front() =
-          std::numeric_limits<uint32_t>::max();
-      sliced.topology = poisonedTopology;
+      sliced.indices.front() = std::numeric_limits<uint32_t>::max();
+      sliced.waterIndices.front() = std::numeric_limits<uint32_t>::max();
       sliced.bounds.back().minimum.x = std::numeric_limits<double>::quiet_NaN();
       auto reused = buildSurfaceMesh(w, center, {}, std::move(sliced));
       sameMesh(reused);
-      require(storage ==
-                  std::array<const void *, 4>{
-                      reused.vertices.data(), reused.topology->indices.data(),
-                      reused.topology->waterIndices.data(),
-                      reused.bounds.data()},
-              "vertex/bounds storage is reused and canonical immutable indices "
-              "restored");
+      require(storage == std::array<const void *, 4>{reused.vertices.data(),
+                                                     reused.indices.data(),
+                                                     reused.waterIndices.data(),
+                                                     reused.bounds.data()},
+              "all four large CPU buffers are reused without reallocation");
       SurfaceBuildWorkspace workspace;
       auto warmed =
           buildSurfaceMesh(w, center, {}, std::move(reused), &workspace);
@@ -326,8 +317,7 @@ int main() {
       require(workspace.basePositions.data() == scratchStorage,
               "normal-position scratch is reused without reallocation");
     }
-    require(mesh.vertices.size() <= 513000 &&
-                mesh.topology->indices.size() <= 3100000,
+    require(mesh.vertices.size() <= 513000 && mesh.indices.size() <= 3100000,
             "bounded mesh complexity");
     require(mesh.bounds.size() <= 8192,
             "per-frame crop work uses bounded terrain blocks");
@@ -338,7 +328,7 @@ int main() {
               "contiguous blocks cover complete triangles without gaps");
       for (uint32_t i = box.firstIndex; i < box.firstIndex + box.indexCount;
            ++i) {
-        const auto &v = mesh.vertices.at(mesh.topology->indices.at(i));
+        const auto &v = mesh.vertices.at(mesh.indices.at(i));
         require(v.x >= box.minimum.x && v.x <= box.maximum.x &&
                     v.y >= box.minimum.y && v.y <= box.maximum.y &&
                     v.z >= box.minimum.z && v.z <= box.maximum.z,
@@ -346,11 +336,10 @@ int main() {
       }
       end += box.indexCount;
     }
-    require(end == mesh.topology->indices.size(),
-            "no terrain triangles lost in blocks");
+    require(end == mesh.indices.size(), "no terrain triangles lost in blocks");
     auto all = surfaceDrawRanges(mesh, {});
     require(all.size() == 1 && all[0].firstIndex == 0 &&
-                all[0].indexCount == mesh.topology->indices.size(),
+                all[0].indexCount == mesh.indices.size(),
             "unrestricted culling coalesces the entire mesh into one draw");
     std::array<SurfacePlane, 6> nowhere{};
     nowhere[0] = {{0, 0, 0}, -1.};
@@ -400,13 +389,10 @@ int main() {
     require(coast.hasLand && coast.hasWater && !coast.pureLand,
             "mixed coastal meshes retain the general shoreline shader");
     auto ocean = buildSurfaceMesh(w, w.location(0));
-    require(ocean.topology == mesh.topology,
-            "ocean and land retain the same cached watertight topology");
     require(!ocean.pureLand, "ocean cannot select the pure-land program");
     require(!ocean.hasLand,
             "open ocean skips unneeded terrain-shadow rendering");
-    require(ocean.topology->waterIndices.size() <
-                ocean.topology->indices.size() / 3,
+    require(ocean.waterIndices.size() < ocean.indices.size() / 3,
             "deep water omits unneeded interior triangles");
     size_t liquidBlocks = 0;
     for (const auto &box : ocean.bounds) {
@@ -415,7 +401,7 @@ int main() {
       ++liquidBlocks;
       for (uint32_t i = box.waterFirstIndex;
            i < box.waterFirstIndex + box.waterIndexCount; ++i) {
-        const auto &v = ocean.vertices.at(ocean.topology->waterIndices.at(i));
+        const auto &v = ocean.vertices.at(ocean.waterIndices.at(i));
         require(v.ground <= -64 && v.temperature >= -1,
                 "specialized water triangles interpolate a pure liquid mask");
       }
@@ -442,13 +428,12 @@ int main() {
         }
         return edges;
       };
-      require(boundary(ocean.topology->indices, box.firstIndex,
-                       box.indexCount) == boundary(ocean.topology->waterIndices,
-                                                   box.waterFirstIndex,
-                                                   box.waterIndexCount),
+      require(boundary(ocean.indices, box.firstIndex, box.indexCount) ==
+                  boundary(ocean.waterIndices, box.waterFirstIndex,
+                           box.waterIndexCount),
               "coarse water retains every fine boundary edge without cracks");
     }
-    for (auto index : ocean.topology->waterIndices)
+    for (auto index : ocean.waterIndices)
       require(index < ocean.vertices.size(),
               "fixed-capacity water fans only reference valid vertices");
     int curvedWaterNormals = 0;
@@ -477,10 +462,10 @@ int main() {
              y = dot(eye, geographicUp(center)),
              z = dot(eye, geographicNorth(center));
       bool found = false;
-      for (size_t i = 0; i < mesh.topology->indices.size(); i += 3) {
-        auto a = mesh.vertices[mesh.topology->indices[i]],
-             b = mesh.vertices[mesh.topology->indices[i + 1]],
-             c = mesh.vertices[mesh.topology->indices[i + 2]];
+      for (size_t i = 0; i < mesh.indices.size(); i += 3) {
+        auto a = mesh.vertices[mesh.indices[i]],
+             b = mesh.vertices[mesh.indices[i + 1]],
+             c = mesh.vertices[mesh.indices[i + 2]];
         double det = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
         if (std::abs(det) < 1.e-9)
           continue;
@@ -505,13 +490,12 @@ int main() {
       auto detail = buildSurfaceMesh(w, c);
       double totalError = 0;
       int samples = 0;
-      for (size_t i = 0; i < detail.topology->indices.size(); i += 3 * 277) {
-        if (detail.topology->indices[i] % surfaceAngularSamples >=
-            surfaceForwardSamples)
+      for (size_t i = 0; i < detail.indices.size(); i += 3 * 277) {
+        if (detail.indices[i] % surfaceAngularSamples >= surfaceForwardSamples)
           continue;
-        auto a = detail.vertices[detail.topology->indices[i]],
-             b = detail.vertices[detail.topology->indices[i + 1]],
-             d = detail.vertices[detail.topology->indices[i + 2]];
+        auto a = detail.vertices[detail.indices[i]],
+             b = detail.vertices[detail.indices[i + 1]],
+             d = detail.vertices[detail.indices[i + 2]];
         Vec3 point{(a.x + b.x + d.x) / 3., (a.y + b.y + d.y) / 3.,
                    (a.z + b.z + d.z) / 3.};
         double radius = std::hypot(point.x, point.z);

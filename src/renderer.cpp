@@ -1289,12 +1289,19 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                                      s.altitudeMeters / 1000.,
                                      weatherState.base + weatherState.thickness)
               : h;
-      dispatchWeather(compute, weatherPixels, weather, 0, firstClear);
-      if (firstClear < h) {
+      const int endClear =
+          weatherClearComputeProgram
+              ? clearWeatherEndRow(w, h, s.forward, s.right, s.cameraUp,
+                                   s.altitudeMeters / 1000., weatherState.base)
+              : 0;
+      dispatchWeather(compute, weatherPixels, weather, endClear,
+                      firstClear - endClear);
+      if (firstClear < h || endClear > 0) {
         prepareWeather(weatherClearComputeProgram);
         dispatchWeather(weatherClearComputeProgram, weatherPixels, weather,
-                        firstClear, h - firstClear);
-        weatherClearRows = h - firstClear;
+                        endClear ? 0 : firstClear,
+                        endClear ? endClear : h - firstClear);
+        weatherClearRows = endClear + h - firstClear;
       }
 #endif
     } else {

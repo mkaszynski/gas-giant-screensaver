@@ -402,7 +402,7 @@ void SurfaceRenderer::resizeReflection(int w, int h) {
   check();
 }
 void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
-  const bool topologyChanged = m.topology != mesh.topology;
+  const bool topologyChanged = m.indices != mesh.indices;
   if (!mesh.vertices.empty()) {
     Vec3 oldAxes[] = {geographicEast(mesh.center), geographicUp(mesh.center),
                       geographicNorth(mesh.center)};
@@ -451,12 +451,12 @@ void SurfaceRenderer::upload(SurfaceMesh m, bool prepared) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   if (topologyChanged) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 mesh.topology->indices.size() * sizeof(uint32_t),
-                 mesh.topology->indices.data(), GL_STATIC_DRAW);
+                 mesh.indices.size() * sizeof(uint32_t), mesh.indices.data(),
+                 GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterIndices);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 mesh.topology->waterIndices.size() * sizeof(uint32_t),
-                 mesh.topology->waterIndices.data(), GL_STATIC_DRAW);
+                 mesh.waterIndices.size() * sizeof(uint32_t),
+                 mesh.waterIndices.data(), GL_STATIC_DRAW);
     // Reuse every fourth row/column of the already resident mesh. The reflected
     // view is quarter-resolution and wave-filtered; no second terrain build
     // exists.
@@ -511,8 +511,7 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   waterLod &= waterLodEnabled;
   if (!cullingEnabled && !waterLod) {
-    glDrawElements(GL_TRIANGLES, mesh.topology->indices.size(), GL_UNSIGNED_INT,
-                   nullptr);
+    glDrawElements(GL_TRIANGLES, mesh.indices.size(), GL_UNSIGNED_INT, nullptr);
     return;
   }
   // Adjacent visible blocks share one draw. No index rebuilding/upload or
@@ -815,16 +814,16 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
       waves[4 * i + 3] = slopes[i];
       if (i < 3) {
         const double foamK = 2 * pi / foamWavelengths[i];
-        foamPhases[i] =
-            std::remainder(globalX * std::cos(angles[i]) * foamK +
-                               globalZ * std::sin(angles[i]) * foamK -
-                               seconds * std::sqrt(9.81 * foamK) + i * 1.7,
-                           2 * pi);
+        foamPhases[i] = std::remainder(
+            globalX * std::cos(angles[i]) * foamK +
+                globalZ * std::sin(angles[i]) * foamK -
+                seconds * std::sqrt(9.81 * foamK) + i * 1.7,
+            2 * pi);
       }
     }
     glUniform4fv(glGetUniformLocation(program, "uWaves[0]"), 4, waves);
     glUniform3f(glGetUniformLocation(program, "uFoamPhase"), foamPhases[0],
-                foamPhases[1], foamPhases[2]);
+                 foamPhases[1], foamPhases[2]);
     glUniformMatrix4fv(glGetUniformLocation(program, "uShadowMatrix[0]"), 4,
                        GL_FALSE, shadowMatrices[0]);
 

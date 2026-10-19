@@ -6,72 +6,6 @@
 #include <stdexcept>
 namespace observatory {
 namespace {
-constexpr int surfaceDetailEnd = 576;
-std::shared_ptr<const SurfaceTopology> fixedSurfaceTopology() {
-  static const std::shared_ptr<const SurfaceTopology> topology = [] {
-    auto data = std::make_shared<SurfaceTopology>();
-    constexpr int angular = surfaceAngularSamples,
-                  radial = surfaceRadialSamples,
-                  visible = surfaceForwardSamples;
-    data->indices.reserve(radial * angular * 6);
-    data->waterIndices.reserve(radial * angular * 2);
-    for (int j = 0; j < radial; j += 16) {
-      for (int i = 0; i < angular;) {
-        const int columns = i < visible ? 16 : 1;
-        SurfaceTopology::Block block{j, i, columns, 0, 0, 0, 0, false};
-        block.firstIndex = data->indices.size();
-        for (int z = j; z < std::min(j + 16, radial); ++z)
-          for (int x = i; x < i + columns; ++x) {
-            uint32_t a = z * angular + x, c = a + angular,
-                     next = z * angular + (x + 1) % angular, d = next + angular;
-            data->indices.insert(data->indices.end(), {a, c, next, next, c, d});
-          }
-        block.indexCount = data->indices.size() - block.firstIndex;
-        // The outer band retains its full silhouette curvature.
-        block.deepWaterEligible = j + 16 <= surfaceDetailEnd;
-        block.waterFirstIndex = data->waterIndices.size();
-        if (columns == 1) {
-          data->waterIndices.insert(data->waterIndices.end(),
-                                    data->indices.begin() + block.firstIndex,
-                                    data->indices.begin() + block.firstIndex +
-                                        block.indexCount);
-        } else {
-          // Preserve every fine boundary vertex so coarse water fans meet
-          // detailed neighbors without T-junctions or cracks.
-          auto index = [](int row, int column) {
-            return uint32_t(row * angular + column % angular);
-          };
-          for (int row = j; row < j + 16; row += 4)
-            for (int col = i; col < i + columns; col += 4) {
-              const auto centerIndex = index(row + 2, col + 2);
-              std::array<uint32_t, 16> edge;
-              size_t edgeCount = 0;
-              for (int k = 0, step = col == i ? 1 : 4; k < 4; k += step)
-                edge[edgeCount++] = index(row + k, col);
-              for (int k = 0, step = row + 4 == j + 16 ? 1 : 4; k < 4;
-                   k += step)
-                edge[edgeCount++] = index(row + 4, col + k);
-              for (int k = 0, step = col + 4 == i + columns ? 1 : 4; k < 4;
-                   k += step)
-                edge[edgeCount++] = index(row + 4 - k, col + 4);
-              for (int k = 0, step = row == j ? 1 : 4; k < 4; k += step)
-                edge[edgeCount++] = index(row, col + 4 - k);
-              for (size_t k = 0; k < edgeCount; ++k)
-                data->waterIndices.insert(
-                    data->waterIndices.end(),
-                    {centerIndex, edge[k], edge[(k + 1) % edgeCount]});
-            }
-        }
-        block.waterIndexCount =
-            data->waterIndices.size() - block.waterFirstIndex;
-        data->blocks.push_back(block);
-        i += columns;
-      }
-    }
-    return data;
-  }();
-  return topology;
-}
 double smooth(double a, double b, double x) {
   x = std::clamp((x - a) / (b - a), 0., 1.);
   return x * x * (3 - 2 * x);
@@ -420,11 +354,12 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   constexpr int visible = surfaceForwardSamples,
                 angular = surfaceAngularSamples, radial = surfaceRadialSamples;
   constexpr double far = 145000.;
-  constexpr int inner = 32, detailEnd = surfaceDetailEnd;
+  constexpr int inner = 32, detailEnd = 576;
   // Refill the retired CPU storage on the worker. Publishing a replacement
   // must not unmap the previous mesh's large vectors on the render thread.
   mesh.vertices.clear();
-  mesh.topology = fixedSurfaceTopology();
+  mesh.indices.clear();
+  mesh.waterIndices.clear();
   mesh.bounds.clear();
   mesh.hasLand = mesh.hasWater = false;
   mesh.pureLand = true;
@@ -514,27 +449,72 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   // Conservative blocks let each frame project thousands of boxes instead
   // of every terrain vertex. Back-sector blocks are narrower because those
   // angular cells are deliberately coarse.
-  mesh.bounds.reserve(mesh.topology->blocks.size());
-  for (const auto &block : mesh.topology->blocks) {
-    const int j = block.row, i = block.column, columns = block.columns;
-    SurfaceMesh::Bounds b{{1.e30, 1.e30, 1.e30}, {-1.e30, -1.e30, -1.e30}};
-    b.firstIndex = block.firstIndex;
-    b.indexCount = block.indexCount;
-    b.waterFirstIndex = block.waterFirstIndex;
-    b.waterIndexCount = block.waterIndexCount;
-    b.deepWater = block.deepWaterEligible;
-    for (int z = j; z <= std::min(j + 16, radial); ++z)
-      for (int x = i; x <= i + columns; ++x) {
-        const auto &v = mesh.vertices[z * angular + x % angular];
-        b.deepWater &= v.ground <= -64. && v.temperature >= -1.;
-        b.minimum = {std::min(b.minimum.x, double(v.x)),
-                     std::min(b.minimum.y, double(v.y)),
-                     std::min(b.minimum.z, double(v.z))};
-        b.maximum = {std::max(b.maximum.x, double(v.x)),
-                     std::max(b.maximum.y, double(v.y)),
-                     std::max(b.maximum.z, double(v.z))};
+  mesh.indices.reserve(radial * angular * 6);
+  mesh.waterIndices.reserve(radial * angular * 2);
+  for (int j = 0; j < radial; j += 16) {
+    for (int i = 0; i < angular;) {
+      int columns = i < visible ? 16 : 1;
+      SurfaceMesh::Bounds b{{1.e30, 1.e30, 1.e30}, {-1.e30, -1.e30, -1.e30}};
+      for (int z = j; z <= std::min(j + 16, radial); ++z)
+        for (int x = i; x <= i + columns; ++x) {
+          const auto &v = mesh.vertices[z * angular + x % angular];
+          b.deepWater &= v.ground <= -64. && v.temperature >= -1.;
+          b.minimum = {std::min(b.minimum.x, double(v.x)),
+                       std::min(b.minimum.y, double(v.y)),
+                       std::min(b.minimum.z, double(v.z))};
+          b.maximum = {std::max(b.maximum.x, double(v.x)),
+                       std::max(b.maximum.y, double(v.y)),
+                       std::max(b.maximum.z, double(v.z))};
+        }
+      b.firstIndex = mesh.indices.size();
+      for (int z = j; z < std::min(j + 16, radial); ++z)
+        for (int x = i; x < i + columns; ++x) {
+          uint32_t a = z * angular + x, c = a + angular,
+                   next = z * angular + (x + 1) % angular, d = next + angular;
+          mesh.indices.insert(mesh.indices.end(), {a, c, next, next, c, d});
+        }
+      b.indexCount = mesh.indices.size() - b.firstIndex;
+      // The outer band is already sparse; preserve its silhouette curvature.
+      b.deepWater &= j + 16 <= detailEnd;
+      b.waterFirstIndex = mesh.waterIndices.size();
+      if (columns == 1) {
+        mesh.waterIndices.insert(
+            mesh.waterIndices.end(), mesh.indices.begin() + b.firstIndex,
+            mesh.indices.begin() + b.firstIndex + b.indexCount);
+      } else {
+        // Keep every fine boundary vertex: coarse interior fans meet adjacent
+        // detailed land/water blocks without T-junctions or cracks.
+        auto index = [](int row, int column) {
+          return uint32_t(row * angular + column % angular);
+        };
+        for (int row = j; row < j + 16; row += 4)
+          for (int col = i; col < i + columns; col += 4) {
+            const auto centerIndex = index(row + 2, col + 2);
+            // A four-cell fan has at most four vertices on each of its four
+            // edges. Avoid repeated heap allocations in every terrain block.
+            std::array<uint32_t, 16> edge;
+            size_t edgeCount = 0;
+            for (int k = 0, step = col == i ? 1 : 4; k < 4; k += step)
+              edge[edgeCount++] = index(row + k, col);
+            for (int k = 0, step = row + 4 == j + 16 ? 1 : 4; k < 4; k += step)
+              edge[edgeCount++] = index(row + 4, col + k);
+            for (int k = 0, step = col + 4 == i + columns ? 1 : 4; k < 4;
+                 k += step)
+              edge[edgeCount++] = index(row + 4 - k, col + 4);
+            for (int k = 0, step = row == j ? 1 : 4; k < 4; k += step)
+              edge[edgeCount++] = index(row, col + 4 - k);
+            for (size_t k = 0; k < edgeCount; ++k)
+              mesh.waterIndices.insert(
+                  mesh.waterIndices.end(),
+                  {centerIndex, edge[k], edge[(k + 1) % edgeCount]});
+          }
       }
-    mesh.bounds.push_back(b);
+      b.waterIndexCount = mesh.waterIndices.size() - b.waterFirstIndex;
+      mesh.bounds.push_back(b);
+      if (checkpoint)
+        checkpoint();
+      i += columns;
+    }
     if (checkpoint)
       checkpoint();
   }
@@ -542,12 +522,11 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
   // deliberately excluded here: its full-resolution cached gradient is added
   // in the fragment shader, independently of the geometry's distance LOD.
   // Reuse the sampled heights; no extra procedural height queries are needed.
-  for (size_t i = 0; i < mesh.topology->indices.size(); i += 3) {
+  for (size_t i = 0; i < mesh.indices.size(); i += 3) {
     if (checkpoint && i % (1024 * 3) == 0)
       checkpoint();
     auto point = [&](uint32_t index) { return basePositions[index]; };
-    auto a = mesh.topology->indices[i], b = mesh.topology->indices[i + 1],
-         c = mesh.topology->indices[i + 2];
+    auto a = mesh.indices[i], b = mesh.indices[i + 1], c = mesh.indices[i + 2];
     Vec3 n = cross(point(b) - point(a), point(c) - point(a));
     for (auto index : {a, b, c}) {
       auto &v = mesh.vertices[index];

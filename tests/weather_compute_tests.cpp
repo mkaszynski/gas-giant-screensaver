@@ -103,6 +103,9 @@ int main() {
         if (route == 162000.)
           require(compute.clearWeatherRows() > 0,
                   "above-cloud sky must exercise the smaller exact solver");
+        if (route == 5600.390625)
+          require(compute.clearWeatherRows() > 0,
+                  "below-base coastal rows must exercise the smaller solver");
         if (route == 0.)
           require(compute.clearWeatherRows() == 0,
                   "inside/below-cloud view must keep every volume column");

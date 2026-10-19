@@ -75,8 +75,9 @@ float marchDensity(vec3 direction,float distance,float lod){
 }
 vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
 #ifdef OBSERVATORY_WEATHER_NO_VOLUME
- // CPU dispatch bounds prove this ray starts above the cloud-top sphere and
- // points outward. Preserve all other layers and their original evaluation.
+ // CPU dispatch bounds prove this ray cannot enter the lower cloud volume:
+ // either above its top and outward, or below its base with the inner-sphere
+ // exit beyond the 100 km endpoint. All other layers retain their evaluation.
  float start=0.,finish=0.;
 #else
  vec2 outer=weatherShell(vec3(0.),d,uWeatherLayer.x+uWeatherLayer.y,uObserverHeight);
