@@ -57,9 +57,11 @@ Only one frame is outstanding. A 4 MiB uniform arena preserves each draw's
 state; dynamic offsets and cached bind groups avoid allocating a uniform buffer
 per draw. Pipeline caches are capped at 256 entries, texture bind groups at 64
 per program. Resources replaced during a frame retire after queue completion.
-The browser requests a low-power adapter and keeps the existing explicit
-1080p / 30 fps target and hidden-tab suspension. No automatic resolution or
-material-quality reduction was added.
+Both browser backends request a high-performance adapter; the browser and OS
+choose the actual device. Hidden tabs suspend rendering. The shared C++ presets
+set resolution, texture quality and features, with High targeting 1080p / 30 fps.
+Auto can choose a substantially reduced scene; the corner hint identifies the
+applied quality and moving/static landscape. See [quality policy](WEB_MEMORY.md).
 
 ## Validation and limits
 
@@ -84,6 +86,10 @@ otherwise clip the aurora or expose a bright strip of rings through the ridge.
 `volumetric=0` selects the existing native `--no-weather` thin-cloud comparison.
 The day, dusk, night, storm and thin-cloud fixtures compare both browser backends;
 the thin-cloud case exercises the padded cloud-offset array in a live pipeline.
+CI also compares both browser APIs directly with the full native renderer at
+identical scene settings and physical dimensions, including a 960×540 daylight
+capture. A separate landscape-region check catches differences hidden by the
+large sky region. Captures avoid browser/DPR resampling.
 Software GPU checks establish behavior and visual agreement, **not hardware performance**.
 Normal `cost` metrics measure CPU command submission; callbacks wait for GPU
 completion before another frame is submitted. Synchronous `benchmark=1` remains

@@ -83,6 +83,8 @@ Low uses the static landscape, smaller textures and thin clouds (about 7 MiB of
 assets). Medium uses moving terrain and half-resolution volumetric clouds;
 High retains native scene fidelity, targeting **30 fps at up to 1080p**.
 The viewport aspect is preserved independently of device pixel ratio.
+Both backends request a high-performance GPU. The corner hint identifies the
+applied quality and whether terrain is moving; Auto Low is a reduced preview.
 
 Move to the upper-right corner (or focus the corner button with Tab) to open the
 shared native debug panel. Choose **Graphics** for the overall Low–High slider
@@ -130,6 +132,8 @@ workflow builds and runs browser behavior checks on PRs, then publishes and chec
 HTML, CSS, JavaScript, WASM, native runtime assets and licenses from `main`.
 Heavy browser/software-renderer tests should run on CI, especially on machines
 with little free memory. Run native and browser performance checks sequentially.
+CI additionally compares both browser backends with full native captures at
+matching settings, including 960×540 daylight and a separate landscape check.
 
 For repeatable review, URL parameters accept `time` (scene seconds), `travel`
 (route seconds), `weather` (independent seconds), `speed`, and `paused=1`.
