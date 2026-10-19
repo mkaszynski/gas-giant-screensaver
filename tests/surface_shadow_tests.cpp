@@ -13,7 +13,7 @@ void require(bool b, const char *message) {
 }
 struct Fixture {
   std::filesystem::path path;
-  Fixture(bool stepped = false) {
+  Fixture(bool stepped = false, bool landOnly = false) {
     char name[] = "/tmp/observatory-shadow-XXXXXX";
     path = mkdtemp(name);
     auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
@@ -33,17 +33,19 @@ struct Fixture {
     }
     // Isolate linear shadow visibility: no changing sky LUT, cloud weather,
     // exposure, albedo or camera can disguise a cache rollover jump.
-    code += "void main(){vec3 dx=dFdx(vMesh),dy=dFdy(vMesh);"
-            "color=vec4(vec3(surfaceShadow(normalize(vNormal),dx,dy)),1.);}";
+    code += "void main(){vec3 dx=dFdx(vMesh),dy=dFdy(vMesh);";
+    if (landOnly)
+      code += "if(vProperties.x<1.)discard;";
+    code += "color=vec4(vec3(surfaceShadow(normalize(vNormal),dx,dy)),1.);}";
     std::ofstream(path / "shaders/surface.frag") << code;
   }
   ~Fixture() { std::filesystem::remove_all(path); }
 };
 std::vector<unsigned char> render(SurfaceRenderer &r, double instant,
-                                  double day = 1800) {
+                                  double day = 1800, double route = 162000) {
   constexpr int width = 640, height = 360;
-  const auto location = r.world().location(162000);
-  const auto scene = travelScene(r.world(), instant, 162000, day);
+  const auto location = r.world().location(route);
+  const auto scene = travelScene(r.world(), instant, route, day);
   GLuint texture = r.render(scene, location, width, height, instant, day, 0,
                             [](GLuint program) { glUseProgram(program); });
   auto error = glGetError();
@@ -86,6 +88,24 @@ int main() {
         glfwCreateWindow(640, 360, "Shadow continuity tests", nullptr, nullptr);
     require(window, "shadow GLES context");
     glfwMakeContextCurrent(window);
+    {
+      // Land receivers and their visible geometry are identical. Only the
+      // sea's shadow-casting mesh changes, isolating depth-pass water LOD.
+      Fixture fixture(false, true);
+      SurfaceRenderer coarse(fixture.path.string(), false, true, true, false);
+      SurfaceRenderer fine(fixture.path.string(), false, true, false, false);
+      for (double time : {100., 510., 900., 1740.}) {
+        auto a = render(coarse, time, 1800, 5600.390625);
+        auto b = render(fine, time, 1800, 5600.390625);
+        const int error = maximum(a, b);
+        std::cout << "Coastal land shadow water LOD time=" << time
+                  << " peak=" << error << "/255\n";
+        require(error <= 1,
+                "coarse ocean casters preserve coastal land visibility");
+        require(coarse.shadowRevision() == fine.shadowRevision(),
+                "water shadow LOD retains cache update timing");
+      }
+    }
     {
       Fixture fixture;
       SurfaceRenderer r(fixture.path.string());

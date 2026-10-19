@@ -507,7 +507,7 @@ void SurfaceRenderer::stageUpload() {
   }
 }
 void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
-                           bool waterLod) {
+                           bool waterLod, bool materialPrograms) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
   waterLod &= waterLodEnabled;
   if (!cullingEnabled && !waterLod) {
@@ -518,15 +518,17 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
   // per-triangle CPU work occurs as the aircraft moves.
   std::array<SurfacePlane, 6> unrestricted{};
   bool waterBuffer = false;
-  const GLuint dryProgram = waterLod && mesh.pureLand ? landProgram : program;
-  if (waterLod && dryProgram != program)
+  const bool shadeMaterials = waterLod && materialPrograms;
+  const GLuint dryProgram =
+      shadeMaterials && mesh.pureLand ? landProgram : program;
+  if (shadeMaterials && dryProgram != program)
     glUseProgram(dryProgram);
   for (auto range : surfaceDrawRanges(
            mesh, cullingEnabled ? planes : unrestricted, waterLod)) {
     if (range.water != waterBuffer) {
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
                    range.water ? waterIndices : indices);
-      if (waterLod)
+      if (shadeMaterials)
         glUseProgram(range.water ? waterProgram : dryProgram);
       waterBuffer = range.water;
     }
@@ -535,7 +537,7 @@ void SurfaceRenderer::draw(const std::array<SurfacePlane, 6> &planes,
         reinterpret_cast<void *>(size_t(range.firstIndex) * sizeof(uint32_t)));
   }
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
-  if (waterLod && (waterBuffer || dryProgram != program))
+  if (shadeMaterials && (waterBuffer || dryProgram != program))
     glUseProgram(program);
 }
 void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
@@ -565,12 +567,15 @@ void SurfaceRenderer::shadowMap(int slot, int cascade, Vec3 sun, Vec3 eye) {
   glUseProgram(shadowProgram);
   glUniformMatrix4fv(glGetUniformLocation(shadowProgram, "uShadowMatrix"), 1,
                      GL_FALSE, m);
+  // Use the same seam-preserving deep-water sphere as the visible ocean.
+  // Keep the depth-only program while selecting those existing index ranges.
   draw({{{right, extent - dot(eye, right)},
          {-right, extent + dot(eye, right)},
          {up, extent - dot(eye, up)},
          {-up, extent + dot(eye, up)},
          {sun, depth - dot(eye, sun)},
-         {-sun, depth + dot(eye, sun)}}});
+         {-sun, depth + dot(eye, sun)}}},
+       true, false);
   ++shadowDraws;
 }
 void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds,
