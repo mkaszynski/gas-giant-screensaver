@@ -10,7 +10,7 @@ target_compile_definitions(observatory PRIVATE OBSERVATORY_DATA_DIR="${CMAKE_INS
 if(EMSCRIPTEN)
   # The exact desktop renderer, including its terrain worker, runs in WASM.
   target_compile_options(observatory PUBLIC -pthread -fexceptions -sUSE_LIBPNG=1)
-  add_executable(observatory-web src/web_main.cpp)
+  add_executable(observatory-web src/web_main.cpp src/debug_overlay.cpp)
   target_link_libraries(observatory-web PRIVATE observatory)
   set_target_properties(observatory-web PROPERTIES OUTPUT_NAME observatory SUFFIX ".js")
   target_link_options(observatory-web PRIVATE
@@ -20,7 +20,7 @@ if(EMSCRIPTEN)
     -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
     -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
     -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
-    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility']"
+    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility','_preview_pointer','_preview_keys','_preview_menu','_preview_viewport']"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png@/assets/giant.png"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain@/assets/terrain"

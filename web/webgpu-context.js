@@ -70,6 +70,8 @@
         [G.BLEND_DST_RGB, G.ZERO],
         [G.BLEND_SRC_ALPHA, G.ONE],
         [G.BLEND_DST_ALPHA, G.ZERO],
+        [G.BLEND_EQUATION_RGB, G.FUNC_ADD],
+        [G.BLEND_EQUATION_ALPHA, G.FUNC_ADD],
         [G.POLYGON_OFFSET_FACTOR, 0],
         [G.POLYGON_OFFSET_UNITS, 0],
         [G.UNPACK_ALIGNMENT, 4],
@@ -245,6 +247,15 @@
     }
     blendFunc(source, destination) {
       this.blendFuncSeparate(source, destination, source, destination);
+    }
+    blendEquation(value) {
+      this.blendEquationSeparate(value, value);
+    }
+    blendEquationSeparate(rgb, alpha) {
+      if (rgb !== G.FUNC_ADD || alpha !== G.FUNC_ADD)
+        throw new Error('Only additive blend equations are supported');
+      this.parameters.set(G.BLEND_EQUATION_RGB, rgb);
+      this.parameters.set(G.BLEND_EQUATION_ALPHA, alpha);
     }
     blendFuncSeparate(sr, dr, sa, da) {
       for (const [key, value] of [
