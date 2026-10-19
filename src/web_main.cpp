@@ -18,7 +18,7 @@ double lastRender = -1e6;
 bool synchronize = false, hidden = false, redraw = true, drawnPrompt = false;
 int drawnWidth = 0, drawnHeight = 0, logicalWidth = 1280, logicalHeight = 720;
 int frames = 0, keyMask = 0;
-bool loadingAssets = false, releasing = false;
+bool loadingAssets = false, releasing = false, resizing = false;
 unsigned qualityRevision = 0;
 SurfaceOptions surfaceBase{true};
 StarfieldOptions skyBase;
@@ -52,7 +52,7 @@ EM_JS(void, consumedAssets, (), { globalThis.previewAssetsConsumed(); });
 // clang-format on
 void advanceClock() {
   const double now = emscripten_get_now();
-  if (lastTick > 0 && !hidden && !loadingAssets && !releasing)
+  if (lastTick > 0 && !hidden && !loadingAssets && !releasing && !resizing)
     activeTime += std::max(0., (now - lastTick) / 1000.);
   lastTick = now;
 }
@@ -126,7 +126,7 @@ void frame() {
         return;
       glDeleteSync(submitted);
       submitted = nullptr;
-      if (!releasing) {
+      if (!releasing && !resizing) {
         reportFrame(completed.count, completed.time, completed.cost,
                     completed.width, completed.height, completed.sceneWidth,
                     completed.sceneHeight, completed.builds, completed.pending,
@@ -135,6 +135,7 @@ void frame() {
                     emscripten_get_now() - completed.started,
                     mallinfo().uordblks, emscripten_get_heap_size());
       }
+      resizing = false;
     }
     if (!controls || loadingAssets)
       return;
@@ -163,6 +164,16 @@ void frame() {
     emscripten_get_canvas_element_size("#scene", &width, &height);
     const auto presentation = menu.graphics.applied.presentationSize(
         logicalWidth, logicalHeight, menu.open());
+    if (renderer->releaseSizeTargetsFor(presentation[0], presentation[1])) {
+      // Keep world/mesh/shaders, but never overlap old and new frame targets.
+      resizing = true;
+      redraw = true;
+      submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+      if (!submitted)
+        throw std::runtime_error("Cannot retire resized GPU targets.");
+      glFlush();
+      return;
+    }
     if (width != presentation[0] || height != presentation[1]) {
       width = presentation[0];
       height = presentation[1];

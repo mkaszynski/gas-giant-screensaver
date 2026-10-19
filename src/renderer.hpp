@@ -31,6 +31,9 @@ public:
                    double daySeconds = 1800, float opacity = 1,
                    bool drawBodies = true, bool drawRings = true,
                    EmissionFrame emission = {}, double weatherSeconds = -1);
+  // A host can retire viewport-dependent storage before allocating a new size.
+  // Wait for previous GPU work before calling, then retire deletions before draw.
+  bool releaseSizeTargetsFor(int width, int height);
   static std::string defaultDataDirectory();
   std::array<int, 2> weatherResolution() const {
     return {weather.width, weather.height};

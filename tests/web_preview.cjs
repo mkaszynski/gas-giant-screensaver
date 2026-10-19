@@ -497,6 +497,11 @@ async function checkInitialFlightTime() {
     timeout: 180000,
   });
   if (uiOnly) {
+    const resizeBaseline = await page.evaluate(() => ({
+      bytes: window.previewMetrics.resources.bytes,
+      assets: window.previewMetrics.assetDownloaded,
+      builds: window.previewMetrics.builds,
+    }));
     for (const [width, height] of [
       [390, 844],
       [2400, 600],
@@ -523,6 +528,11 @@ async function checkInitialFlightTime() {
       assert.equal(bounds.width, width);
       assert.equal(bounds.height, height);
     }
+    assert.deepEqual(await page.evaluate(() => ({
+      bytes: window.previewMetrics.resources.bytes,
+      assets: window.previewMetrics.assetDownloaded,
+      builds: window.previewMetrics.builds,
+    })), resizeBaseline, 'Aspect round trip must reuse assets and return to the same GPU budget');
     await page.locator('#debug-open').focus();
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.previewControls.open);
