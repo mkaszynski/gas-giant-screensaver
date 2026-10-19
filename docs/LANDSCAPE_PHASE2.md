@@ -115,3 +115,25 @@ report and slow runs are retained in `landscape-phase2-resolution-benchmark.json
 see `VALIDATION.md`. Release performance acceptance remains open. The latest
 local gate passed 40 CPU/CLI checks, 38 offline tests, all 13 GPU suites on AMD
 hardware and Mesa, and the real benchmark CSV checks on both renderers.
+
+## Acceptance audit, 19 October 2026
+
+The preceding checkpoints are historical. The landscape implementation was
+reviewed and merged through PR #12; subsequent weather and rendering work does
+not replace the frozen Phase 1 reference above. Its packaged executable still
+matches the recorded SHA-256 `776dde86a09f15a10a9e02a64f1b08d5e14e7592c97d6aafb9eec655e5a02865`.
+The active completion gates remain stricter than an average-FPS demonstration.
+
+| Requirement | Current evidence | Remaining verification |
+| --- | --- | --- |
+| Coherent detailed geometry, filtered PBR materials, dense canopy and water | `surface.cpp`, numerical world/material caches, `fidelity-render-tests`, `water-render-tests` and offline world/material tests; operator reviewed the landscape | Preserve these effects and their output through further optimization |
+| Hardware/software correctness | Combined head `678930a` passes renderer, Nix and browser CI in PR #29 | Validate any new scheduling/shading change on both AMD and Mesa |
+| 30 fps at native 1920×1080 | Native previews run at 30 fps, but a controlled 360-frame forest trace still has six frames above 33.33 ms (35.58 ms maximum) | Resolve rendering tails; submission rate or HUD FPS alone is insufficient |
+| At most 30% added complete-renderer cost | Historical median comparison passes; original p95 comparison fails | Fresh matched complete-renderer comparison against the unchanged frozen reference; do not substitute a newer baseline or a terrain-only timing |
+| Bounded memory and streaming | Prior long combined runs use 274–278 MiB RSS and at most 2 MiB normal-frame uploads | Recheck long flights and mesh replacements on the final candidate |
+| Native integration and operator review | PR #29 contains the combined sky/ocean work and remains open against `main` | Final package/native checks and operator review before merge or installation-pin changes |
+
+Neither green correctness CI nor the previous median cost pass establishes full
+performance acceptance. Do not mark Phase 2 complete while these gates remain
+open. Failed timing controls and rejected optimization experiments are retained
+with the local experiment records rather than substituted with faster retries.

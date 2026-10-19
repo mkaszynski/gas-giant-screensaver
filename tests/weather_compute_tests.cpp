@@ -109,6 +109,12 @@ int main() {
         for (auto size : {std::array<int, 2>{640, 360},
                           {641, 360},
                           {641, 359},
+                          // Cover dispatch boundaries and a viewport smaller
+                          // than one workgroup, including the sky-cache pass.
+                          {31, 1},
+                          {32, 2},
+                          {33, 3},
+                          {65, 5},
                           {1920, 1080}})
           compare(compute, fragment, scene, size[0], size[1], sky, 1790900000.);
         for (auto preset : {WeatherPreset::Clear, WeatherPreset::Fair,

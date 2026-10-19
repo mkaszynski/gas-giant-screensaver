@@ -271,7 +271,7 @@ GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
                   "#define OBSERVATORY_WEATHER_SKY_PASS\n");
   source += R"(
 #undef main
-layout(local_size_x=16,local_size_y=4)in;
+layout(local_size_x=32,local_size_y=2)in;
 uniform highp sampler2D uWeatherPixels;
 layout(rgba16f,binding=0)writeonly uniform highp image2D uWeatherImage;
 layout(rgba16f,binding=1)writeonly uniform highp image2D uWeatherSkyImage;
@@ -827,7 +827,7 @@ void Renderer::dispatchWeather(GLuint p, const Target &pixels,
   if (output.skyTexture)
     glBindImageTexture(1, output.skyTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
                        GL_RGBA16F);
-  glDispatchCompute((output.width + 15) / 16, (output.height + 3) / 4, 1);
+  glDispatchCompute((output.width + 31) / 32, (output.height + 1) / 2, 1);
   glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT |
                   GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
