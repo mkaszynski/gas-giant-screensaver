@@ -1,5 +1,5 @@
-// Same-frame column reuse. Partial silhouettes and unresolved bright sources
-// retain exact columns; complete opaque-ground columns use a stricter bound.
+// Same-frame reuse is restricted to sky. Ground, mixed MSAA coverage and bright
+// unresolved sources keep exact optical columns at the display pixel center.
 uniform highp sampler2D uWeatherSkyCache,uWeatherScene;
 bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  if(dot(direction,uSun)>.995)return false;
@@ -17,23 +17,8 @@ bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  vec4 e=texelFetch(uWeatherSkyCache,clamp(p+ivec2(1,1),ivec2(0),size-1),0);
  vec4 low=min(min(a,b),min(c,e));
  // A negative transmission marks any ground coverage in the coarse draw.
-#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
- bool ground=uWeatherCompleteColumns&&weatherGroundColumn;
- highp uint signs=floatBitsToUint(a.a)|floatBitsToUint(b.a)|floatBitsToUint(c.a)|floatBitsToUint(e.a);
- if(!ground&&(signs&0x80000000u)!=0u)return false;
- if(ground){
-  a.a=abs(a.a);b.a=abs(b.a);c.a=abs(c.a);e.a=abs(e.a);
-  // Transparent corners cannot rule out a narrow wisp between cache rays.
-  // Reuse only optically thick interiors; skins and clear columns stay exact.
-  if(max(max(a.a,b.a),max(c.a,e.a))>.2)return false;
- }
-#else
  if(low.a<0.)return false;
-#endif
  vec3 background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),0).rgb*(uExposure/uSceneScale);
-#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
- if(ground)background=texelFetch(uSurface,ivec2(weatherPixelPosition()),0).rgb*(uExposure/uSceneScale);
-#endif
  // Tiny, intense sources need exact extinction even inside a smooth field.
  if(max(background.x,max(background.y,background.z))>16.)return false;
  // Project each emission/transmission pair together: their changes often
@@ -49,12 +34,6 @@ bool cachedSkyWeather(vec3 direction,out vec4 estimate){
  // finer structure than the shorter columns higher in the sky.
  float tolerance=mix(.020,.240,smoothstep(.02,.06,direction.y));
  if(max(relative.x,max(relative.y,relative.z))>tolerance)return false;
-#ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
- // For ACES followed by gamma, x*f'(x)<=2/2.2<1. Positive foreground fog
- // cannot increase relative contrast. Limit the projected neighbor range to
- // under half a display code even across an unknown fog attenuation/addition.
- if(ground&&any(greaterThan(maximum-minimum,max(minimum,vec3(1.e-6))*(.5/255.))))return false;
-#endif
  estimate=mix(mix(a,b,f.x),mix(c,e,f.x),f.y);
  return true;
 }

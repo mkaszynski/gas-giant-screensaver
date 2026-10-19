@@ -4,6 +4,7 @@
 #include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
+#include "weather_dispatch.hpp"
 #include <GLES2/gl2ext.h>
 #ifndef __EMSCRIPTEN__
 #include <GLES3/gl31.h>
@@ -227,7 +228,8 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
   programs.push_back(p);
   return p;
 }
-GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
+GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass,
+                                             bool noVolume) {
 #ifndef __EMSCRIPTEN__
   GLint major = 0, minor = 0, images = 0, samplers = 0;
   glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -263,10 +265,12 @@ GLuint Renderer::createWeatherComputeProgram(bool calm, bool skyPass) {
   // the entry-point boundary avoids maintaining a second cloud algorithm.
   source.replace(0, versionLine.size(),
                  "#version 310 es\n#define OBSERVATORY_WEATHER_COMPUTE\n"
-                 "#define OBSERVATORY_WEATHER_COMPLETE_COLUMNS\n"
                  "#define main weatherPixel\n");
   if (calm)
     source.insert(source.find('\n') + 1, "#define OBSERVATORY_WEATHER_CALM\n");
+  if (noVolume)
+    source.insert(source.find('\n') + 1,
+                  "#define OBSERVATORY_WEATHER_NO_VOLUME\n");
   if (skyPass)
     source.insert(source.find('\n') + 1,
                   "#define OBSERVATORY_WEATHER_SKY_PASS\n");
@@ -277,7 +281,7 @@ uniform highp sampler2D uWeatherPixels;
 layout(rgba16f,binding=0)writeonly uniform highp image2D uWeatherImage;
 layout(rgba16f,binding=1)writeonly uniform highp image2D uWeatherSkyImage;
 void main(){
- ivec2 p=ivec2(gl_GlobalInvocationID.xy);
+ ivec2 p=ivec2(gl_GlobalInvocationID.xy)+ivec2(0,uWeatherRowOffset);
  if(any(greaterThanEqual(p,imageSize(uWeatherImage))))return;
  vec4 pixel=texelFetch(uWeatherPixels,p,0);
  uv=pixel.rg;
@@ -591,6 +595,14 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
       }
       if (weatherComputeProgram) {
         try {
+          weatherClearComputeProgram =
+              createWeatherComputeProgram(false, false, true);
+        } catch (const std::exception &error) {
+          std::cerr
+              << "Clear-column specialization unavailable; using full solver: "
+              << error.what() << '\n';
+        }
+        try {
           weatherCalmComputeProgram = createWeatherComputeProgram(true);
         } catch (const std::exception &error) {
           std::cerr << "Calm weather specialization unavailable; using full "
@@ -818,7 +830,12 @@ void Renderer::weatherPixelCoordinates(Target &pixels, int w, int h,
 }
 #ifndef __EMSCRIPTEN__
 void Renderer::dispatchWeather(GLuint p, const Target &pixels,
-                               const Target &output) {
+                               const Target &output, int firstRow, int rows) {
+  if (rows < 0)
+    rows = output.height;
+  if (rows == 0)
+    return;
+  integer(p, "uWeatherRowOffset", firstRow);
   bind(p, 2, "uWeatherPixels", pixels.texture);
   const ImageBindings images;
   glBindImageTexture(0, output.texture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
@@ -828,7 +845,7 @@ void Renderer::dispatchWeather(GLuint p, const Target &pixels,
   if (output.skyTexture)
     glBindImageTexture(1, output.skyTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY,
                        GL_RGBA16F);
-  glDispatchCompute((output.width + 15) / 16, (output.height + 3) / 4, 1);
+  glDispatchCompute((output.width + 15) / 16, (rows + 3) / 4, 1);
   glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_FRAMEBUFFER_BARRIER_BIT |
                   GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
@@ -1231,9 +1248,6 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       bind(p, 14, "uWeatherScene", scene.texture);
       bind(p, 13, "uWeatherSkyCache", mountains);
       integer(p, "uWeatherCacheEnabled", surfaceOptions.weatherCache);
-      integer(p, "uWeatherCompleteColumns",
-              surfaceOptions.weatherCache && weatherComputeProgram &&
-                  weatherSkyComputeProgram);
     };
     if (surfaceOptions.weatherCache) {
       if (weatherSkyComputeProgram) {
@@ -1257,6 +1271,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     WEATHER_PROFILE_STAGE(7);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
+    weatherClearRows = 0;
     if (weatherComputeProgram) {
 #ifndef __EMSCRIPTEN__
       // Exact zeros only: a growing storm or even a subframe flash must use
@@ -1268,7 +1283,19 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
       // The post pass samples these images; manual meteors also blend into
       // their framebuffer attachments. Both consumers need visibility.
-      dispatchWeather(compute, weatherPixels, weather);
+      const int firstClear =
+          weatherClearComputeProgram
+              ? clearWeatherFirstRow(w, h, s.forward, s.right, s.cameraUp,
+                                     s.altitudeMeters / 1000.,
+                                     weatherState.base + weatherState.thickness)
+              : h;
+      dispatchWeather(compute, weatherPixels, weather, 0, firstClear);
+      if (firstClear < h) {
+        prepareWeather(weatherClearComputeProgram);
+        dispatchWeather(weatherClearComputeProgram, weatherPixels, weather,
+                        firstClear, h - firstClear);
+        weatherClearRows = h - firstClear;
+      }
 #endif
     } else {
       // With a fragment sky cache this program is already prepared; retain

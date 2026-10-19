@@ -1,0 +1,39 @@
+{
+  "scope": "Interrupted optimization diagnostic, not performance acceptance or frozen Phase 1 cost comparison. Whole renderer with nine stage queries, 1920x1080, 30 static prewarm frames, 240 moving frames at 1/30 second per frame. Candidate skips only geometrically impossible lower-cloud intersections.",
+  "reference_commit": "678930aea6e31ab47812bb6976bdc322ccc1ae6e",
+  "scene": {
+    "sky_seconds": 510,
+    "route_seconds": 162000,
+    "weather_seconds": 1790900000
+  },
+  "controls": {
+    "max_background_cpu_cores": 1,
+    "max_external_gpu_fraction": 0.05,
+    "max_collection_ms": 10
+  },
+  "performance_acceptance": false,
+  "reason": "Candidate external GPU load exceeded the declared limit; run stopped at the first failed control. Both versions exceeded the rendering deadline. No speedup or resolution of frame stalls established.",
+  "records": [
+    {
+      "case": "forest-before-1",
+      "cpu": 0.5932549924373087,
+      "gpu": 0.03872490912349694,
+      "latency_ms": 6.153371999971569,
+      "controls_pass": true,
+      "median_ms": 33.368226,
+      "p95_ms": 36.503818,
+      "misses": 124
+    },
+    {
+      "case": "forest-after-1",
+      "cpu": 0.6101262837092754,
+      "gpu": 0.05629776875542014,
+      "latency_ms": 6.683978019282222,
+      "controls_pass": false,
+      "median_ms": 32.8756565,
+      "p95_ms": 36.786848,
+      "misses": 90
+    }
+  ],
+  "candidate_binary_sha256": "f23e18964143ae40c7360d366caeeeba493098f1a79225b31786ab97ca41f5a2"
+}

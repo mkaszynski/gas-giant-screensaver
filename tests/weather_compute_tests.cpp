@@ -100,6 +100,12 @@ int main() {
                 "explicit fallback must retain fragment sky cache");
         const auto scene = travelScene(world, sky, route);
         compare(compute, fragment, scene, 1920, 1080, sky, 1790900000.);
+        if (route == 162000.)
+          require(compute.clearWeatherRows() > 0,
+                  "above-cloud sky must exercise the smaller exact solver");
+        if (route == 0.)
+          require(compute.clearWeatherRows() == 0,
+                  "inside/below-cloud view must keep every volume column");
         require(compute.computingCalmWeather() == (route != 0.),
                 "only exact zero-storm states select calm compute");
         if (route != 162000.)

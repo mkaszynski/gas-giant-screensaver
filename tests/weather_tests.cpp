@@ -1,4 +1,5 @@
 #include "weather.hpp"
+#include "weather_dispatch.hpp"
 #include <iostream>
 #include <stdexcept>
 using namespace observatory;
@@ -8,6 +9,33 @@ void require(bool condition, const char *message) {
 }
 int main() {
   try {
+    for (auto size : {std::array<int, 2>{1920, 1080}, {641, 359}, {31, 1}}) {
+      const int w = size[0], h = size[1];
+      require(clearWeatherFirstRow(w, h, {0, .3, .95}, {1, 0, 0}, {0, .95, -.3},
+                                   1., 2.) == h,
+              "observer below clouds retains every complete column");
+      require(clearWeatherFirstRow(w, h, {0, .3, .95}, {1, 0, 0}, {0, .95, -.3},
+                                   2.001, 2.) == h,
+              "cloud boundary has a float-safe altitude margin");
+      for (double roll : {0., .25, -.25}) {
+        Vec3 forward{0, .3, .95}, right{1, roll, 0}, up{0, .95, -.3};
+        const int first =
+            clearWeatherFirstRow(w, h, forward, right, up, 3., 2.);
+        require(first >= 0 && first <= h && (first == h || first % 4 == 0),
+                "dispatch cuts only at whole workgroups without gaps");
+        for (int y = first; y < h; ++y)
+          for (int x : {0, w - 1}) {
+            const double qx =
+                ((x + .5) / w * 2 - 1) * w / h * std::tan(29 * pi / 180);
+            const double qy = ((y + .5) / h * 2 - 1) * std::tan(29 * pi / 180);
+            require(forward.y + right.y * qx + up.y * qy > .001,
+                    "every specialized ray points safely above the horizon");
+          }
+      }
+    }
+    require(clearWeatherFirstRow(1920, 1080, {0, 1, 0}, {1, 0, 0}, {0, 0, 1},
+                                 3., 2.) == 1080,
+            "unsupported camera orientation retains full shader");
     TravelLocation location{.37, .81};
     WeatherClimate wet{.9, 26, .1, .2}, dry{.1, 26, .1, 0},
         cold{.8, -12, .4, .1};

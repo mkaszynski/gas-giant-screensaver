@@ -155,6 +155,21 @@ int main() {
       Renderer weather(Renderer::defaultDataDirectory(), {}, {true, 0, 162000});
       auto a = capture(weather, forest, 1790900000.),
            b = capture(weather, forest, 1790900000.001);
+      if (weather.computingWeather()) {
+        require(weather.clearWeatherRows() > 0,
+                "above-cloud fixture exercises the outward-ray solver");
+        Fixture fallback;
+        fallback.replace(
+            "weather.frag", "#version 300 es",
+            "#version 300 es\n#ifdef OBSERVATORY_WEATHER_NO_VOLUME\n"
+            "#error deliberate optional-program failure\n#endif");
+        Renderer complete(fallback.root.string(), {}, {true, 0, 162000});
+        const auto unchanged = capture(complete, forest, 1790900000.);
+        require(complete.computingWeather() && complete.clearWeatherRows() == 0,
+                "optional-program failure retains complete compute rendering");
+        require(difference(a, unchanged).peak <= 1,
+                "optional outward-ray solver cannot change the scene");
+      }
       auto continuity = difference(a, b);
       std::cout << "Unix subframe weather: peak=" << continuity.peak
                 << " mean=" << continuity.mean << '\n';
@@ -299,81 +314,6 @@ int main() {
                     reusedDifferent < reusedMatching / 2,
                 "cache must reuse cancelling optical columns and reject "
                 "visible background-dependent contrast");
-      }
-      {
-        // A homogeneous, opaque slab isolates actual column reuse and the
-        // signed-zero terrain mask from morphology or illumination gradients.
-        Fixture complete;
-        complete.layer(1.);
-        complete.replace("weather.frag",
-                         "lighting=lighting*air+viewSky*(1.-air);",
-                         "lighting=vec3(.01);");
-        complete.replace("weather_sky_cache.glsl", "bool cachedSkyWeather(",
-                         "bool cacheUsed=false;bool rejectedGroundFootprint=false;\n"
-                         "bool cachedSkyWeather(");
-        complete.replace("weather_sky_cache.glsl", " return true;",
-                         " cacheUsed=true;return true;");
-        complete.replace(
-            "weather_sky_cache.glsl",
-            "vec3 background=texelFetch(uWeatherScene,ivec2(weatherPixelPosition()),"
-            "0).rgb*(uExposure/uSceneScale);",
-            // An invisible bright sky must not replace the actual terrain
-            // background in the cache's contrast/bright-source decision.
-            "vec3 background=vec3(1000.);");
-        complete.replace(
-            "weather_sky_cache.glsl",
-            "if(!ground&&(signs&0x80000000u)!=0u)return false;",
-            "if(!ground&&(signs&0x80000000u)!=0u){rejectedGroundFootprint=true;return false;}");
-        complete.append("weather.frag", R"(
- if(!uWeatherSkyPass){
- #ifdef OBSERVATORY_WEATHER_COMPLETE_COLUMNS
-  color=vec4(cacheUsed?1.:0.,weatherGroundColumn?1.:0.,
-             edge?1.:(rejectedGroundFootprint?.5:0.),1.);
- #else
-  color=vec4(0.,0.,edge?1.:0.,1.);
- #endif
- }
-)");
-        complete.replace("post.frag", "if(coverage>=1.)", "if(false)");
-        complete.append("post.frag", R"(
- color=vec4(texelFetch(uWeather,ivec2(gl_FragCoord.xy),0).rgb,1.);
-)");
-        Fixture interrupted;
-        interrupted.copyShaders(complete);
-        interrupted.replace("weather_depth.glsl", "return distance;",
-                            "return min(distance,1.5);");
-        Renderer cached(complete.root.string(), {}, {true, 0, 0});
-        Renderer clipped(interrupted.root.string(), {}, {true, 0, 0});
-        if (cached.computingWeather() && cached.computingWeatherCache()) {
-          auto view = travelScene(world, 510, 0);
-          view.altitudeMeters = 3000;
-          view.sunLocal = {0, -1, 0};
-          view.sunVisibility = view.giantLight = 0;
-          auto image = capture(cached, view, 0.);
-          auto blocked = capture(clipped, view, 0.);
-          int ground = 0, reused = 0, partial = 0, rejected = 0;
-          for (size_t i = 0; i < image.size(); i += 4) {
-            if (image[i + 1] > 127) {
-              ++ground;
-              reused += image[i] > 127;
-              require(blocked[i] < 2,
-                      "terrain interrupting a cloud column must trace directly");
-            }
-            if (image[i + 2] > 200) {
-              ++partial;
-              require(image[i] < 2,
-                      "partial silhouettes must keep exact ground/sky columns");
-            } else if (image[i + 2] > 100)
-              ++rejected;
-          }
-          std::cout << "Complete ground columns: ground=" << ground
-                    << " reused=" << reused << " partial=" << partial
-                    << " rejected sky footprints=" << rejected << '\n';
-          require(ground > 1000 && reused > ground / 2,
-                  "complete opaque columns must actually reuse the cache");
-          require(partial > 0 && rejected > 0,
-                  "silhouette and signed-zero mask checks must be exercised");
-        }
       }
       auto storm = capture(weather, forest, 1260.);
       auto changed = difference(a, storm);
