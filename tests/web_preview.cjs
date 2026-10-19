@@ -258,12 +258,14 @@ async function checkInitialFlightTime() {
   async function capturePixels(name) {
     const width = await page.evaluate(() => window.previewMetrics.width);
     const height = await page.evaluate(() => window.previewMetrics.height);
+    const dpr = await page.evaluate(() => window.devicePixelRatio);
+    // One framebuffer texel per physical screenshot pixel. CSS-size capture
+    // at DPR 2 would otherwise filter the scene twice and hide real fidelity.
     const style = await page.addStyleTag({
-      content: `header,footer,#loading,#debug-open,#debug-hint,#browser-controls{visibility:hidden}#scene{width:${width}px;height:${height}px;object-fit:fill}`,
+      content: `header,footer,#loading,#debug-open,#debug-hint,#browser-controls{visibility:hidden}#scene{width:${width / dpr}px;height:${height / dpr}px;object-fit:fill}`,
     });
     await page.locator('#scene').screenshot({
       path: path.join(captureDir, `web-${backend}-${name}-pixels.png`),
-      scale: 'css',
     });
     await style.evaluate((node) => node.remove());
   }
