@@ -789,6 +789,7 @@ Renderer::~Renderer() {
   release(multi);
   release(sky);
   release(scene);
+  release(composite);
   release(weather);
   release(skyWeatherCache);
   release(weatherPixels);
@@ -1278,9 +1279,14 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     revealMeteors(s, w, h, surfaceTexture);
   }
   WEATHER_PROFILE_STAGE(6);
-  glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
-  glViewport(0, 0, outputWidth, outputHeight);
-  common(postProgram, s, outputWidth, outputHeight);
+  // Composite depth/coverage/cloud texels at the scene's pixel centres. Only
+  // the finished display color is enlarged for the host framebuffer/UI.
+  if (graphics)
+    target(composite, w, h, false, false, GL_RGBA8, true);
+  glBindFramebuffer(GL_FRAMEBUFFER,
+                    graphics ? composite.framebuffer : state.framebuffer);
+  glViewport(0, 0, w, h);
+  common(postProgram, s, w, h);
   integer(postProgram, "uMovingSurface", bool(surface));
   scalar(postProgram, "uSurfaceFraction",
          surface ? surface->coverageFraction() : 1.);
@@ -1302,6 +1308,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
               std::remainder(seconds * .157, 2 * pi));
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
+  if (graphics) {
+    if (!presentationProgram)
+      presentationProgram = program("presentation.frag");
+    glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
+    glViewport(0, 0, outputWidth, outputHeight);
+    glUseProgram(presentationProgram);
+    bind(presentationProgram, 0, "uPresentation", composite.texture);
+    quad(presentationProgram);
+  }
 #ifdef OBSERVATORY_WEATHER_PROFILE
   glEndQuery(GL_TIME_ELAPSED_EXT);
 #endif

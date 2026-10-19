@@ -11,11 +11,16 @@ uniform float uOpacity;
 uniform float uSceneScale;
 #include "clouds.glsl"
 uniform highp sampler2D uWeather,uSkyWeather;
-// The cloud pass and resolved terrain depth share display-pixel centres.
-// One fetch keeps silhouettes exact and costs less than depth-guided upscale.
+// High keeps exact scene-pixel fetches. Lower cloud budgets interpolate only
+// cloud radiance/coverage; terrain coverage remains at scene resolution.
+vec4 weatherPixel(highp sampler2D image){
+ if(all(equal(textureSize(image,0),ivec2(uResolution))))
+  return texelFetch(image,ivec2(gl_FragCoord.xy),0);
+ return texture(image,uv);
+}
 vec3 applyWeather(vec3 L){
  if(!uWeatherEnabled)return L;
- vec4 cloud=texelFetch(uWeather,ivec2(gl_FragCoord.xy),0);
+ vec4 cloud=weatherPixel(uWeather);
  return L*cloud.a+cloud.rgb/uSceneScale;
 }
 
@@ -59,8 +64,8 @@ void main(){
  // Terrain coverage is premultiplied before mips, with no thresholding.
  if(uMovingSurface){
   if(uWeatherEnabled&&surface.a>0.&&surface.a<1.){
-   vec4 front=texelFetch(uWeather,ivec2(gl_FragCoord.xy),0);
-   vec4 back=texelFetch(uSkyWeather,ivec2(gl_FragCoord.xy),0);
+   vec4 front=weatherPixel(uWeather);
+   vec4 back=weatherPixel(uSkyWeather);
    vec3 skyL=L*back.a+back.rgb/uSceneScale;
    vec3 groundL=surface.rgb/uSceneScale*front.a+front.rgb/uSceneScale*surface.a;
    L=skyL*(1.-surface.a)+groundL;

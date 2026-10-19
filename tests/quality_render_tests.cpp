@@ -55,8 +55,29 @@ int main() {
       if (renderer.weatherSkyCacheResolution() != std::array<int, 2>{54, 45})
         throw std::runtime_error(
             "Medium must reduce the weather sky cache too");
+      unsigned char corner[4]{};
+      glReadPixels(300, 160, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, corner);
+      if (corner[0] + corner[1] + corner[2] < 20)
+        throw std::runtime_error(
+            "Half-resolution clouds must cover the whole scene");
       if (glGetError() != GL_NO_ERROR)
         throw std::runtime_error("Medium cloud quality GL error");
+    }
+    {
+      auto medium = GraphicsSettings::forPreset(GraphicsPreset::Medium);
+      medium.features[2] = medium.features[3] = false;
+      medium.height = 90;
+      Renderer renderer(source.string(), {}, SurfaceOptions{true}, medium);
+      renderer.render(320, 180, 510, 1800, 1, true, true, {}, 1260);
+      unsigned char corner[4]{};
+      glReadPixels(300, 160, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, corner);
+      if (corner[0] + corner[1] + corner[2] < 20)
+        throw std::runtime_error(
+            "Scaled moving terrain and clouds must fill presentation");
+      if (renderer.weatherResolution() != std::array<int, 2>{80, 45})
+        throw std::runtime_error("Presentation must not enlarge cloud targets");
+      if (glGetError() != GL_NO_ERROR)
+        throw std::runtime_error("Scaled presentation GL error");
     }
     glfwDestroyWindow(window);
     glfwTerminate();

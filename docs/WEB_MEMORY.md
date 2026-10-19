@@ -59,6 +59,12 @@ reserve. Aggregate peaks include Node, the browser, driver, and cache:
 | New build, isolated minimal scene with High textures | 865.3 MiB | 81.1 MiB | 97.4 MiB | 7.0 MiB |
 | New Auto Low, including stars/rings, 640×360 | 524.1 MiB | 64 MiB | 13.7 MiB | 7.3 MiB |
 
+These development measurements precede the final budget-sized display-color
+target, which adds about 0.9 MiB requested GPU storage at Low. The CI matrix
+records the final implementation on each backend. That target keeps terrain,
+clouds and tone mapping at scene resolution before the inexpensive presentation
+upscale; reduced cloud targets use normalized sampling in the shared compositor.
+
 These are different quality configurations: the stripped diagnostics rendered at
 320×180, while Auto Low rendered at 640×360. They demonstrate memory behavior,
 not equal-quality speed or desktop-equivalent FPS. Individual cold starts vary;

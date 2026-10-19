@@ -105,9 +105,9 @@ private:
   std::vector<GLuint> programs, textures;
   GLuint transProgram = 0, multiProgram = 0, skyProgram = 0,
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
-         postProgram = 0, ringProgram = 0, giantProgram = 0,
-         giantLimbProgram = 0, emissionProgram = 0, weatherProgram = 0,
-         weatherLightProgram = 0;
+         postProgram = 0, presentationProgram = 0, ringProgram = 0,
+         giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
+         weatherProgram = 0, weatherLightProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0;
@@ -116,7 +116,7 @@ private:
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
          weatherLightFbo = 0;
-  Target trans, multi, sky, scene, weather, skyWeatherCache;
+  Target trans, multi, sky, scene, weather, skyWeatherCache, composite;
   Target weatherPixels, weatherSkyPixels;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;
