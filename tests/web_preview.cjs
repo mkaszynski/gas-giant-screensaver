@@ -152,11 +152,14 @@ async function checkInitialFlightTime() {
     await page.waitForFunction(() => window.previewControls?.prompt);
     await nativeClick('prompt');
     await page.waitForFunction(() => window.previewControls?.open);
+    // Input state arrives before GPU completion; screenshots need the frame
+    // that actually contains the panel, rather than its preceding invitation.
+    await page.waitForFunction(() => window.previewMetrics.menuOpen, null, {timeout: 120000});
   }
   async function closeMenu() {
     const before = await page.evaluate(() => window.previewMetrics.frames);
     await nativeClick('close');
-    await page.waitForFunction(n => !window.previewControls.open && window.previewMetrics.frames > n, before, {timeout: 120000});
+    await page.waitForFunction(n => !window.previewControls.open && !window.previewMetrics.menuOpen && window.previewMetrics.frames > n, before, {timeout: 120000});
   }
   const before = await page.evaluate(() => ({ ...window.previewMetrics, samples: undefined }));
   await page.waitForTimeout(250);

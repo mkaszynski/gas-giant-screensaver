@@ -20,7 +20,7 @@ GLsync submitted = nullptr;
 struct SubmittedFrame {
   int count, width, height, builds;
   double time, cost;
-  bool pending, paused;
+  bool pending, paused, menuOpen;
 } completed{};
 
 // clang-format off: EM_JS bodies contain JavaScript operators, not C++ tokens.
@@ -33,8 +33,8 @@ EM_JS(void, reportError, (const char *message), {
   globalThis.previewError(UTF8ToString(message));
 });
 EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height,
-                         int builds, int pending, int paused), {
-  globalThis.previewFrame({count, time, cost, width, height, builds, pending: !!pending, paused: !!paused});
+                         int builds, int pending, int paused, int menuOpen), {
+  globalThis.previewFrame({count, time, cost, width, height, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen});
 });
 EM_JS(void, reportControls, (const char *json), {
   globalThis.previewControls(JSON.parse(UTF8ToString(json)));
@@ -101,7 +101,7 @@ void frame() {
       submitted = nullptr;
       reportFrame(completed.count, completed.time, completed.cost,
                   completed.width, completed.height, completed.builds,
-                  completed.pending, completed.paused);
+                  completed.pending, completed.paused, completed.menuOpen);
     }
     auto &menu = controls->menu;
     menu.keys({bool(keyMask & 1), bool(keyMask & 2), bool(keyMask & 4),
@@ -144,7 +144,8 @@ void frame() {
                  scene,
                  emscripten_get_now() - start,
                  renderer->surfaceBuildPending(),
-                 !menu.timeline.playing()};
+                 !menu.timeline.playing(),
+                 menu.open()};
     // At most one outstanding frame, including debug draws. Never spin-wait.
     submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (!submitted)
