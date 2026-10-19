@@ -40,6 +40,10 @@ async function ready(page, frames = 1) {
   const failure = await page.locator('h2').textContent();
   assert.notEqual(failure, 'Preview unavailable', await page.locator('#status').textContent());
 }
+async function checkInitialFlightTime() {
+  assert(await page.evaluate(() => window.previewMetrics.samples[0].time >= 510 && window.previewMetrics.samples[0].time < 570),
+    'An unpaused flight must start at its requested scene time after runtime initialization');
+}
 (async () => {
   fs.mkdirSync(captureDir, { recursive: true });
   let url = process.env.PREVIEW_URL;
@@ -205,6 +209,11 @@ async function ready(page, frames = 1) {
     await page.waitForFunction(() => window.previewControls.open);
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !window.previewControls.open);
+    await page.goto(address(url, 'time=510&travel=162000&speed=1'));
+    await page.getByRole('button', {name: 'Launch preview'}).click();
+    await smallCanvas();
+    await ready(page);
+    await checkInitialFlightTime();
     assert.deepEqual(errors, []);
     console.log(backend + ' stripped-scene UI: native menu, scrub, weather/meteor controls, aspect, budget and keyboard access passed');
     return;
@@ -226,8 +235,7 @@ async function ready(page, frames = 1) {
   await page.getByRole('button', { name: 'Launch preview' }).click();
   await smallCanvas();
   await ready(page);
-  assert(await page.evaluate(() => window.previewMetrics.samples[0].time >= 510 && window.previewMetrics.samples[0].time < 570),
-    'An unpaused flight must start at its requested scene time after runtime initialization');
+  await checkInitialFlightTime();
   await page.waitForFunction(() => window.previewMetrics.samples.some(frame => frame.pending), null, { timeout: 240000 });
   const builds = await page.evaluate(() => window.previewMetrics.builds);
   await page.waitForFunction(n => window.previewMetrics.frames > n, await page.evaluate(() => window.previewMetrics.frames) + 3, { timeout: 120000 });
