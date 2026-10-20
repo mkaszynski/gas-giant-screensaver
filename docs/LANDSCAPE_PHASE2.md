@@ -131,7 +131,7 @@ The active completion gates remain stricter than an average-FPS demonstration.
 | 30 fps at native 1920×1080 | Four current forest/coast flights pass their workload controls with zero missed deadlines in 2,840 steady frames; largest p95 27.655 ms; native preview shows 30.0 fps | [Browser hardware diagnostic](BROWSER_GPU_TIMING.md): 20.76 fps, below target; the original full comparative trial remains invalid after its reference-only collection failure |
 | At most 30% added complete-renderer cost | Fresh original frozen Phase 1 comparison passes all 12 runs and six matched pairs; worst median ratio 1.093, p95 ratio 1.058 | Preserve original baseline, complete-renderer scope, cloud isolation, controls and 1.30 limit through later changes |
 | Bounded memory and streaming | Every current long flight completes four mesh revisions, with normal uploads at most 2 MiB; whole-flight process-tree peak 374.7 MiB; browser memory CI passes | Continue distinguishing requested GPU storage, WASM capacity and process-tree RAM |
-| Native integration and operator review | Current application passes all four Nix checks and a target-GPU preview; PR #30 remains stacked on open #29 | Operator review before merge or installation-pin changes; current results do not authorize a pin update |
+| Native integration and operator review | Current application passes all four Nix checks and a target-GPU preview; the operator authorized incremental landing of PR #29 and #30 on 20 October 2026 | Browser performance acceptance remains open; the installation pin is unchanged |
 
 Neither green correctness CI nor the previous median cost pass establishes full
 performance acceptance. Do not mark Phase 2 complete while these gates remain

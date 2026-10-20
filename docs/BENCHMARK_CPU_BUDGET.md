@@ -48,5 +48,6 @@ A fullscreen hardware preview displayed native 1920×1080 at 30.0 fps:
 
 These results establish the stated native sample results and frozen landscape
 cost allowance. The [browser hardware diagnostic](BROWSER_GPU_TIMING.md) measures
-20.76 fps and remains below target. Operator review is still required before
-merge or a NixOS pin update.
+20.76 fps and remains below target. On 20 October 2026 the operator authorized
+landing these validated improvements incrementally. This does not change the
+browser performance requirement or the NixOS installation pin.

@@ -44,5 +44,20 @@ The [numeric summary and compressed completed-frame trace](frame-drop-investigat
 retain adapter, artifact hash, dimensions, quality, resource caps and throttling.
 The only recorded console error was an HTTP 404; no GPU validation errors were recorded. A separate repeat with a static fullscreen cover over desktop applications
 measured 21.28 fps under the same limits. Covering the desktop did not resolve
-the browser bottleneck. Performance work remains open;
-these results do not justify merging or updating the NixOS pin.
+the browser bottleneck. Browser performance acceptance remains open.
+
+## Incremental landing, 20 October 2026
+
+The operator authorized merging the validated improvements as an incremental
+release, with the browser shortfall recorded explicitly. The native terrain
+work windows, exact sampling shortcuts and conservative cloud specializations
+preserve the existing effects and image quality. Correctness, backend parity,
+Nix integration and memory validation pass in CI. The native timing evidence
+remains separate from the browser measurements above.
+
+The later interleaved vertex-binding experiment produced an identical frozen
+1080p image but no material browser FPS improvement; it is excluded. Other
+unsuccessful cloud compiler, cache and compute experiments are also excluded.
+This landing does not certify browser 30 fps or change the NixOS installation
+pin. The next performance task is reducing the final cloud solver's GPU cost
+without reducing samples, resolution or visible effects.
