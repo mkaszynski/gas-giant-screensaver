@@ -4,7 +4,11 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <array>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 using namespace observatory;
@@ -13,6 +17,32 @@ void require(bool value, const char *message) {
   if (!value)
     throw std::runtime_error(message);
 }
+// Keep the established compute comparison independent of the newly shared
+// empty-row selection: its fragment reference must execute the full marcher.
+// Fragment specialization/fallback comparisons live in the separate suite.
+struct FullFragmentReference {
+  std::filesystem::path root;
+  explicit FullFragmentReference(const std::string &data) {
+    char name[] = "/tmp/observatory-full-fragment-XXXXXX";
+    const auto directory = mkdtemp(name);
+    require(directory, "temporary complete fragment reference");
+    root = directory;
+    const auto source = std::filesystem::absolute(data);
+    std::filesystem::copy(source / "shaders", root / "shaders",
+                          std::filesystem::copy_options::recursive);
+    std::filesystem::create_directory_symlink(source / "assets", root / "assets");
+    const auto shader = root / "shaders/weather.frag";
+    std::ifstream in(shader);
+    std::ostringstream text;
+    text << in.rdbuf();
+    auto code = text.str();
+    code.insert(code.find('\n') + 1,
+                "#ifdef OBSERVATORY_WEATHER_PIXEL_ONLY\n"
+                "#error retain independent complete fragment reference\n#endif\n");
+    std::ofstream(shader) << code;
+  }
+  ~FullFragmentReference() { std::filesystem::remove_all(root); }
+};
 using ImageState = std::array<std::array<GLint, 6>, 2>;
 ImageState imageState() {
   constexpr GLenum names[] = {
@@ -72,6 +102,7 @@ int main() {
     glfwMakeContextCurrent(window);
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
     const auto data = Renderer::defaultDataDirectory();
+    FullFragmentReference reference(data);
     {
       // Nondefault host bindings must survive both paths and viewport changes.
       std::array<GLuint, 2> host{};
@@ -94,14 +125,16 @@ int main() {
         require(compute.computingWeatherCache(),
                 "coarse sky compute path must be active");
         options.weatherCompute = false;
-        Renderer fragment(data, {}, options);
+        Renderer fragment(reference.root.string(), {}, options);
+        require(!fragment.specializingFragmentClear(),
+                "comparison reference must retain the full volume shader");
         require(!fragment.computingWeather(), "explicit fragment fallback");
         require(!fragment.computingWeatherCache(),
                 "explicit fallback must retain fragment sky cache");
         const auto scene = travelScene(world, sky, route);
         compare(compute, fragment, scene, 1920, 1080, sky, 1790900000.);
-        require(compute.clearWeatherRows() == fragment.clearWeatherRows(),
-                "fragment and compute use identical clear-row bounds");
+        require(fragment.clearWeatherRows() == 0,
+                "independent reference cannot share empty-row selection");
         if (route == 162000.)
           require(compute.clearWeatherRows() > 0,
                   "above-cloud sky must exercise the smaller exact solver");
@@ -175,7 +208,7 @@ int main() {
         require(!compute.computingWeatherCache(),
                 "disabled sky cache must not allocate a compute program");
         options.weatherCompute = false;
-        Renderer fragment(data, {}, options);
+        Renderer fragment(reference.root.string(), {}, options);
         compare(compute, fragment, travelScene(world, 900, 162000), 641, 359,
                 900, 1790900000.);
       }

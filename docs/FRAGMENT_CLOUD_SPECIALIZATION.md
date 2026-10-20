@@ -36,6 +36,9 @@ the fallback to run and limits complete-image differences to the existing
 two-code/0.003-mean threshold. Full rendering checks and browser memory matrices
 run in CI. Passing conversion or image tests does not establish a speedup or
 the 30 fps hardware gate; those remain pending for this candidate.
+The established compute/fragment comparison separately rejects only the new
+empty-volume fragment variant. Its reference therefore still executes the full
+marcher rather than sharing the candidate's row-selection decision.
 
 For the earlier sky-only candidate `ead1700`, all five added full-scene software
 comparisons have zero differing display codes, and WebGL/WebGPU/fallback/native
