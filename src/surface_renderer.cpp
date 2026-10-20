@@ -148,6 +148,9 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
     : terrain(root + "/assets/world/moon.ggworld"),
       reflectionsEnabled(reflections), cullingEnabled(culling),
       waterLodEnabled(waterLod), weatherEnabled(weather) {
+#ifdef __EMSCRIPTEN__
+  cooperativeBuilds = false;
+#endif
   program = link(root, "surface.vert", "surface.frag", false, weather);
   if (waterLodEnabled) {
     waterProgram = link(root, "surface.vert", "surface.frag", false, weather,
@@ -292,6 +295,11 @@ void SurfaceRenderer::releaseTargets() {
   multisample = resolved = colorBuffer = depthBuffer = texture = 0;
 }
 SurfaceRenderer::~SurfaceRenderer() {
+  backgroundWork.release();
+#ifndef __EMSCRIPTEN__
+  if (frameFence)
+    glDeleteSync(frameFence);
+#endif
   if (pending.valid())
     pending.wait();
   releaseTargets();
@@ -626,6 +634,52 @@ void SurfaceRenderer::shadows(const Scene &s, Vec3 eye, double seconds,
   if (!oldPolygon)
     glDisable(GL_POLYGON_OFFSET_FILL);
 }
+void SurfaceRenderer::prepareFrame() {
+  frameCpuWork = false;
+#ifndef __EMSCRIPTEN__
+  using Clock = detail::SurfaceWork::Clock;
+  const auto now = Clock::now();
+  const double period =
+      lastWorkFrame == Clock::time_point{}
+          ? 1. / 30.
+          : std::chrono::duration<double>(now - lastWorkFrame).count();
+  lastWorkFrame = now;
+  if (!cooperativeBuilds || !buildPending() || !frameFence)
+    return;
+  const auto status = glClientWaitSync(frameFence, 0, 0);
+  if (status == GL_WAIT_FAILED) {
+    cooperativeBuilds = false;
+    backgroundWork.release();
+    return;
+  }
+  if (status != GL_ALREADY_SIGNALED && status != GL_CONDITION_SATISFIED)
+    return;
+  // Finish a bounded CPU slice before this frame issues drawing commands.
+  // The fence proves the preceding frame is no longer using the GPU.
+  const auto budget = std::chrono::duration_cast<Clock::duration>(
+      std::chrono::duration<double>(detail::surfaceWorkSeconds(period)));
+  frameCpuWork = true;
+  backgroundWork.runFor(budget);
+#endif
+}
+void SurfaceRenderer::finishFrame() {
+#ifndef __EMSCRIPTEN__
+  if (frameFence)
+    glDeleteSync(frameFence);
+  frameFence = nullptr;
+  if (!cooperativeBuilds || !buildPending())
+    return;
+  frameFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (!frameFence) {
+    cooperativeBuilds = false;
+    backgroundWork.release();
+    return;
+  }
+  // Explicit submission also supports callers which read or swap later.
+  // This is asynchronous; never wait for the GPU here.
+  glFlush();
+#endif
+}
 GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
                                int h, double seconds, double daySeconds,
                                GLuint scene,
@@ -647,15 +701,20 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
     staged = pending.get();
     stagedBytes = 0;
   }
-  stageUpload();
+  // A completed worker may be collected during its last CPU window. Begin
+  // uploads next frame so that window and a transfer never share a frame.
+  if (!frameCpuWork)
+    stageUpload();
   Vec3 eye = delta(mesh.center);
   if (length(eye) > 2000.) {
     if (staged)
       recycled = std::move(*staged);
     staged.reset();
     stagedBytes = 0;
-    if (pending.valid())
+    if (pending.valid()) {
+      backgroundWork.release();
       pending.wait();
+    }
     if (pending.valid())
       recycled = pending.get();
     ++buildStarts;
@@ -664,9 +723,25 @@ GLuint SurfaceRenderer::render(const Scene &s, TravelLocation location, int w,
     eye = delta(mesh.center);
   } else if (length(eye) > 750. && !pending.valid() && !staged) {
     ++buildStarts;
+    const bool phased = cooperativeBuilds;
+    if (phased)
+      backgroundWork.reset();
     pending = std::async(
         std::launch::async,
-        [this, location, reusable = std::move(recycled)]() mutable {
+        [this, location, phased, reusable = std::move(recycled)]() mutable {
+          if (phased) {
+            try {
+              backgroundWork.checkpoint();
+              auto result = buildSurfaceMesh(
+                  terrain, location, [this] { backgroundWork.checkpoint(); },
+                  std::move(reusable), &buildWorkspace);
+              backgroundWork.complete();
+              return result;
+            } catch (...) {
+              backgroundWork.complete();
+              throw;
+            }
+          }
           // A continuous CPU burst competes with the GPU on shared-power APUs,
           // even before any mesh upload. Spread only background work over short
           // slices; the resident mesh covers the flight while this one is

@@ -293,8 +293,12 @@ int main() {
         const auto ready =
             std::chrono::steady_clock::now() + std::chrono::seconds(20);
         while (moving.surfaceBuildPending() &&
-               std::chrono::steady_clock::now() < ready)
+               std::chrono::steady_clock::now() < ready) {
           std::this_thread::sleep_for(std::chrono::milliseconds(20));
+          // Cooperative builds receive CPU windows from displayed frames.
+          // Stop before the next draw begins uploading the completed mesh.
+          moving.render(w, h, 670);
+        }
         require(!moving.surfaceBuildPending(), "replacement worker finishes");
         moving.render(w, h, 670);
         require(moving.surfaceMeshRevision() == beforeStaging &&

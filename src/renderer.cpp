@@ -971,6 +971,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   if (w <= 0 || h <= 0)
     return;
   if (surface)
+    surface->prepareFrame();
+  if (surface)
     surfaceLocation = {s.latitude, s.longitude};
   if (weatherProgram) {
     double clock = weatherSeconds >= 0
@@ -1341,6 +1343,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
               std::remainder(seconds * .157, 2 * pi));
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
+  if (surface)
+    surface->finishFrame();
 #ifdef OBSERVATORY_WEATHER_PROFILE
   glEndQuery(GL_TIME_ELAPSED_EXT);
 #endif
