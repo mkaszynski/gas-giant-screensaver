@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 namespace observatory {
 struct StarfieldOptions {
@@ -56,6 +57,7 @@ public:
   bool floatingWeatherNoise() const { return floatingNoise; }
   bool computingWeather() const { return weatherComputeProgram != 0; }
   bool computingWeatherCache() const { return weatherSkyComputeProgram != 0; }
+  bool specializingFragmentSky() const { return weatherSkyFragmentProgram != 0; }
   int clearWeatherRows() const { return weatherClearRows; }
   bool computingCalmWeather() const {
     return weatherCalmComputeProgram && weatherState.storm == 0. &&
@@ -119,7 +121,8 @@ private:
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
          postProgram = 0, presentationProgram = 0, ringProgram = 0,
          giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
-         weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0;
+         weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0,
+         weatherSkyFragmentProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0, weatherClearComputeProgram = 0;
@@ -139,7 +142,7 @@ private:
   int stars = 0;
   std::string shader(const std::string &);
   GLuint program(const std::string &, const std::string & = "fullscreen.vert",
-                 int giantAtmosphere = 0);
+                 int giantAtmosphere = 0, std::string_view defines = {});
   GLuint imageTexture(const std::string &);
   GLuint galaxyTexture();
   void target(Target &, int, int, bool depth = false, bool skyLayer = false,

@@ -19,8 +19,12 @@ uniform highp sampler2D uSurface;
 #include "atmospheric_optics.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
-#ifdef OBSERVATORY_WEATHER_COMPUTE
+#if defined(OBSERVATORY_WEATHER_COMPUTE)||defined(OBSERVATORY_WEATHER_SKY_ONLY)
 #ifdef OBSERVATORY_WEATHER_SKY_PASS
+const bool uWeatherSkyPass=true;
+#elif defined(OBSERVATORY_WEATHER_SKY_ONLY)
+// Browser/native fragment caches never integrate ground-edge or foreground
+// precipitation. Compile away those paths instead of keeping a uniform branch.
 const bool uWeatherSkyPass=true;
 #else
 const bool uWeatherSkyPass=false;

@@ -70,6 +70,11 @@ def programs():
             )
         ],
         (
+            "weather.frag",
+            "fullscreen.vert",
+            "#define OBSERVATORY_WEATHER_SKY_ONLY\n",
+        ),
+        (
             "body.frag",
             "fullscreen.vert",
             "#define GIANT_ATMOSPHERE\n#define GIANT_SLAB_LUT\n#define GIANT_INTERIOR\n",

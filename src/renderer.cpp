@@ -192,8 +192,10 @@ std::string Renderer::shader(const std::string &name) {
   return out;
 }
 GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
-                         int giantAtmosphere) {
+                         int giantAtmosphere, std::string_view defines) {
   auto fragmentSource = shader(fragment);
+  if (!defines.empty())
+    fragmentSource.insert(fragmentSource.find('\n') + 1, std::string(defines));
   // Weather is a construction-time option. Remove its unreachable branches
   // from the large composite shader instead of retaining a uniform branch.
   if (fragment == "post.frag")
@@ -223,8 +225,13 @@ GLuint Renderer::program(const std::string &fragment, const std::string &vertex,
                       "main(){scenePixel();color.rgb=min(color.rgb*uSceneScale,"
                       "vec3(60000.));}\n";
   }
-  GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)),
-         fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
+  GLuint vs = compile(GL_VERTEX_SHADER, shader(vertex)), fs = 0;
+  try {
+    fs = compile(GL_FRAGMENT_SHADER, fragmentSource);
+  } catch (...) {
+    glDeleteShader(vs);
+    throw;
+  }
   GLuint p = linkProgram({vs, fs});
   programs.push_back(p);
   return p;
@@ -643,6 +650,17 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
                          "using the available cloud solver: "
                       << error.what() << '\n';
           }
+        }
+      }
+      if (surfaceOptions.weatherCache && !weatherSkyComputeProgram) {
+        try {
+          weatherSkyFragmentProgram =
+              program("weather.frag", "fullscreen.vert", 0,
+                      "#define OBSERVATORY_WEATHER_SKY_ONLY\n");
+        } catch (const std::exception &error) {
+          std::cerr << "Sky weather fragment specialization unavailable; "
+                       "using the full cloud shader: "
+                    << error.what() << '\n';
         }
       }
       weatherLightProgram = program("weather-light.frag");
@@ -1322,11 +1340,14 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         dispatchWeather(compute, weatherSkyPixels, skyWeatherCache);
 #endif
       } else {
-        prepareWeather(weatherProgram);
-        integer(weatherProgram, "uWeatherSkyPass", true);
+        const GLuint skyFragment = weatherSkyFragmentProgram
+                                       ? weatherSkyFragmentProgram
+                                       : weatherProgram;
+        prepareWeather(skyFragment);
+        integer(skyFragment, "uWeatherSkyPass", true);
         glBindFramebuffer(GL_FRAMEBUFFER, skyWeatherCache.framebuffer);
         glViewport(0, 0, skyWeatherCache.width, skyWeatherCache.height);
-        quad(weatherProgram);
+        quad(skyFragment);
       }
     }
     WEATHER_PROFILE_STAGE(7);
@@ -1371,9 +1392,9 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       }
 #endif
     } else {
-      // With a fragment sky cache this program is already prepared; retain
-      // the original single uniform setup on WebGL and older native contexts.
-      if (!surfaceOptions.weatherCache)
+      // A distinct sky-only program has its own uniforms. Preserve the old
+      // single setup when the optional specialization is unavailable.
+      if (!surfaceOptions.weatherCache || weatherSkyFragmentProgram)
         prepareWeather(weatherProgram);
       bind(weatherProgram, 13, "uWeatherSkyCache",
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);

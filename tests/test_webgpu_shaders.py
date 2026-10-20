@@ -33,12 +33,12 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 28)
+        self.assertEqual(len(programs), 29)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            28,
+            29,
         )
         self.assertIn("weather-rain.frag", {p[0] for p in programs})
         for label, vertex, fragment in programs:
@@ -47,6 +47,22 @@ class ShaderBakeTests(unittest.TestCase):
         self.assertEqual(
             sum("SURFACE_REFLECTION" in label for label, _, _ in programs), 2
         )
+
+    def test_sky_only_weather_keeps_the_shared_solver_and_constant_pass(self):
+        label, vertex, fragment = next(
+            p for p in bake.programs()
+            if p[0] == "weather.frag:OBSERVATORY_WEATHER_SKY_ONLY"
+        )
+        self.assertEqual(vertex, bake.source("fullscreen.vert"))
+        expected = bake.source("weather.frag").replace(
+            "\n", "\n#define OBSERVATORY_WEATHER_SKY_ONLY\n", 1
+        )
+        self.assertEqual(fragment, expected)
+        converted, _ = bake.convert_program(label, fragment, "frag", {"uv": 0})
+        compact = "".join(converted.split())
+        self.assertIn("constbooluWeatherSkyPass=true;", compact)
+        self.assertNotIn("uintuWeatherSkyPass;", compact)
+        self.assertIn("integrateWeather", converted)
 
     def test_debug_overlay_uses_shared_shaders_and_swapchain_coordinates(self):
         label, vertex, fragment = next(p for p in bake.programs() if p[0] == "debug.frag")

@@ -2,6 +2,7 @@
 #include "renderer.hpp"
 #include "surface_renderer.hpp"
 #include <GLFW/glfw3.h>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -54,8 +55,9 @@ struct UniformBranches {
   }
   ~UniformBranches() { std::filesystem::remove_all(path); }
 };
-std::vector<unsigned char> shot(Renderer &renderer, double time) {
-  renderer.render(width, height, time);
+std::vector<unsigned char> shot(Renderer &renderer, double time,
+                                double weather = -1) {
+  renderer.render(width, height, time, 1800, 1, true, true, {}, weather);
   std::vector<unsigned char> pixels(width * height * 4);
   glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
   require(glGetError() == GL_NO_ERROR, "specialized shader GL state");
@@ -116,6 +118,45 @@ void distanceTarget(const std::string &root) {
   }
   glDeleteTextures(1, &noise);
 }
+void fragmentSkySpecialization() {
+  char name[] = "/tmp/observatory-fragment-sky-XXXXXX";
+  const auto directory = mkdtemp(name);
+  require(directory, "temporary sky specialization fixture");
+  const auto fixture = std::filesystem::path(directory);
+  const auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
+  std::filesystem::copy(root / "shaders", fixture / "shaders",
+                        std::filesystem::copy_options::recursive);
+  std::filesystem::create_directory_symlink(root / "assets", fixture / "assets");
+  const auto shader = fixture / "shaders/weather.frag";
+  std::ifstream in(shader);
+  std::ostringstream text;
+  text << in.rdbuf();
+  auto code = text.str();
+  code.insert(code.find('\n') + 1,
+              "#ifdef OBSERVATORY_WEATHER_SKY_ONLY\n"
+              "#error deliberate optional sky specialization failure\n#endif\n");
+  std::ofstream(shader) << code;
+  try {
+    for (const auto &test : std::array<std::array<double, 3>, 5>{{
+             {162000., 510., 1790900000.}, {162000., 510., 1260.},
+             {162000., 1200., 1512.8}, {5600.390625, 1740., 1790900000.},
+             {210600., 1200., 1790900000.}}}) {
+      SurfaceOptions options{true, 0, test[0]};
+      options.weatherCompute = false;
+      Renderer specialized(root.string(), {}, options);
+      Renderer reference(fixture.string(), {}, options);
+      require(specialized.specializingFragmentSky() &&
+                  !reference.specializingFragmentSky(),
+              "fragment sky specialization and optional-failure fallback run");
+      compare(shot(specialized, test[1], test[2]),
+               shot(reference, test[1], test[2]));
+    }
+  } catch (...) {
+    std::filesystem::remove_all(fixture);
+    throw;
+  }
+  std::filesystem::remove_all(fixture);
+}
 } // namespace
 int main() {
   GLFWwindow *window = nullptr;
@@ -130,6 +171,7 @@ int main() {
     glfwMakeContextCurrent(window);
     {
       distanceTarget(Renderer::defaultDataDirectory());
+      fragmentSkySpecialization();
       UniformBranches original;
       for (double route : {0., 5600.390625, 162000., 210600.}) {
         SurfaceOptions options{true, 0, route};
