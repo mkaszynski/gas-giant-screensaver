@@ -1,0 +1,93 @@
+{
+  "kind": "CPU-only mesh construction ABBA; excludes serialization and hashing; no GPU deadline acceptance",
+  "records": [
+    {
+      "binary_sha256": "ffe8e35334ec07373b23279a4ff6b8c14e90610d283f0780b84f45bb9c650fd5",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.4407875619945116,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "order": 1,
+      "version": "before",
+      "construction_ms": [
+        284.41,
+        248.087,
+        200.443,
+        210.738,
+        248.725
+      ]
+    },
+    {
+      "binary_sha256": "262570987999d3bbc6ef01777522ec4fbb10b66d6f29e83457b75cdc232e40d3",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.0904455810086802,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "order": 2,
+      "version": "after",
+      "construction_ms": [
+        152.412,
+        179.852,
+        201.138,
+        191.002,
+        119.148
+      ]
+    },
+    {
+      "binary_sha256": "262570987999d3bbc6ef01777522ec4fbb10b66d6f29e83457b75cdc232e40d3",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.0869201319874264,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "order": 3,
+      "version": "after",
+      "construction_ms": [
+        150.976,
+        179.556,
+        202.877,
+        191.188,
+        118.88
+      ]
+    },
+    {
+      "binary_sha256": "ffe8e35334ec07373b23279a4ff6b8c14e90610d283f0780b84f45bb9c650fd5",
+      "mesh_sha256": "797cd764be22058109837405a8d1e78edd5ee60ae775b1dbbc688742a1825b60",
+      "bytes": 241936255,
+      "seconds": 1.4374374479812104,
+      "routes": [
+        0,
+        5600.390625,
+        162000,
+        210600,
+        259199
+      ],
+      "order": 4,
+      "version": "before",
+      "construction_ms": [
+        284.232,
+        249.108,
+        200.264,
+        210.061,
+        249.056
+      ]
+    }
+  ]
+}

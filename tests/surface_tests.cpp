@@ -37,8 +37,68 @@ struct RouteFixture {
     require(rejected, "malformed cached circuit rejected before use");
   }
 };
+// Constant fields isolate the ocean cutoff and biome relief blend from the
+// real asset's changing elevations. Use deliberately different relief layers.
+struct ConstantWorldFixture {
+  RouteFixture temporary;
+  std::filesystem::path world = temporary.path.parent_path() / "moon.ggworld";
+  static void integer(std::ofstream &out, uint32_t value, int bytes) {
+    for (int i = 0; i < bytes; ++i)
+      out.put(char(value >> (8 * i)));
+  }
+  ConstantWorldFixture() {
+    std::filesystem::create_directory(world.parent_path() / "landforms");
+    for (const auto &[name, value] :
+         std::array<std::pair<const char *, int>, 3>{
+             {{"relief.ggrelief", 900}, {"landforms/arid.ggrelief", -400},
+              {"landforms/coastal.ggrelief", 100}}}) {
+      std::ofstream out(world.parent_path() / name, std::ios::binary);
+      out.write("GGRELIF1", 8);
+      integer(out, 64, 4);
+      integer(out, 64, 4);
+      float spacing = 8.f;
+      uint32_t bits;
+      std::memcpy(&bits, &spacing, sizeof(bits));
+      integer(out, bits, 4);
+      for (int i = 0; i < 64 * 64; ++i)
+        integer(out, uint16_t(value), 2);
+    }
+  }
+  void height(int value) {
+    std::ofstream out(world, std::ios::binary);
+    out.write("GGWORLD1", 8);
+    integer(out, 64, 4);
+    integer(out, 32, 4);
+    for (int i = 0; i < 64 * 32; ++i)
+      integer(out, uint16_t(value), 2);
+    for (int i = 0; i < 2 * 64 * 32; ++i)
+      out.put(char(128));
+  }
+};
 int main() {
   try {
+    ConstantWorldFixture constant;
+    for (int height : {-1000, -251, -250, -249, 100}) {
+      constant.height(height);
+      SurfaceWorld field(constant.world.string(), true);
+      const auto sample = field.sample(0., 0.);
+      require(sample.ground == field.elevation(0., 0.),
+              "ocean cutoff agrees in material and altitude queries");
+      if (height <= -250)
+        require(sample.ground == height && sample.reliefHeight == 0.,
+                "deep ocean and exact cutoff retain the base elevation");
+      else if (height == -249)
+        require(sample.ground != height && sample.reliefHeight == 0.,
+                "detail immediately above the ocean cutoff is retained");
+      else {
+        const double t = (height + 100.) / 600.;
+        const double expected =
+            100. * (.65 + .75 * (128. / 255.)) * (t * t * (3. - 2. * t));
+        require(sample.landforms[1] == 1. &&
+                    std::abs(sample.reliefHeight - expected) < 1.e-12,
+                "zero continental weight preserves the coastal relief layer");
+      }
+    }
     std::mt19937_64 random(0x715ab3);
     for (int extent : {1, 2, 3, 63, 64, 72, 127, 128, 4095, 4096, 8192}) {
       for (int index : {-extent, -extent + 1, -1, 0, 1, extent - 1, extent})

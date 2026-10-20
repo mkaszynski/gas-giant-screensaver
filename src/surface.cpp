@@ -233,6 +233,13 @@ double SurfaceWorld::elevationAt(double lat, double lon,
                                  std::array<double, 2> coordinates,
                                  const BaseSample &base,
                                  double *reliefHeight) const {
+  // All three height-detail weights are exactly zero below -250 m.
+  // Keep the original ground value without sampling invisible relief.
+  if (base.height <= -250.) {
+    if (reliefHeight)
+      *reliefHeight = 0.;
+    return base.height;
+  }
   // Longitude/pole-safe local relief, anchored in moon-fixed coordinates.
   // The orbit never reaches the poles, but the field remains well-defined
   // there.
@@ -241,8 +248,11 @@ double SurfaceWorld::elevationAt(double lat, double lon,
   double h = base.height;
   const double seam = base.seam;
   const auto &weights = base.landforms;
-  double measured = (1. - weights[0] - weights[1]) *
-                    localRelief(coordinates[0], coordinates[1]);
+  const double continental = 1. - weights[0] - weights[1];
+  double measured =
+      continental == 0.
+          ? 0.
+          : continental * localRelief(coordinates[0], coordinates[1]);
   for (int i = 0; i < 2; ++i)
     if (weights[i] > 0.)
       measured +=
@@ -421,9 +431,12 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
       // From airplane height the canopy is a continuous volume. Crown normals
       // and occlusion are mip-filtered in the material, rather than sparse
       // dots.
-      double h = std::max(v.ground, v.water) +
-                 forest * (12. + 6. * noise(surfaceRadius * lon,
-                                            surfaceRadius * lat, 80, 1397));
+      double h =
+          std::max(v.ground, v.water) +
+          (forest == 0.
+               ? forest
+               : forest * (12. + 6. * noise(surfaceRadius * lon,
+                                            surfaceRadius * lat, 80, 1397)));
       double baseHeight = std::max(v.ground - v.reliefHeight, v.water) + h -
                           std::max(v.ground, v.water);
       mesh.vertices.push_back(
