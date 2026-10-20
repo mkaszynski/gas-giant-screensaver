@@ -133,8 +133,8 @@ void fragmentSkySpecialization() {
   text << in.rdbuf();
   auto code = text.str();
   code.insert(code.find('\n') + 1,
-              "#ifdef OBSERVATORY_WEATHER_SKY_ONLY\n"
-              "#error deliberate optional sky specialization failure\n#endif\n");
+              "#if defined(OBSERVATORY_WEATHER_SKY_ONLY)||defined(OBSERVATORY_WEATHER_PIXEL_ONLY)\n"
+              "#error deliberate optional fragment specialization failure\n#endif\n");
   std::ofstream(shader) << code;
   try {
     for (const auto &test : std::array<std::array<double, 3>, 5>{{
@@ -146,10 +146,25 @@ void fragmentSkySpecialization() {
       Renderer specialized(root.string(), {}, options);
       Renderer reference(fixture.string(), {}, options);
       require(specialized.specializingFragmentSky() &&
-                  !reference.specializingFragmentSky(),
-              "fragment sky specialization and optional-failure fallback run");
+                  specialized.specializingFragmentClear() &&
+                  !reference.specializingFragmentSky() &&
+                  !reference.specializingFragmentClear(),
+              "fragment specializations and optional-failure fallback run");
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(7, 9, 13, 17);
       compare(shot(specialized, test[1], test[2]),
                shot(reference, test[1], test[2]));
+      GLint box[4]{};
+      glGetIntegerv(GL_SCISSOR_BOX, box);
+      require(glIsEnabled(GL_SCISSOR_TEST) && box[0] == 7 && box[1] == 9 &&
+                  box[2] == 13 && box[3] == 17,
+              "fragment row splitting restores the host scissor state");
+      glDisable(GL_SCISSOR_TEST);
+      if (test[2] == 1790900000. &&
+          (test[0] == 162000. || test[0] == 5600.390625))
+        require(specialized.clearWeatherRows() > 0 &&
+                    reference.clearWeatherRows() == 0,
+                "above/below-cloud fragment rows use the smaller solver");
     }
   } catch (...) {
     std::filesystem::remove_all(fixture);

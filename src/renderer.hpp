@@ -58,6 +58,9 @@ public:
   bool computingWeather() const { return weatherComputeProgram != 0; }
   bool computingWeatherCache() const { return weatherSkyComputeProgram != 0; }
   bool specializingFragmentSky() const { return weatherSkyFragmentProgram != 0; }
+  bool specializingFragmentClear() const {
+    return weatherClearFragmentProgram != 0;
+  }
   int clearWeatherRows() const { return weatherClearRows; }
   bool computingCalmWeather() const {
     return weatherCalmComputeProgram && weatherState.storm == 0. &&
@@ -122,7 +125,7 @@ private:
          postProgram = 0, presentationProgram = 0, ringProgram = 0,
          giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
          weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0,
-         weatherSkyFragmentProgram = 0;
+         weatherSkyFragmentProgram = 0, weatherClearFragmentProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0, weatherClearComputeProgram = 0;

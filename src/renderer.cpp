@@ -663,6 +663,18 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
                     << error.what() << '\n';
         }
       }
+      if (!weatherComputeProgram) {
+        try {
+          weatherClearFragmentProgram =
+              program("weather.frag", "fullscreen.vert", 0,
+                      "#define OBSERVATORY_WEATHER_PIXEL_ONLY\n"
+                      "#define OBSERVATORY_WEATHER_NO_VOLUME\n");
+        } catch (const std::exception &error) {
+          std::cerr << "Clear-column fragment specialization unavailable; "
+                       "using the full cloud shader: "
+                    << error.what() << '\n';
+        }
+      }
       weatherLightProgram = program("weather-light.frag");
       weatherRainProgram = program("weather-rain.frag");
       target(rainDensityCache, 512, 512, false, false, GL_R16F, true);
@@ -1354,6 +1366,23 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     weatherClearRows = 0;
+    // Both backends share the same conservative bounds. Reduced cloud targets
+    // have different pixel centres and must retain their complete solver.
+    const bool clearCompatible =
+        (weatherComputeProgram ? weatherClearComputeProgram
+                               : weatherClearFragmentProgram) &&
+        weather.width == w && weather.height == h;
+    const int firstClear =
+        clearCompatible
+            ? clearWeatherFirstRow(w, h, s.forward, s.right, s.cameraUp,
+                                   s.altitudeMeters / 1000.,
+                                   weatherState.base + weatherState.thickness)
+            : weather.height;
+    const int endClear =
+        clearCompatible
+            ? clearWeatherEndRow(w, h, s.forward, s.right, s.cameraUp,
+                                 s.altitudeMeters / 1000., weatherState.base)
+            : 0;
     if (weatherComputeProgram) {
 #ifndef __EMSCRIPTEN__
       // Exact zeros only: a growing storm or even a subframe flash must use
@@ -1365,22 +1394,6 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
       // The post pass samples these images; manual meteors also blend into
       // their framebuffer attachments. Both consumers need visibility.
-      // The proof uses display-pixel row centres and their camera aspect.
-      // Reduced cloud targets use different pixel centres; keep their complete
-      // solver instead of applying display-row bounds to a smaller image.
-      const bool clearCompatible = weatherClearComputeProgram &&
-                                   weather.width == w && weather.height == h;
-      const int firstClear =
-          clearCompatible
-              ? clearWeatherFirstRow(w, h, s.forward, s.right, s.cameraUp,
-                                     s.altitudeMeters / 1000.,
-                                     weatherState.base + weatherState.thickness)
-              : weather.height;
-      const int endClear =
-          clearCompatible
-              ? clearWeatherEndRow(w, h, s.forward, s.right, s.cameraUp,
-                                   s.altitudeMeters / 1000., weatherState.base)
-              : 0;
       dispatchWeather(compute, weatherPixels, weather, endClear,
                       firstClear - endClear);
       if (firstClear < weather.height || endClear > 0) {
@@ -1399,7 +1412,23 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       bind(weatherProgram, 13, "uWeatherSkyCache",
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
       integer(weatherProgram, "uWeatherSkyPass", false);
-      quad(weatherProgram);
+      if (firstClear < weather.height || endClear > 0) {
+        // Scissoring preserves the original fullscreen interpolation and pixel
+        // centres. Disjoint rows cover both MRT attachments exactly once.
+        glEnable(GL_SCISSOR_TEST);
+        if (firstClear > endClear) {
+          glScissor(0, endClear, weather.width, firstClear - endClear);
+          quad(weatherProgram);
+        }
+        prepareWeather(weatherClearFragmentProgram);
+        glScissor(0, endClear ? 0 : firstClear, weather.width,
+                  endClear ? endClear : weather.height - firstClear);
+        quad(weatherClearFragmentProgram);
+        glDisable(GL_SCISSOR_TEST);
+        weatherClearRows = endClear + weather.height - firstClear;
+      } else {
+        quad(weatherProgram);
+      }
     }
     revealMeteors(s, w, h, surfaceTexture);
   }

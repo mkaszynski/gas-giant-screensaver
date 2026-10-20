@@ -100,6 +100,8 @@ int main() {
                 "explicit fallback must retain fragment sky cache");
         const auto scene = travelScene(world, sky, route);
         compare(compute, fragment, scene, 1920, 1080, sky, 1790900000.);
+        require(compute.clearWeatherRows() == fragment.clearWeatherRows(),
+                "fragment and compute use identical clear-row bounds");
         if (route == 162000.)
           require(compute.clearWeatherRows() > 0,
                   "above-cloud sky must exercise the smaller exact solver");

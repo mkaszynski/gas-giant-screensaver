@@ -19,7 +19,7 @@ uniform highp sampler2D uSurface;
 #include "atmospheric_optics.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
-#if defined(OBSERVATORY_WEATHER_COMPUTE)||defined(OBSERVATORY_WEATHER_SKY_ONLY)
+#if defined(OBSERVATORY_WEATHER_COMPUTE)||defined(OBSERVATORY_WEATHER_SKY_ONLY)||defined(OBSERVATORY_WEATHER_PIXEL_ONLY)
 #ifdef OBSERVATORY_WEATHER_SKY_PASS
 const bool uWeatherSkyPass=true;
 #elif defined(OBSERVATORY_WEATHER_SKY_ONLY)
@@ -79,7 +79,7 @@ float marchDensity(vec3 direction,float distance,float lod){
 }
 vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
 #ifdef OBSERVATORY_WEATHER_NO_VOLUME
- // CPU dispatch bounds prove this ray cannot enter the lower cloud volume:
+ // CPU bounds prove this ray cannot enter the lower cloud volume:
  // either above its top and outward, or below its base with the inner-sphere
  // exit beyond the 100 km endpoint. All other layers retain their evaluation.
  float start=0.,finish=0.;

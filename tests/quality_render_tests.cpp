@@ -44,10 +44,12 @@ int main() {
       if (glGetError() != GL_NO_ERROR)
         throw std::runtime_error("Quality render GL error");
     }
-    {
+    for (bool compute : {false, true}) {
       auto medium = GraphicsSettings::forPreset(GraphicsPreset::Medium);
       medium.features[2] = medium.features[3] = false;
-      Renderer renderer(source.string(), {}, SurfaceOptions{true}, medium);
+      SurfaceOptions options{true};
+      options.weatherCompute = compute;
+      Renderer renderer(source.string(), {}, options, medium);
       renderer.render(320, 180, 510, 1800, 1, true, true, {}, 1260);
       if (renderer.weatherResolution() != std::array<int, 2>{160, 90})
         throw std::runtime_error(

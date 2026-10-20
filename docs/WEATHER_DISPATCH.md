@@ -24,7 +24,9 @@ four-row workgroups; tiny/odd final groups retain the existing bounds checks.
 The two altitude cases are disjoint, so at most two dispatches cover the output
 without overlap or gaps. Unsupported or nonfinite bounds keep the full solver.
 Failure to compile the optional smaller shader also retains the full solver.
-Browser and fragment paths continue to provide the complete reference.
+Browser and native fragment paths now use the same bounds with disjoint
+scissored fullscreen draws; see [fragment specialization](FRAGMENT_CLOUD_SPECIALIZATION.md).
+Optional-program failure fixtures retain the complete fragment reference.
 
 Unit checks exercise pitches, rolls, nonorthogonal bases, altitude boundaries,
 tiny/odd viewports and float inner-sphere intersections. The AMD compute test
