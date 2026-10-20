@@ -44,8 +44,8 @@ At `5bf5c20`, all 72 CPU/CLI checks, renderer/Nix CI, browser backend/native
 parity and the full browser memory matrix pass. All 30 specialization and 45
 compute/full-reference software images have zero differing display codes.
 [Four current native flights](BENCHMARK_CPU_BUDGET.md) meet their steady 30 fps
-deadlines with passing workload controls; browser hardware fps remains
-unverified. A compiler-only
+deadlines with passing workload controls. The [hardware browser diagnostic](BROWSER_GPU_TIMING.md)
+measures 20.76 fps, below the target. A compiler-only
 probe using glslang 16.0.0 with `-V -Os` reduces generic weather SPIR-V from
 97,828 bytes to 32,112 bytes for sky-only rendering and 47,448 bytes for an
 empty-volume final pass. These code-size observations are not runtime timings.

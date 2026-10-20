@@ -47,5 +47,6 @@ A fullscreen hardware preview displayed native 1920×1080 at 30.0 fps:
 ![Native 1080p preview with the FPS overlay](frame-drop-investigation/5bf-validation/preview-1080.png)
 
 These results establish the stated native sample results and frozen landscape
-cost allowance. Browser hardware fps remains unverified. Operator review is
-still required before merge or a NixOS pin update.
+cost allowance. The [browser hardware diagnostic](BROWSER_GPU_TIMING.md) measures
+20.76 fps and remains below target. Operator review is still required before
+merge or a NixOS pin update.

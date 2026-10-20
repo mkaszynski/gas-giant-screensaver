@@ -1,0 +1,113 @@
+{
+  "kind": "Authorized targeted hardware browser diagnostic, not software CI or physical presentation timing",
+  "wasm_sha256": "fef9cde1530dc0315e1e76958417f8818f469f34ee921d6c69feadaf4dc47198",
+  "adapter": {
+    "software": false,
+    "actual_device": {
+      "vendor": "amd",
+      "architecture": "rdna-2",
+      "device": "",
+      "description": ""
+    },
+    "enumerated": {
+      "vendor": "amd",
+      "architecture": "rdna-2",
+      "device": "",
+      "description": ""
+    }
+  },
+  "health": {
+    "backend": "webgpu",
+    "scene": [
+      1920,
+      1080
+    ],
+    "display": [
+      1920,
+      1080
+    ],
+    "quality": {
+      "open": false,
+      "preset": 2,
+      "name": "High",
+      "height": 1080,
+      "fps": 30,
+      "revision": 0,
+      "features": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    "error": null
+  },
+  "frames": 300,
+  "fps": 20.764126811206207,
+  "cpu_encode_median_ms": 11.1298828125,
+  "cpu_encode_p95_ms": 16.135009765625,
+  "completion_latency_p95_ms": 101.3798828125,
+  "cpu_stat_delta": {
+    "usage_usec": 11457756,
+    "user_usec": 9995957,
+    "system_usec": 1461800,
+    "nice_usec": 0,
+    "core_sched.force_idle_usec": 0,
+    "nr_periods": 144,
+    "nr_throttled": 35,
+    "throttled_usec": 2414126,
+    "nr_bursts": 0,
+    "burst_usec": 0
+  },
+  "parent_cpu_max": "90000 100000",
+  "parent_memory_max": "1153433600",
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "revision": "37dbbfb2d51e50e191e026ef466196f30fdd87da",
+  "qualification": "Targeted headless hardware diagnostic under default CPU/RAM caps; not a controlled native/browser comparison or physical presentation measurement. Below 30 fps; release performance gate remains open.",
+  "gpu_profile": {
+    "separate_run": true,
+    "frames": 24,
+    "mean_pass_milliseconds": {
+      "clear/resolve": 0.7442816666666668,
+      "background.frag / stars.frag / rings.frag / body.frag / body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_INTERIOR / body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_LIMB / emission.frag": 10.566446666666668,
+      "surface.frag:SURFACE_PURE_LAND,OBSERVATORY_WEATHER_MODE 1": 6.503031666666667,
+      "weather-light.frag": 0.8340150000000003,
+      "weather.frag:OBSERVATORY_WEATHER_SKY_ONLY": 2.63182,
+      "weather.frag / weather.frag:OBSERVATORY_WEATHER_PIXEL_ONLY,OBSERVATORY_WEATHER_NO_VOLUME": 22.64139333333333,
+      "post.frag:OBSERVATORY_WEATHER_MODE 1": 1.4109049999999996,
+      "presentation.frag": 0.5344933333333334,
+      "sky_lut.frag": 0.06168166666666666,
+      "surface_shadow.frag:OBSERVATORY_WEATHER_MODE 1": 0.05917
+    },
+    "note": "Pass timestamps from a separate instrumented run; do not combine their costs with the uninstrumented completion-fps sample."
+  },
+  "trace": {
+    "file": "completed-frames.json.gz",
+    "sha256": "efd30c3a051bc1c89af9cbbfa542cba88f4163a602e63bba8d78a59df09dd433"
+  },
+  "covered_repeat": {
+    "fps": 21.28121452391316,
+    "cpu_encode_median_ms": 10.655029296875,
+    "cpu_encode_p95_ms": 13.7900390625,
+    "completion_latency_p95_ms": 100.090087890625,
+    "cpu_stat_delta": {
+      "usage_usec": 10851547,
+      "user_usec": 9431343,
+      "system_usec": 1420204,
+      "nice_usec": 0,
+      "core_sched.force_idle_usec": 0,
+      "nr_periods": 141,
+      "nr_throttled": 24,
+      "throttled_usec": 1769740,
+      "nr_bursts": 0,
+      "burst_usec": 0
+    },
+    "qualification": "Separate diagnostic with a static fullscreen desktop cover; same application and limits; still below 30 fps."
+  }
+}
