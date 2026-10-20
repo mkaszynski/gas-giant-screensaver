@@ -8,10 +8,12 @@
 #include <string_view>
 
 namespace observatory::detail {
-// Keep a resumed/slow frame from granting a correspondingly long CPU burst.
+// Zero selects independent progress when cadence cannot supply enough windows.
 inline double surfaceWorkSeconds(double framePeriod) {
   if (!std::isfinite(framePeriod) || framePeriod <= 0.)
     framePeriod = 1. / 30.;
+  if (framePeriod > .05)
+    return 0.;
   return std::clamp(framePeriod * .16, .0005, .0055);
 }
 inline bool hardwareSurfaceWork(std::string_view renderer) {

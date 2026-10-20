@@ -649,6 +649,12 @@ void SurfaceRenderer::prepareFrame() {
   lastWorkFrame = now;
   if (!cooperativeBuilds || !buildPending() || !frameFence)
     return;
+  const double cpuSeconds = detail::surfaceWorkSeconds(period);
+  if (cpuSeconds == 0.) {
+    cooperativeBuilds = false;
+    backgroundWork.release();
+    return;
+  }
   const auto status = glClientWaitSync(frameFence, 0, 0);
   if (status == GL_WAIT_FAILED) {
     cooperativeBuilds = false;
@@ -660,7 +666,7 @@ void SurfaceRenderer::prepareFrame() {
   // Finish a bounded CPU slice before this frame issues drawing commands.
   // The fence proves the preceding frame is no longer using the GPU.
   const auto budget = std::chrono::duration_cast<Clock::duration>(
-      std::chrono::duration<double>(detail::surfaceWorkSeconds(period)));
+      std::chrono::duration<double>(cpuSeconds));
   frameCpuWork = true;
   backgroundWork.runFor(budget);
 #endif

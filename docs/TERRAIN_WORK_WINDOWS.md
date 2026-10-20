@@ -17,7 +17,9 @@ The last CPU window and staged mesh uploads use separate frames. Existing
 2 MiB upload chunks and resident coverage thresholds are unchanged. Seek and
 shutdown release paused work before waiting, so they never need another frame
 to complete. Invalid intervals use the nominal 30 fps budget; the upper bound
-also applies after a long pause. A failed fence disables cooperative scheduling
+does not grow after a long pause. Cadence slower than 20 fps switches to
+independent progress instead of starving construction between rare frames. A
+failed fence also disables cooperative scheduling
 and releases the worker. No GPU finish or blocking fence wait is added.
 
 Software rasterizers retain the existing schedule: a slow CPU-rendered frame
@@ -42,5 +44,6 @@ also failed: a forest build remained pending for 9.4 seconds and triggered a
 512,800-vertex forest in 5.88 seconds with 2.67 ms windows, versus 2.49 seconds
 with 5.33 ms windows at 30 Hz. The revised sixteen-percent grant restores
 construction margin; it still needs the packaged deadline and streaming gate.
-[Raw CPU window measurements](frame-drop-investigation/terrain-window-throughput.json). CPU savings, image parity and passing
-functional tests alone do not establish the 30 fps gate.
+[Raw CPU window measurements](frame-drop-investigation/terrain-window-throughput.json).
+CPU savings, image parity and passing functional tests alone do not establish
+the 30 fps gate.

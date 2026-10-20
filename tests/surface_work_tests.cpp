@@ -14,9 +14,12 @@ int main() {
   try {
     require(surfaceWorkSeconds(1. / 30.) == (1. / 30.) * .16,
             "normal frames reserve sixteen percent for terrain work");
-    require(surfaceWorkSeconds(30.) == .0055 &&
+    require(surfaceWorkSeconds(.05) == .0055 &&
                 surfaceWorkSeconds(1.e-6) == .0005,
-            "pause/resume and very fast frames retain bounded CPU slices");
+            "supported intervals retain bounded CPU slices");
+    for (double period : {.051, .1, 1., 30.})
+      require(surfaceWorkSeconds(period) == 0.,
+              "slow frames and resume select independent terrain progress");
     for (double period : {0., -1., std::numeric_limits<double>::infinity(),
                           std::numeric_limits<double>::quiet_NaN()})
       require(surfaceWorkSeconds(period) == surfaceWorkSeconds(1. / 30.),
