@@ -150,6 +150,9 @@ SurfaceRenderer::SurfaceRenderer(const std::string &root, bool reflections,
       waterLodEnabled(waterLod), weatherEnabled(weather) {
 #ifdef __EMSCRIPTEN__
   cooperativeBuilds = false;
+#else
+  const auto renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+  cooperativeBuilds = detail::hardwareSurfaceWork(renderer ? renderer : "");
 #endif
   program = link(root, "surface.vert", "surface.frag", false, weather);
   if (waterLodEnabled) {

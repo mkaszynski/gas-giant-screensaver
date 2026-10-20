@@ -8,7 +8,7 @@ they could fall behind flight and force synchronous terrain reconstruction.
 The native renderer instead experiments with separating its own background
 construction from GPU draws. A nonblocking GLES fence checks whether the
 previous frame is finished. Only then does the render thread grant the worker
-eight percent of the observed frame interval, clamped to 0.5–3 ms. The worker
+sixteen percent of the observed frame interval, clamped to 0.5–5.5 ms. The worker
 acknowledges the end of the window at its existing cooperative checkpoints
 before drawing starts. This is a scheduling change; mesh construction,
 materials, lighting, image resolution and effects are unchanged.
@@ -20,7 +20,9 @@ to complete. Invalid intervals use the nominal 30 fps budget; the upper bound
 also applies after a long pause. A failed fence disables cooperative scheduling
 and releases the worker. No GPU finish or blocking fence wait is added.
 
-The browser retains its existing worker schedule and makes no new sync calls,
+Software rasterizers retain the existing schedule: a slow CPU-rendered frame
+cannot supply enough short windows to keep terrain moving. The browser also
+retains its existing worker schedule and makes no new sync calls,
 including through the WebGPU compatibility layer. Native Hyprlock packages
 include the new helper explicitly.
 
@@ -34,5 +36,11 @@ The first prototype without the zero-contribution sampling shortcuts fell
 behind on one coast flight and is rejected. A subsequent prototype trial
 stopped on the reference run because monitoring exceeded its unchanged 10 ms
 limit; no candidate performance result was obtained. Packaged full-weather
-deadline validation is still required. CPU savings, image parity and passing
+deadline validation is still required. The first packaged eight-percent setting
+also failed: a forest build remained pending for 9.4 seconds and triggered a
+306 ms synchronous rebuild. A CPU-only ABBA throughput probe built the same
+512,800-vertex forest in 5.88 seconds with 2.67 ms windows, versus 2.49 seconds
+with 5.33 ms windows at 30 Hz. The revised sixteen-percent grant restores
+construction margin; it still needs the packaged deadline and streaming gate.
+[Raw CPU window measurements](frame-drop-investigation/terrain-window-throughput.json). CPU savings, image parity and passing
 functional tests alone do not establish the 30 fps gate.

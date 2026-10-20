@@ -12,15 +12,24 @@ void require(bool value, const char *message) {
 }
 int main() {
   try {
-    require(surfaceWorkSeconds(1. / 30.) == (1. / 30.) * .08,
-            "normal frames reserve eight percent for terrain work");
-    require(surfaceWorkSeconds(30.) == .003 &&
+    require(surfaceWorkSeconds(1. / 30.) == (1. / 30.) * .16,
+            "normal frames reserve sixteen percent for terrain work");
+    require(surfaceWorkSeconds(30.) == .0055 &&
                 surfaceWorkSeconds(1.e-6) == .0005,
             "pause/resume and very fast frames retain bounded CPU slices");
     for (double period : {0., -1., std::numeric_limits<double>::infinity(),
                           std::numeric_limits<double>::quiet_NaN()})
       require(surfaceWorkSeconds(period) == surfaceWorkSeconds(1. / 30.),
               "invalid frame intervals use the nominal budget");
+    for (auto renderer : {"", "llvmpipe (LLVM 20.1.8, 256 bits)", "softpipe",
+                           "Software Rasterizer", "Google SwiftShader",
+                           "SWR (LLVM)"})
+      require(!hardwareSurfaceWork(renderer),
+              "CPU rendering retains independent terrain progress");
+    for (auto renderer : {"AMD Radeon Graphics (radeonsi, renoir)",
+                           "Mesa Intel(R) UHD Graphics", "NVIDIA GeForce"})
+      require(hardwareSurfaceWork(renderer),
+              "hardware renderers can use GPU-separated CPU windows");
     SurfaceWork work;
     work.reset();
     std::atomic<bool> stop{false}, gpuActive{false};

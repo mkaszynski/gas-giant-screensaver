@@ -5,13 +5,23 @@
 #include <condition_variable>
 #include <mutex>
 #include <stdexcept>
+#include <string_view>
 
 namespace observatory::detail {
 // Keep a resumed/slow frame from granting a correspondingly long CPU burst.
 inline double surfaceWorkSeconds(double framePeriod) {
   if (!std::isfinite(framePeriod) || framePeriod <= 0.)
     framePeriod = 1. / 30.;
-  return std::clamp(framePeriod * .08, .0005, .003);
+  return std::clamp(framePeriod * .16, .0005, .0055);
+}
+inline bool hardwareSurfaceWork(std::string_view renderer) {
+  if (renderer.empty())
+    return false;
+  for (auto software : {"llvmpipe", "softpipe", "Software Rasterizer",
+                         "SwiftShader", "SWR"})
+    if (renderer.find(software) != std::string_view::npos)
+      return false;
+  return true;
 }
 // One producer and one render-thread owner. CPU work runs only inside an
 // explicit window; runFor returns after the worker has acknowledged its end.
