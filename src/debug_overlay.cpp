@@ -142,7 +142,57 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
   auto &timeline = menu.timeline;
   const auto day = menu.day, year = menu.year;
   vertices.clear();
-  if (menu.open()) {
+  if (menu.open() && menu.graphics.open) {
+    rectangle(layout.panel, .018, .028, .043, .94);
+    auto button = [&](DebugRect r, const std::string &label,
+                      bool selected = false) {
+      rectangle(r, selected ? .08 : .055, selected ? .28 : .09,
+                selected ? .38 : .13);
+      text(r.x + 7 * layout.scale, r.y + 6 * layout.scale, 1.5 * layout.scale,
+           label);
+    };
+    button(layout.graphicsBack(), "BACK");
+    button(layout.close(), "X");
+    const auto &q = menu.graphics.draft;
+    button(layout.graphicsButton(),
+           "TEX " + std::to_string(q.textureSize / 1024) + " K");
+    text(layout.panel.x + 145 * layout.scale,
+         layout.panel.y + 17 * layout.scale, 2 * layout.scale, "GRAPHICS");
+    auto slider = layout.qualitySlider();
+    rectangle(
+        {slider.x, slider.y + 8 * layout.scale, slider.width, 4 * layout.scale},
+        .12, .19, .24);
+    const double fraction =
+        q.preset == GraphicsPreset::Custom ? .5 : int(q.preset) / 2.;
+    rectangle({slider.x + fraction * slider.width - 4 * layout.scale, slider.y,
+               8 * layout.scale, 20 * layout.scale},
+              .8, .94, 1.);
+    text(slider.x, slider.y + 25 * layout.scale, 1.5 * layout.scale,
+         "LOW                 MEDIUM                 HIGH");
+    if (q.preset == GraphicsPreset::Custom)
+      text(slider.x, slider.y - 18 * layout.scale, 1.5 * layout.scale,
+           "CUSTOM");
+    for (int i = 0; i < 8; ++i)
+      button(layout.feature(i),
+             std::string(q.features[i] ? "ON  " : "OFF ") +
+                 std::string(graphicsFeatureNames[i]),
+             q.features[i]);
+    auto r = layout.resolution();
+    text(r.x, r.y - 18 * layout.scale, 1.5 * layout.scale,
+         "RESOLUTION " + std::to_string(q.height) + " P");
+    rectangle({r.x, r.y + 6 * layout.scale, r.width, 5 * layout.scale}, .12,
+              .19, .24);
+    rectangle({r.x + (q.height - 360) / 720. * r.width - 3 * layout.scale, r.y,
+               6 * layout.scale, 18 * layout.scale},
+              .8, .94, 1.);
+    button(layout.frameCap(), std::to_string(q.fps) + " FPS");
+    button(layout.cloudQuality(),
+           q.clouds == 1 ? "CLOUDS FULL" : "CLOUDS HALF");
+    button(layout.graphicsApply(), "APPLY", q != menu.graphics.applied);
+    text(layout.panel.x + 132 * layout.scale,
+         layout.panel.y + 334 * layout.scale, 1.5 * layout.scale,
+         "APPLY REBUILDS RESOURCES");
+  } else if (menu.open()) {
     rectangle(layout.panel, .018, .028, .043, .90);
     std::array<std::string, 5> labels{timeline.playing() ? "PAUSE" : "PLAY",
                                       "DAY", "3 DAYS", "YEAR", "RESET"};
@@ -157,6 +207,10 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
                (button.width - labels[i].size() * 12 * layout.scale) / 2.,
            button.y + 5 * layout.scale, 2 * layout.scale, labels[i]);
     }
+    auto graphicsButton = layout.graphicsButton();
+    rectangle(graphicsButton, .055, .09, .13);
+    text(graphicsButton.x + 5 * layout.scale,
+         graphicsButton.y + 7 * layout.scale, 1.5 * layout.scale, "GRAPHICS");
     const auto target = timeline.target(real);
     std::ostringstream label;
     label << (timeline.dragging() ? "SEEK " : "TIME ") << std::fixed
@@ -189,7 +243,9 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
            2 * layout.scale, std::string(weatherPresetNames[i]));
     }
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 196 * layout.scale,
-         1.5 * layout.scale, "AUTO RESTORES BIOME WEATHER");
+         1.5 * layout.scale,
+         menu.graphics.applied.features[1] ? "AUTO RESTORES BIOME WEATHER"
+                                           : "VOLUME CLOUDS OFF IN GRAPHICS");
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 226 * layout.scale,
          1.5 * layout.scale, "METEOR SHOWERS");
     const std::array<std::string, 3> modes{"AUTO", "PREVIEW NOW", "OFF"};
@@ -231,12 +287,13 @@ void DebugOverlay::draw(int w, int h, int ww, int wh, double real,
     rarity << std::fixed << std::setprecision(1) << "RANDOM GAP "
            << menu.meteorOptions.intervalHours * 2. / 9. << " TO "
            << menu.meteorOptions.intervalHours * 16. / 9. << " H";
-    const std::string status = menu.meteorOptions.mode == MeteorMode::Off
-                                   ? "SHOWERS DISABLED"
-                               : menu.meteorOptions.mode == MeteorMode::Preview
-                                   ? "MANUAL SHOWER - ALL SKIES"
-                               : !menu.meteorDark ? "WAITING FOR DARK SKY"
-                                                  : rarity.str();
+    const std::string status =
+        !menu.graphics.applied.features[6]           ? "METEORS OFF IN GRAPHICS"
+        : menu.meteorOptions.mode == MeteorMode::Off ? "SHOWERS DISABLED"
+        : menu.meteorOptions.mode == MeteorMode::Preview
+            ? "MANUAL SHOWER - ALL SKIES"
+        : !menu.meteorDark ? "WAITING FOR DARK SKY"
+                           : rarity.str();
     text(layout.panel.x + 8 * layout.scale, layout.panel.y + 340 * layout.scale,
          1.5 * layout.scale, status);
   } else if (menu.promptVisible(real)) {

@@ -4,7 +4,16 @@ const {
   writeUniform,
   sourceKey,
   textureUsage,
+  softwareAdapter,
 } = require('../web/graphics-data.js');
+assert(
+  softwareAdapter({ info: { description: 'SwiftShader Device (Subzero)' } }),
+);
+assert(softwareAdapter({ info: { architecture: 'llvmpipe' } }));
+assert(softwareAdapter({ isFallbackAdapter: true }));
+assert(softwareAdapter({ info: { isFallbackAdapter: true } }));
+assert(!softwareAdapter({ info: { vendor: 'AMD', device: 'Radeon' } }));
+assert(!softwareAdapter({}));
 for (const [value, expected] of [
   [0, 0],
   [-0, 0x8000],
@@ -44,13 +53,19 @@ assert.deepEqual([...f.slice(4, 12)], [1, 2, 0, 0, 3, 4, 0, 0]);
 writeUniform(
   buffer,
   { offset: 16, type: 'vec4', valueType: 'vec2', array_stride: 16 },
-  [99, 5, 6, 7, 8, 99], 1, 4,
+  [99, 5, 6, 7, 8, 99],
+  1,
+  4,
 );
 assert.deepEqual([...f.slice(4, 12)], [5, 6, 0, 0, 7, 8, 0, 0]);
 writeUniform(
   buffer,
   { offset: 16, type: 'vec4', valueType: 'vec2', array_stride: 16 },
-  [9, 10], 0, 2, 0, 1,
+  [9, 10],
+  0,
+  2,
+  0,
+  1,
 );
 assert.deepEqual([...f.slice(4, 12)], [5, 6, 0, 0, 9, 10, 0, 0]);
 writeUniform(

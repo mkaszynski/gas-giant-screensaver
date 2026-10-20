@@ -5,6 +5,7 @@
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
 #include "weather_dispatch.hpp"
+#include "texture_quality.hpp"
 #include <GLES2/gl2ext.h>
 #ifndef __EMSCRIPTEN__
 #include <GLES3/gl31.h>
@@ -375,6 +376,9 @@ GLuint Renderer::imageTexture(const std::string &file) {
     png_image_free(&img);
     throw std::runtime_error(msg);
   }
+  if (graphics && (file == "giant.png" || file.starts_with("terrain/")))
+    reduceTexture(pixels, img.width, img.height, graphics->textureSize,
+                  file == "terrain/geometry.png");
   GLuint t;
   glGenTextures(1, &t);
   glBindTexture(GL_TEXTURE_2D, t);
@@ -442,8 +446,15 @@ GLuint Renderer::galaxyTexture() {
       throw std::runtime_error("Inconsistent galaxy cube format: " + file);
     size = mips.front().size;
     cubeCompressed = mips.front().compressed;
-    for (unsigned level = 0; level < mips.size(); ++level) {
-      const auto &mip = mips[level];
+    unsigned first = 0;
+    if (graphics)
+      while (first + 1 < mips.size() &&
+             mips[first].size > unsigned(graphics->textureSize))
+        ++first;
+    for (unsigned sourceLevel = first; sourceLevel < mips.size();
+         ++sourceLevel) {
+      const unsigned level = sourceLevel - first;
+      const auto &mip = mips[sourceLevel];
       if (compressed && mip.compressed) {
         glCompressedTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level,
                                GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT,
@@ -536,8 +547,17 @@ bool Renderer::needsFloatingWeatherNoise() {
   return error > 40;
 }
 Renderer::Renderer(std::string dir, StarfieldOptions options,
-                   SurfaceOptions travel)
-    : root(std::move(dir)), starfield(options), surfaceOptions(travel) {
+                   SurfaceOptions travel,
+                   std::optional<GraphicsSettings> quality)
+    : graphics(quality), root(std::move(dir)), starfield(options),
+      surfaceOptions(travel) {
+  if (graphics) {
+    surfaceOptions.enabled = graphics->features[0];
+    surfaceOptions.weather = graphics->features[1];
+    surfaceOptions.reflections = graphics->features[7];
+    starfield.galaxy = graphics->features[2];
+    starfield.stars = graphics->features[3];
+  }
   const GLState state;
   glGenVertexArrays(1, &vao);
   transProgram = program("transmittance.frag");
@@ -547,20 +567,24 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   bodyProgram = program("body.frag");
   giantProgram = program("body.frag", "fullscreen.vert", 1);
   giantLimbProgram = program("body.frag", "fullscreen.vert", 2);
-  ringProgram = program("rings.frag");
-  starProgram = program("stars.frag", "stars.vert");
+  if (!graphics || graphics->features[4])
+    ringProgram = program("rings.frag");
+  if (starfield.stars)
+    starProgram = program("stars.frag", "stars.vert");
   postProgram = program("post.frag");
-  emissionProgram = program("emission.frag", "emission.vert");
-  glGenVertexArrays(1, &emissionVao);
-  glGenBuffers(1, &emissionBuffer);
-  glBindVertexArray(emissionVao);
-  glBindBuffer(GL_ARRAY_BUFFER, emissionBuffer);
-  for (int i = 0, offset = 0; i < 4; ++i) {
-    const int size = i == 0 ? 2 : (i == 3 ? 4 : 3);
-    glEnableVertexAttribArray(i);
-    glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, 12 * sizeof(float),
-                          reinterpret_cast<void *>(offset * sizeof(float)));
-    offset += size;
+  if (!graphics || graphics->features[5]) {
+    emissionProgram = program("emission.frag", "emission.vert");
+    glGenVertexArrays(1, &emissionVao);
+    glGenBuffers(1, &emissionBuffer);
+    glBindVertexArray(emissionVao);
+    glBindBuffer(GL_ARRAY_BUFFER, emissionBuffer);
+    for (int i = 0, offset = 0; i < 4; ++i) {
+      const int size = i == 0 ? 2 : (i == 3 ? 4 : 3);
+      glEnableVertexAttribArray(i);
+      glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, 12 * sizeof(float),
+                            reinterpret_cast<void *>(offset * sizeof(float)));
+      offset += size;
+    }
   }
   giant = imageTexture("giant.png");
   if (surfaceOptions.enabled) {
@@ -758,7 +782,9 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  const auto catalog = loadStarCatalog(root + "/assets/sky/stars.bin");
+  const auto catalog = starfield.stars
+                           ? loadStarCatalog(root + "/assets/sky/stars.bin")
+                           : std::vector<CatalogStar>{};
   stars = static_cast<int>(catalog.size());
   if (starfield.galaxy)
     galaxy = galaxyTexture();
@@ -787,11 +813,27 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
   target(sky, 256, 128);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+bool Renderer::releaseSizeTargetsFor(int width, int height) {
+  const auto size =
+      graphics ? graphics->size(width, height) : std::array{width, height};
+  if (!scene.width || (scene.width == size[0] && scene.height == size[1]))
+    return false;
+  release(scene);
+  release(composite);
+  release(weather);
+  release(skyWeatherCache);
+  release(weatherPixels);
+  release(weatherSkyPixels);
+  if (surface)
+    surface->releaseSizeTargets();
+  return true;
+}
 Renderer::~Renderer() {
   release(trans);
   release(multi);
   release(sky);
   release(scene);
+  release(composite);
   release(weather);
   release(skyWeatherCache);
   release(rainDensityCache);
@@ -953,6 +995,8 @@ void Renderer::rings(GLuint p, const Scene &s, bool enabled) {
 void Renderer::render(int w, int h, double seconds, double day, float opacity,
                       bool drawBodies, bool drawRings, EmissionFrame emission,
                       double weatherSeconds) {
+  if (graphics)
+    drawRings &= graphics->features[4];
   if (surface) {
     auto s = travelScene(surface->world(), seconds,
                          seconds * surfaceOptions.speed + surfaceOptions.offset,
@@ -970,6 +1014,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
                            double weatherSeconds) {
   if (w <= 0 || h <= 0)
     return;
+  const int outputWidth = w, outputHeight = h;
+  if (graphics) {
+    auto size = graphics->size(w, h);
+    w = size[0];
+    h = size[1];
+    drawRings &= graphics->features[4];
+    if (!graphics->features[5])
+      emission.seconds = -1;
+  }
   if (surface)
     surface->prepareFrame();
   if (surface)
@@ -1177,7 +1230,8 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
   glDisable(GL_DEPTH_TEST);
   if (drawBodies && emission.seconds >= 0)
     emissions(s, w, h, emission, drawRings, day);
-  drawMeteors(s, w, h, day);
+  if (!graphics || graphics->features[6])
+    drawMeteors(s, w, h, day);
   GLuint surfaceTexture = 0;
   WEATHER_PROFILE_STAGE(2);
   if (surface) {
@@ -1216,13 +1270,18 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     WEATHER_PROFILE_STAGE(6);
     // Preserve vertical sampling of long grazing columns. Wider horizontal
     // cells remove redundant smooth-sky rays without coarsening the horizon.
+    const double cloudScale = graphics ? graphics->clouds : 1.;
+    const int cloudWidth = std::max(1, int(w * cloudScale)),
+              cloudHeight = std::max(1, int(h * cloudScale));
     if (surfaceOptions.weatherCache)
-      target(skyWeatherCache, (w + 2) / 3, (h + 1) / 2, false, false,
-             GL_RGBA16F, weatherSkyComputeProgram != 0);
+      target(skyWeatherCache, (cloudWidth + 2) / 3, (cloudHeight + 1) / 2,
+             false, false, GL_RGBA16F, weatherSkyComputeProgram != 0);
     // Ground and partial MSAA pixels retain exact, display-resolution paths.
-    target(weather, w, h, false, true, GL_RGBA16F, weatherComputeProgram != 0);
+    target(weather, cloudWidth, cloudHeight, false, true, GL_RGBA16F,
+           weatherComputeProgram != 0);
     if (weatherComputeProgram)
-      weatherPixelCoordinates(weatherPixels, w, h, (w + 2) / 3, (h + 1) / 2);
+      weatherPixelCoordinates(weatherPixels, weather.width, weather.height,
+                              (cloudWidth + 2) / 3, (cloudHeight + 1) / 2);
     if (weatherSkyComputeProgram)
       weatherPixelCoordinates(weatherSkyPixels, skyWeatherCache.width,
                               skyWeatherCache.height, 0, 0);
@@ -1285,25 +1344,30 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
       // The post pass samples these images; manual meteors also blend into
       // their framebuffer attachments. Both consumers need visibility.
+      // The proof uses display-pixel row centres and their camera aspect.
+      // Reduced cloud targets use different pixel centres; keep their complete
+      // solver instead of applying display-row bounds to a smaller image.
+      const bool clearCompatible = weatherClearComputeProgram &&
+                                   weather.width == w && weather.height == h;
       const int firstClear =
-          weatherClearComputeProgram
+          clearCompatible
               ? clearWeatherFirstRow(w, h, s.forward, s.right, s.cameraUp,
                                      s.altitudeMeters / 1000.,
                                      weatherState.base + weatherState.thickness)
-              : h;
+              : weather.height;
       const int endClear =
-          weatherClearComputeProgram
+          clearCompatible
               ? clearWeatherEndRow(w, h, s.forward, s.right, s.cameraUp,
                                    s.altitudeMeters / 1000., weatherState.base)
               : 0;
       dispatchWeather(compute, weatherPixels, weather, endClear,
                       firstClear - endClear);
-      if (firstClear < h || endClear > 0) {
+      if (firstClear < weather.height || endClear > 0) {
         prepareWeather(weatherClearComputeProgram);
         dispatchWeather(weatherClearComputeProgram, weatherPixels, weather,
                         endClear ? 0 : firstClear,
-                        endClear ? endClear : h - firstClear);
-        weatherClearRows = endClear + h - firstClear;
+                        endClear ? endClear : weather.height - firstClear);
+        weatherClearRows = endClear + weather.height - firstClear;
       }
 #endif
     } else {
@@ -1319,7 +1383,12 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     revealMeteors(s, w, h, surfaceTexture);
   }
   WEATHER_PROFILE_STAGE(8);
-  glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
+  // Composite depth/coverage/cloud texels at the scene's pixel centres. Only
+  // the finished display color is enlarged for the host framebuffer/UI.
+  if (graphics)
+    target(composite, w, h, false, false, GL_RGBA8, true);
+  glBindFramebuffer(GL_FRAMEBUFFER,
+                    graphics ? composite.framebuffer : state.framebuffer);
   glViewport(0, 0, w, h);
   common(postProgram, s, w, h);
   integer(postProgram, "uMovingSurface", bool(surface));
@@ -1343,6 +1412,15 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
               std::remainder(seconds * .157, 2 * pi));
   scalar(postProgram, "uOpacity", opacity);
   quad(postProgram);
+  if (graphics) {
+    if (!presentationProgram)
+      presentationProgram = program("presentation.frag");
+    glBindFramebuffer(GL_FRAMEBUFFER, state.framebuffer);
+    glViewport(0, 0, outputWidth, outputHeight);
+    glUseProgram(presentationProgram);
+    bind(presentationProgram, 0, "uPresentation", composite.texture);
+    quad(presentationProgram);
+  }
   if (surface)
     surface->finishFrame();
 #ifdef OBSERVATORY_WEATHER_PROFILE

@@ -45,8 +45,9 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/emission-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/sky-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/terrain-render-tests
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-render-tests
+          timeout 240s xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/debug-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/quality-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-shadow-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-render-tests

@@ -66,6 +66,7 @@ def programs():
                 "weather-light",
                 "weather-rain",
                 "weather-filter-probe",
+                "presentation",
             )
         ],
         (
@@ -357,7 +358,9 @@ def convert_program(label, original, stage, varyings):
         original,
         stage,
         varyings,
-        post=name in ("post.frag", "debug.frag"),
+        # Browser composites always use a budget-sized offscreen target.
+        # Only presentation and the overlay write directly to the swapchain.
+        post=name in ("presentation.frag", "debug.frag"),
         points=name == "stars.frag",
     )
 

@@ -27,6 +27,7 @@ public:
   }
   void prepareFrame();
   void finishFrame();
+  void releaseSizeTargets();
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
 

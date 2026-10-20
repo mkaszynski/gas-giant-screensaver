@@ -90,6 +90,37 @@ struct DebugLayout {
     return {panel.x + panel.width - 38 * scale, panel.y + 10 * scale,
             30 * scale, 24 * scale};
   }
+  DebugRect graphicsButton() const {
+    return {panel.x + 406 * scale, panel.y + 10 * scale, 108 * scale,
+            24 * scale};
+  }
+  DebugRect graphicsBack() const {
+    return {panel.x + 8 * scale, panel.y + 10 * scale, 110 * scale, 24 * scale};
+  }
+  DebugRect qualitySlider() const {
+    return {panel.x + 20 * scale, panel.y + 70 * scale,
+            panel.width - 40 * scale, 20 * scale};
+  }
+  DebugRect feature(int i) const {
+    return {panel.x + (8 + (i % 2) * 276) * scale,
+            panel.y + (126 + (i / 2) * 34) * scale, 268 * scale, 26 * scale};
+  }
+  DebugRect resolution() const {
+    return {panel.x + 8 * scale, panel.y + 290 * scale, 250 * scale,
+            18 * scale};
+  }
+  DebugRect frameCap() const {
+    return {panel.x + 280 * scale, panel.y + 280 * scale, 85 * scale,
+            30 * scale};
+  }
+  DebugRect cloudQuality() const {
+    return {panel.x + 373 * scale, panel.y + 280 * scale, 175 * scale,
+            30 * scale};
+  }
+  DebugRect graphicsApply() const {
+    return {panel.x + 8 * scale, panel.y + 326 * scale, 110 * scale,
+            26 * scale};
+  }
   DebugRect weather(int index) const {
     return {panel.x + (8 + (index % 3) * 181) * scale,
             panel.y + (120 + (index / 3) * 34) * scale, 173 * scale,

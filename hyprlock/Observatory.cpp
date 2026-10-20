@@ -67,6 +67,9 @@ bool CObservatory::draw(const SRenderData &data) {
             observatory::StarfieldOptions{}, observatory::SurfaceOptions{true});
         controls =
             std::make_unique<observatory::DebugOverlay>(time, day, false);
+        auto quality = observatory::GraphicsSettings{};
+        quality.fps = fps;
+        controls->menu.graphics.initialize(quality);
       }
       auto now = std::chrono::steady_clock::now();
       double dt = std::chrono::duration<double>(now - last).count();
@@ -93,6 +96,17 @@ bool CObservatory::draw(const SRenderData &data) {
       // applied independently so neither debug controls nor pause affect PAM.
       const double seconds =
           controls->time(realElapsed) + elapsed - realElapsed;
+      if (qualityRevision != controls->menu.graphics.revision) {
+        glFinish();
+        renderer.reset();
+        renderer = std::make_unique<observatory::Renderer>(
+            observatory::Renderer::defaultDataDirectory(),
+            observatory::StarfieldOptions{}, observatory::SurfaceOptions{true},
+            controls->menu.graphics.applied);
+        qualityRevision = controls->menu.graphics.revision;
+        fps = controls->menu.graphics.applied.fps;
+        framePacer = observatory::FramePacer(fps);
+      }
       renderer->setWeatherPreset(controls->menu.weather());
       renderer->setMeteorFrame(
           {controls->menu.meteorOptions.mode == observatory::MeteorMode::Preview

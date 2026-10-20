@@ -4,7 +4,7 @@ const path = require('node:path');
 const { PNG } = require('../web/node_modules/pngjs');
 const directory = path.resolve(__dirname, '../captures');
 const report = {};
-for (const fixture of ['day', 'dusk', 'debug-menu', 'night', 'night-no-stars', 'storm', 'thin-clouds']) {
+for (const fixture of ['day', 'day-540p', 'dusk', 'debug-menu', 'night', 'night-no-stars', 'storm', 'thin-clouds', 'night-clouds']) {
   const images = ['webgl2', 'webgpu'].map((backend) =>
     PNG.sync.read(
       fs.readFileSync(

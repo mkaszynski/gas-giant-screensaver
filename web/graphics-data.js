@@ -80,7 +80,25 @@
     } else if (!compressed) usage |= flags.RENDER_ATTACHMENT;
     return usage;
   }
-  const data = { sourceKey, float16, writeUniform, textureUsage };
+  function softwareAdapter(adapter) {
+    const info = adapter.info || {};
+    return (
+      adapter.isFallbackAdapter === true ||
+      info.isFallbackAdapter === true ||
+      /swiftshader|llvmpipe|softpipe/i.test(
+        [info.vendor, info.architecture, info.device, info.description].join(
+          ' ',
+        ),
+      )
+    );
+  }
+  const data = {
+    sourceKey,
+    float16,
+    writeUniform,
+    textureUsage,
+    softwareAdapter,
+  };
   if (typeof module === 'object') module.exports = data;
   else root.ObservatoryGraphicsData = data;
 })(globalThis);

@@ -193,6 +193,14 @@ int main() {
         size_t initialRevision = moving.surfaceMeshRevision();
         // Ten seconds gives measurable parallax at airplane height.
         moving.render(w, h, 520);
+        const auto streamingBuilds = moving.surfaceBuildsStarted();
+        glFinish();
+        require(moving.releaseSizeTargetsFor(w / 2, h / 2),
+                "viewport retirement releases pixel targets during streaming");
+        moving.render(w, h, 520);
+        require(moving.surfaceBuildsStarted() == streamingBuilds &&
+                    moving.surfaceMeshRevision() == initialRevision,
+                "viewport retirement preserves the in-flight terrain job");
         auto beforeRefresh = pixels(w, h);
         auto deadline =
             std::chrono::steady_clock::now() + std::chrono::seconds(20);
@@ -318,6 +326,12 @@ int main() {
         for (int i = 0; i < 4; ++i)
           require(restored[i] == expected[i], "host clear color restored");
         require(glGetError() == GL_NO_ERROR, "moving surface GL validity");
+        const auto beforeShutdown = moving.surfaceBuildsStarted();
+        moving.render(w, h, 530.1);
+        require(moving.surfaceBuildsStarted() == beforeShutdown + 1,
+                "shutdown fixture starts a final background build");
+        // On hardware the new worker is paused until another frame grants a
+        // window. Destruction must release it without requiring that frame.
       }
       std::vector<unsigned char> oceanImage;
       {
