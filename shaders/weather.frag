@@ -15,6 +15,7 @@ uniform highp sampler2D uSurface;
 #include "scene.glsl"
 #include "weather_common.glsl"
 #include "weather_depth.glsl"
+#include "atmospheric_optics.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
 #ifdef OBSERVATORY_WEATHER_COMPUTE
@@ -28,6 +29,7 @@ uniform bool uWeatherCacheEnabled;
 uniform bool uWeatherSkyPass,uWeatherCacheEnabled;
 #endif
 uniform highp sampler3D uWeatherLightCache;
+uniform highp sampler2D uWeatherRainCache;
 vec2 weatherPixelPosition(){
 #ifdef OBSERVATORY_WEATHER_COMPUTE
  return vec2(gl_GlobalInvocationID.xy)+.5;
@@ -54,6 +56,15 @@ vec2 cloudSunTransmission(vec3 p,float density,float lod){
  // Fine local extinction preserves the illuminated cloud skin even when the
  // wider solar column is filtered through the quarter-kilometre light cache.
  return column*exp(-stepLength*density*.35*vec2(1.,.2));
+}
+float weatherRainDensity(vec3 column){
+ float edge=smoothstep(24.,32.,max(abs(column.x),abs(column.z)));
+ float density=0.;
+ if(edge<1.){
+  density=textureLod(uWeatherRainCache,column.xz/64.+.5,0.).r;
+ }
+ if(edge>0.)density=mix(density,weatherDensity(column,uObserverHeight,2.),edge);
+ return density;
 }
 
 // No per-frame dither or stochastic reprojection: bounded, stable quadrature
@@ -84,6 +95,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  if(span>0.&&!reused){
   WeatherLighting lightingTerms=weatherLighting(d);
   lightingTerms.ambient+=lightingTerms.planet;
+  vec3 dropletPhase=cloudOpticsPhase(d,lightingTerms.forward);
   float position=start;
   for(int i=0;i<96;++i){
    if(position>=finish)break;
@@ -123,7 +135,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
     // surface path retains its original evaluation order; volume roundoff is
     // bounded by the rendered-reference regression test.
     vec3 solar=transmission(uTrans,weatherHeight(p,uObserverHeight),uSun.y)*lightingTerms.sunlit;
-    vec3 lighting=solar*(lightingTerms.forward*shadow.x+.032*(.35+.65*shadow.y))+lightingTerms.ambient;
+    vec3 lighting=solar*(dropletPhase*shadow.x+.032*(.35+.65*shadow.y))+lightingTerms.ambient;
 #ifndef OBSERVATORY_WEATHER_CALM
     if(uWeatherFlash.w>0.){
      vec3 delta=p-vec3(uWeatherFlash.x,uWeatherFlash.y-uObserverHeight,uWeatherFlash.z);
@@ -146,29 +158,44 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  if(uWeatherKind.w>.001&&highDistance>0.&&highDistance<end){
   float tau=weatherCirrus(d*highDistance)/max(.2,abs(d.y))*(1.-smoothstep(70.,100.,highDistance));
   float a=1.-exp(-tau);
-  vec3 light=weatherLight(d,9.5,.1);
+  WeatherLighting terms=weatherLighting(d);
+  vec3 light=weatherLightPrepared(terms,9.5,exp(-.1*vec2(1.,.2)));
+  light+=transmission(uTrans,9.5,uSun.y)*terms.sunlit*exp(-.1)*
+         (iceOpticsPhase(d,terms.forward)-vec3(terms.forward));
   if(highDistance<start){L=light*a+L*(1.-a);T*=1.-a;}
   else {L+=T*light*a;T*=1.-a;}
  }
  // A shallow moisture-dependent aerosol/fog bank sits in valleys and above
  // water. Integrate height, including curvature, rather than a screen overlay.
- float fogColumn=0.,rainColumn=0.;
+ float fogColumn=0.,rainColumn=0.;vec3 rainMoment=vec3(0.);
+ float rainStart=0.,rainSpan=0.;
+ if(uWeatherRain>.02){
+  vec2 rainShell=weatherShell(vec3(0.),d,uWeatherLayer.x,uObserverHeight);
+  rainStart=max(0.,rainShell.x);
+  rainSpan=max(0.,min(end,rainShell.y)-rainStart);
+ }
  if(uWeatherLayer.z>0.||uWeatherRain>.02)for(int i=0;i<4;++i){
   vec3 p=d*((float(i)+.5)*end*.25);
   float h=weatherHeight(p,uObserverHeight);
   fogColumn+=exp(-max(0.,h-uWeatherLayer.w)/.30);
-  if(uWeatherRain>.02&&h<uWeatherLayer.x){
+  if(uWeatherRain>.02&&rainSpan>0.){
+   p=d*(rainStart+(float(i)+.5)*rainSpan*.25);
+   h=weatherHeight(p,uObserverHeight);
    // Distant precipitation curtains descend from the same cloud cells. From
    // airplane height these are volumes, not large raindrops on the camera.
    vec3 column=p+vec3(0.,uWeatherLayer.x+uWeatherLayer.y*.38-h,0.);
-   float rain=weatherDensity(column,uObserverHeight,2.);
-   rainColumn+=rain*smoothstep(0.,.20,h);
+   float rain=weatherRainDensity(column);
+   float weight=rain*smoothstep(0.,.20,h)*rainSpan/max(.001,end);
+   rainColumn+=weight;rainMoment+=p*weight;
   }
  }
  float fogOptical=min(5.,end*.25*(fogColumn*uWeatherLayer.z+rainColumn*uWeatherRain*.025));
  float fogT=exp(-fogOptical);
  vec3 fogLight=viewSky+transmission(uTrans,uWeatherLayer.w,uSun.y)*
                 max(0.,uSun.y)*uEclipse*.03+vec3(.97,.98,1.)*uPlanetLight*.15;
+ vec3 point=rainColumn>1.e-6?rainMoment/rainColumn:d*(end*.5);
+ fogLight=precipitationOptics(d,fogLight,transmission(uTrans,uWeatherLayer.w,uSun.y)*uEclipse,
+                             fogColumn*uWeatherLayer.z,rainColumn*uWeatherRain*.025,point);
  // Foreground haze attenuates both the sky and clouds; no duplicate dry-air
  // scattering, which the terrain and atmosphere passes already integrate.
  L=L*fogT+fogLight*(1.-fogT);T*=fogT;

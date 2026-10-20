@@ -25,11 +25,13 @@ jobs:
           python3 -m venv /tmp/sky-model-tests
           /tmp/sky-model-tests/bin/pip install -r scripts/sky-model-requirements.txt
           /tmp/sky-model-tests/bin/pip install -r scripts/terrain-requirements.txt
+          /tmp/sky-model-tests/bin/pip install -r scripts/optics-requirements.txt
           /tmp/sky-model-tests/bin/python tests/test_galaxy_model.py
           /tmp/sky-model-tests/bin/python tests/test_terrain_bake.py
           /tmp/sky-model-tests/bin/python tests/test_world_bake.py
           /tmp/sky-model-tests/bin/python tests/test_surface_materials.py
           /tmp/sky-model-tests/bin/python tests/test_landform_bake.py
+          /tmp/sky-model-tests/bin/python tests/test_atmospheric_optics.py
       - name: Frame-profile analysis tests
         run: python3 tests/test_frame_profile.py
       - name: GPU behavior on Mesa software renderer
@@ -49,11 +51,14 @@ jobs:
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/surface-shadow-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/fidelity-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-render-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/whitecap-render-tests captures
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-preparation-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/water-reuse-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-specialization-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-sampling-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/weather-compute-tests
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/optics-render-tests captures
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-render-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ./build/meteor-optics-tests
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tests/test_benchmark_output.py

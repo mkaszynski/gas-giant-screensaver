@@ -1,4 +1,6 @@
 #include "renderer.hpp"
+#include "optics.hpp"
+#include "ocean_foam.hpp"
 #include "projection.hpp"
 #include "sky_catalog.hpp"
 #include "sky_texture.hpp"
@@ -22,7 +24,7 @@
 #endif
 namespace observatory {
 #ifdef OBSERVATORY_WEATHER_PROFILE
-static void weatherProfileStage(int index) {
+void weatherProfileStage(int index) {
   if (index)
     glEndQuery(GL_TIME_ELAPSED_EXT);
   glBeginQuery(GL_TIME_ELAPSED_EXT, weatherProfileQueries[index]);
@@ -585,6 +587,18 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
         root, surfaceOptions.reflections, surfaceOptions.culling,
         surfaceOptions.waterLod, surfaceOptions.weather);
     if (surfaceOptions.weather) {
+      const auto phases =
+          readOpticsTable(root + "/assets/world/optics/phase.ggoptics");
+      glGenTextures(1, &opticsPhaseTexture);
+      textures.push_back(opticsPhaseTexture);
+      glBindTexture(GL_TEXTURE_2D, opticsPhaseTexture);
+      glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, opticsWidth, opticsHeight);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, opticsWidth, opticsHeight,
+                      GL_RGBA, GL_HALF_FLOAT, phases.data());
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       weatherProgram = program("weather.frag");
       if (surfaceOptions.weatherCompute) {
         try {
@@ -619,6 +633,8 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
         }
       }
       weatherLightProgram = program("weather-light.frag");
+      weatherRainProgram = program("weather-rain.frag");
+      target(rainDensityCache, 512, 512, false, false, GL_R16F, true);
       glGenTextures(1, &weatherLightTexture);
       textures.push_back(weatherLightTexture);
       glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
@@ -807,6 +823,7 @@ Renderer::~Renderer() {
   release(composite);
   release(weather);
   release(skyWeatherCache);
+  release(rainDensityCache);
   release(weatherPixels);
   release(weatherSkyPixels);
   glDeleteFramebuffers(1, &weatherLightFbo);
@@ -902,6 +919,8 @@ void Renderer::common(GLuint p, const Scene &s, int w, int h) {
 }
 void Renderer::weatherUniforms(GLuint p, const Scene &s) {
   integer(p, "uWeatherEnabled", bool(weatherProgram));
+  glUniform2f(glGetUniformLocation(p, "uWhitecaps"), whitecapState[0],
+              whitecapState[1]);
   glActiveTexture(GL_TEXTURE15);
   glBindTexture(GL_TEXTURE_3D, weatherNoiseTexture);
   integer(p, "uWeatherNoise", 15);
@@ -995,6 +1014,12 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     weatherState =
         weatherAt(weatherClimate(surface->world(), surfaceLocation),
                   surfaceLocation, clock, emission.exposure, weatherPreset);
+    const double coverage = surfaceOptions.whitecaps
+                                ? whitecapFraction(marineWind(weatherState.cover,
+                                                             weatherState.storm,
+                                                             weatherState.fog))
+                                : 0.;
+    whitecapState = {float(coverage), float(whitecapThreshold(coverage))};
   }
   const GLState state;
   WEATHER_PROFILE_STAGE(0);
@@ -1189,16 +1214,27 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     drawMeteors(s, w, h, day);
   GLuint surfaceTexture = 0;
   WEATHER_PROFILE_STAGE(2);
-  if (surface)
+  if (surface) {
     surfaceTexture = surface->render(s, surfaceLocation, w, h, seconds, day,
                                      scene.texture, [&](GLuint p) {
                                        common(p, s, w, h);
                                        cloudUniforms(p, s, seconds);
                                      });
-  WEATHER_PROFILE_STAGE(3);
+  } else {
+    WEATHER_PROFILE_STAGE(3);
+    WEATHER_PROFILE_STAGE(4);
+  }
+  WEATHER_PROFILE_STAGE(5);
   if (weatherProgram) {
     // Cache broad solar attenuation in a small geographic volume. Fine view
     // extinction stays at display resolution; repeated up-sun probes do not.
+    if (weatherState.rain > .02) {
+      glBindFramebuffer(GL_FRAMEBUFFER, rainDensityCache.framebuffer);
+      glViewport(0, 0, 512, 512);
+      common(weatherRainProgram, s, w, h);
+      weatherUniforms(weatherRainProgram, s);
+      quad(weatherRainProgram);
+    }
     if (s.sunLocal.y > -.08 && s.sunVisibility > 0.) {
       glBindFramebuffer(GL_FRAMEBUFFER, weatherLightFbo);
       glViewport(0, 0, 128, 128);
@@ -1211,7 +1247,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherLightProgram);
       }
     }
-    WEATHER_PROFILE_STAGE(4);
+    WEATHER_PROFILE_STAGE(6);
     // Preserve vertical sampling of long grazing columns. Wider horizontal
     // cells remove redundant smooth-sky rays without coarsening the horizon.
     const double cloudScale = graphics ? graphics->clouds : 1.;
@@ -1234,6 +1270,14 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     auto prepareWeather = [&](GLuint p) {
       common(p, s, w, h);
       weatherUniforms(p, s);
+      bind(p, 10, "uAtmosphericOptics", opticsPhaseTexture);
+      bind(p, 3, "uWeatherRainCache", rainDensityCache.texture);
+      integer(p, "uAtmosphericOpticsEnabled", surfaceOptions.atmosphericOptics);
+      glUniform2f(glGetUniformLocation(p, "uOpticsLiquid"),
+                  weatherState.cloudLiquid, weatherState.fogLiquid);
+      const double elevation = std::asin(std::clamp(s.sunLocal.y, -1., 1.));
+      glUniform2f(glGetUniformLocation(p, "uOpticsSun"), elevation,
+                  std::cos(elevation));
       glActiveTexture(GL_TEXTURE12);
       glBindTexture(GL_TEXTURE_3D, weatherLightTexture);
       integer(p, "uWeatherLightCache", 12);
@@ -1265,7 +1309,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         quad(weatherProgram);
       }
     }
-    WEATHER_PROFILE_STAGE(5);
+    WEATHER_PROFILE_STAGE(7);
     glBindFramebuffer(GL_FRAMEBUFFER, weather.framebuffer);
     glViewport(0, 0, weather.width, weather.height);
     if (weatherComputeProgram) {
@@ -1293,7 +1337,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     }
     revealMeteors(s, w, h, surfaceTexture);
   }
-  WEATHER_PROFILE_STAGE(6);
+  WEATHER_PROFILE_STAGE(8);
   // Composite depth/coverage/cloud texels at the scene's pixel centres. Only
   // the finished display color is enlarged for the host framebuffer/UI.
   if (graphics)

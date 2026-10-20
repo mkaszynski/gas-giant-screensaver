@@ -681,6 +681,42 @@
       ++texture.generation;
       texture.views.clear();
     }
+    texStorage2D(target, levels, internal, width, height) {
+      const texture = this.texture(target);
+      this.allocate(
+        texture,
+        internal,
+        width,
+        height,
+        texture.target === G.TEXTURE_CUBE_MAP ? 6 : 1,
+        levels,
+      );
+    }
+    texSubImage2D(
+      target,
+      level,
+      x,
+      y,
+      width,
+      height,
+      format,
+      type,
+      data,
+      offset = 0,
+    ) {
+      const texture = this.texture(target);
+      this.upload(
+        texture,
+        level,
+        [x, y, texture.target === G.TEXTURE_CUBE_MAP
+          ? target - G.TEXTURE_CUBE_MAP_POSITIVE_X : 0],
+        [width, height, 1],
+        format,
+        type,
+        data,
+        offset,
+      );
+    }
     texImage2D(
       target,
       level,

@@ -56,14 +56,14 @@ struct EarlyPreparation {
     auto preparation = source.substr(bodyBegin, helperEnd - bodyBegin);
     replace(preparation, " vec4 phase=wavePhase();", "");
     replace(preparation,
-            " return oceanRadiance(d,waterNormal,phase,amplitude);", "");
+            " return oceanRadiance(d,waterNormal,phase,amplitude,foot);", "");
     source.erase(phaseBegin, helperEnd + 2 - phaseBegin);
     replace(source, " vec4 foot=fwidth(wavePhase());",
             " vec4 phase=" + expression + ";\n vec4 foot=fwidth(phase);" +
                 preparation);
     for (int call = 0; call < 2; ++call)
       replace(source, "preparedOcean(d,foot)",
-              "oceanRadiance(d,waterNormal,phase,amplitude)");
+              "oceanRadiance(d,waterNormal,phase,amplitude,foot)");
     require(source.find("preparedOcean") == std::string::npos &&
                 source.find("wavePhase") == std::string::npos,
             "reference must use the previous preparation order");

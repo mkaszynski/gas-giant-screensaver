@@ -33,13 +33,14 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 27)
+        self.assertEqual(len(programs), 28)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            27,
+            28,
         )
+        self.assertIn("weather-rain.frag", {p[0] for p in programs})
         for label, vertex, fragment in programs:
             self.assertNotIn("#include", vertex + fragment, label)
             self.assertIn("void main()", fragment, label)

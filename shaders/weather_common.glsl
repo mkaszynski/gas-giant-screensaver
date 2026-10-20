@@ -127,5 +127,8 @@ vec3 weatherReflection(vec3 direction,vec3 L,vec3 origin){
  vec3 q=origin+direction*distance;
  float density=weatherDensity(q,uObserverHeight,1.);
  float optical=density*uWeatherLayer.y/max(.15,abs(direction.y))*(1.-smoothstep(100.,160.,distance));
- return mix(L,weatherLight(direction,uWeatherLayer.x,.6*density),1.-exp(-optical));
+ float opacity=1.-exp(-optical);
+ // Empty columns cannot contribute reflected cloud light.
+ if(opacity<=0.)return L;
+ return mix(L,weatherLight(direction,uWeatherLayer.x,.6*density),opacity);
 }

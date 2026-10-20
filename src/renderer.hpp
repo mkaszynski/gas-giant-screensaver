@@ -45,6 +45,10 @@ public:
     return {skyWeatherCache.width, skyWeatherCache.height};
   }
   void setWeatherPreset(WeatherPreset preset) { weatherPreset = preset; }
+  void setAtmosphericOptics(bool enabled) {
+    surfaceOptions.atmosphericOptics = enabled;
+  }
+  void setWhitecaps(bool enabled) { surfaceOptions.whitecaps = enabled; }
   // Diagnostic reference for detecting clipped filtering or atmospheric glow.
   void setCelestialScissor(bool enabled) { celestialScissor = enabled; }
   void setMeteorFrame(MeteorFrame frame) { meteorFrame = frame; }
@@ -95,6 +99,7 @@ private:
   TravelLocation surfaceLocation{};
   double lastAltitude = -1e30;
   WeatherState weatherState;
+  std::array<float, 2> whitecapState{0.f, 1.f};
   WeatherPreset weatherPreset = WeatherPreset::Auto;
   MeteorFrame meteorFrame;
   Vec3 previewRadiant{};
@@ -113,7 +118,7 @@ private:
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
          postProgram = 0, presentationProgram = 0, ringProgram = 0,
          giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
-         weatherProgram = 0, weatherLightProgram = 0;
+         weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0;
@@ -121,8 +126,9 @@ private:
          terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
          emissionVao = 0, weatherNoiseTexture = 0, weatherLightTexture = 0,
-         weatherLightFbo = 0;
-  Target trans, multi, sky, scene, weather, skyWeatherCache, composite;
+         weatherLightFbo = 0, opticsPhaseTexture = 0;
+  Target trans, multi, sky, scene, weather, skyWeatherCache, rainDensityCache,
+      composite;
   Target weatherPixels, weatherSkyPixels;
   double lastSky = -1e30, lastDay = 0;
   double lastVisibility = -1;

@@ -12,7 +12,7 @@ def manifest():
     groups = {"base": ["assets/giant.png"]}
     for name in ("terrain", "world"):
         groups[name] = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "assets" / name).rglob("*")
-                              if p.is_file() and p.suffix in (".png", ".ggworld", ".ggrelief", ".ggflight"))
+                              if p.is_file() and p.suffix in (".png", ".ggworld", ".ggrelief", ".ggflight", ".ggoptics"))
     groups["galaxy"] = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "assets/sky").glob("*.ggsky"))
     groups["stars"] = ["assets/sky/stars.bin"]
     return groups

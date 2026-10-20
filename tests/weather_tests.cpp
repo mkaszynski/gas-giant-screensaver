@@ -104,6 +104,17 @@ int main() {
               "weather continuous across longitude seam");
     }
     SurfaceWorld world(WEATHER_ASSET_DIR "/moon.ggworld");
+    for (auto preset : {WeatherPreset::Auto, WeatherPreset::Fair,
+                        WeatherPreset::Fog, WeatherPreset::Storm}) {
+      const auto warm =
+          weatherAt({.8, 28., 0., .5}, {.2, .5}, 1790900000., 1. / 30, preset);
+      const auto cold =
+          weatherAt({.8, -35., 0., .5}, {.2, .5}, 1790900000., 1. / 30, preset);
+      require(warm.cloudLiquid > .95 && warm.fogLiquid > .95,
+              "warm low clouds retain liquid droplets for optical scattering");
+      require(cold.cloudLiquid == 0. && cold.fogLiquid == 0.,
+              "frozen clouds and fog do not produce liquid-water glories");
+    }
     auto c = weatherClimate(world, world.location(162000));
     require(c.moisture >= 0 && c.moisture <= 1 && c.elevation >= 0 &&
                 c.ocean >= 0 && c.ocean <= 1,

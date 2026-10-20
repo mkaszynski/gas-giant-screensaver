@@ -6,9 +6,12 @@ import math
 import subprocess
 
 stages = {
-    "atmosphere_ms", "celestial_ms", "terrain_ms", "solar_cache_ms",
+    "atmosphere_ms", "celestial_ms", "terrain_prepare_ms", "terrain_shadows_ms",
+    "terrain_ms", "solar_cache_ms",
     "sky_cache_ms", "clouds_ms", "composite_ms",
 }
+counters = {"mesh_revision", "shadow_revision", "upload_bytes",
+            "mesh_build_pending", "mesh_builds_started"}
 for step, cache in [(0, 1), (1 / 30, 0)]:
     run = subprocess.run(
         ["./build/weather-benchmark", ".", "128", "72", "3", "1740",
@@ -17,7 +20,7 @@ for step, cache in [(0, 1), (1 / 30, 0)]:
     )
     rows = list(csv.DictReader(io.StringIO(run.stdout)))
     assert len(rows) == 3, run.stdout
-    assert set(rows[0]) == stages | {"frame", "scene_seconds", "render_ms"}
+    assert set(rows[0]) == stages | counters | {"frame", "scene_seconds", "render_ms"}
     for i, row in enumerate(rows):
         assert int(row["frame"]) == i
         assert abs(float(row["scene_seconds"]) - (1740 + i * step)) < 1e-7
@@ -27,4 +30,8 @@ for step, cache in [(0, 1), (1 / 30, 0)]:
         assert float(row["clouds_ms"]) > 0, row
         if cache:
             assert float(row["sky_cache_ms"]) > 0, row
+        for counter in counters:
+            assert int(row[counter]) >= 0, row
+        assert int(row["mesh_build_pending"]) in (0, 1), row
+        assert int(row["mesh_revision"]) >= 1, row
 print("Weather profiler: deterministic clocks, finite GPU stages and cache selection PASS")

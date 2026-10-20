@@ -307,6 +307,28 @@ int main() {
       require(changed.changed > width * height / 2,
               "independent weather clock changes the rendered sky");
       {
+        Fixture reference;
+        reference.replace(
+            "weather.frag", "float rain=weatherRainDensity(column);",
+            "float rain=weatherDensity(column,uObserverHeight,2.);");
+        Renderer direct(reference.root.string(), {}, {true, 0, 162000});
+        for (auto [sky, clock, route] :
+             {std::array<double, 3>{1740., 1790900000., 5600.390625},
+              {510., 1260., 162000.},
+              {1740., 1790900000., 0.}}) {
+          auto view = travelScene(world, sky, route);
+          auto cached = capture(weather, view, clock, sky),
+               exact = capture(direct, view, clock, sky);
+          auto error = difference(cached, exact);
+          std::cout << "Rain field cache route=" << route
+                    << ": mean=" << error.mean << " peak=" << error.peak
+                    << '\n';
+          require(
+              error.mean < .02 && error.peak <= 2,
+              "rain field caching must preserve direct precipitation sampling");
+        }
+      }
+      {
         Fixture anchored;
         anchored.replace("post.frag", "if(coverage>=1.)", "if(false)");
         anchored.append("weather.frag", R"(
@@ -413,10 +435,11 @@ int main() {
       {
         Fixture original;
         original.replace("weather.frag",
-                         "vec3 lighting=solar*(lightingTerms.forward*shadow.x+"
+                         "vec3 lighting=solar*(dropletPhase*shadow.x+"
                          ".032*(.35+.65*shadow.y))+lightingTerms.ambient;",
                          "vec3 lighting=weatherLightTrans(d,weatherHeight(p,"
-                         "uObserverHeight),shadow);");
+                         "uObserverHeight),shadow)+solar*(dropletPhase-"
+                         "vec3(lightingTerms.forward))*shadow.x;");
         Renderer scalar(original.root.string(), {}, {true, 0, 162000});
         for (auto [sky, clock, route] :
              {std::array<double, 3>{510., 1790900000., 162000.},

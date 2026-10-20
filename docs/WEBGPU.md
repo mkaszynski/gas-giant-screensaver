@@ -25,7 +25,7 @@ fails at linking instead of selecting stale shaders. Tests compare the Python
 and JavaScript fingerprints and validate every WGSL module in Chromium.
 The manifest includes the shared meteor optical kernel and its HDR scaling;
 integrating the native meteor renderer must also retain this shader variant.
-It bakes 25 programs, covering both fixed cloud profiles, general/deep-water/
+It bakes 27 programs, covering both fixed cloud profiles, general/deep-water/
 inland/reflected terrain and both composite variants. Material defines precede
 the cloud define, matching the shared C++ source fingerprints exactly. Composite
 variants retain the swapchain coordinate conversion regardless of their label.
