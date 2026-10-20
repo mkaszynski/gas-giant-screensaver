@@ -1,10 +1,14 @@
 #include "debug_overlay.hpp"
 #include "renderer.hpp"
 #include <algorithm>
+#include <deque>
 #include <emscripten.h>
+#include <emscripten/heap.h>
 #include <emscripten/html5.h>
 #include <exception>
+#include <malloc.h>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 using namespace observatory;
@@ -15,13 +19,32 @@ double sceneStart = 510, weatherOffset = 0, activeTime = 0, lastTick = 0;
 double lastRender = -1e6;
 bool synchronize = false, hidden = false, redraw = true, drawnPrompt = false;
 int drawnWidth = 0, drawnHeight = 0, logicalWidth = 1280, logicalHeight = 720;
-int frames = 0, keyMask = 0;
-GLsync submitted = nullptr;
+int frames = 0, keyMask = 0, maxInFlight = 0;
+bool loadingAssets = false, releasing = false, resizing = false;
+unsigned qualityRevision = 0;
+SurfaceOptions surfaceBase{true};
+StarfieldOptions skyBase;
 struct SubmittedFrame {
-  int count, width, height, builds;
-  double time, cost;
-  bool pending, paused, menuOpen;
-} completed{};
+  int count, width, height, sceneWidth, sceneHeight, builds, quality;
+  double time, cost, started;
+  bool pending, paused, menuOpen, graphicsOpen;
+};
+struct Submission {
+  GLsync fence;
+  std::optional<SubmittedFrame> frame;
+};
+constexpr unsigned frameQueueLimit = 2;
+std::deque<Submission> submitted;
+void submit(std::optional<SubmittedFrame> frame = {}) {
+  if (submitted.size() >= frameQueueLimit)
+    throw std::runtime_error("GPU frame queue exceeded its bound.");
+  const auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (!fence)
+    throw std::runtime_error("Cannot track GPU completion.");
+  submitted.push_back({fence, frame});
+  maxInFlight = std::max(maxInFlight, int(submitted.size()));
+  glFlush();
+}
 
 // clang-format off: EM_JS bodies contain JavaScript operators, not C++ tokens.
 EM_JS(double, option, (const char *name, double fallback, double low, double high), {
@@ -32,17 +55,21 @@ EM_JS(double, option, (const char *name, double fallback, double low, double hig
 EM_JS(void, reportError, (const char *message), {
   globalThis.previewError(UTF8ToString(message));
 });
-EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height,
-                         int builds, int pending, int paused, int menuOpen), {
-  globalThis.previewFrame({count, time, cost, width, height, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen});
+EM_JS(void, reportFrame, (int count, double time, double cost, int width, int height, int sceneWidth, int sceneHeight,
+                         int builds, int pending, int paused, int menuOpen, int graphicsOpen, int quality, int maxInFlight, double latency, double allocated, double heap), {
+  globalThis.previewFrame({count, time, cost, width, height, sceneWidth, sceneHeight, builds, pending: !!pending, paused: !!paused, menuOpen: !!menuOpen, graphicsOpen: !!graphicsOpen, qualityRevision: quality, maxInFlight, latency, allocated, heap, resources: Module.preinitializedWebGLContext?.memoryStats?.() || null});
 });
 EM_JS(void, reportControls, (const char *json), {
   globalThis.previewControls(JSON.parse(UTF8ToString(json)));
 });
+EM_JS(void, requestAssets, (const char *groups), {
+  globalThis.previewLoadAssets(JSON.parse(UTF8ToString(groups)));
+});
+EM_JS(void, consumedAssets, (), { globalThis.previewAssetsConsumed(); });
 // clang-format on
 void advanceClock() {
   const double now = emscripten_get_now();
-  if (lastTick > 0 && !hidden)
+  if (lastTick > 0 && !hidden && !loadingAssets && !releasing && !resizing)
     activeTime += std::max(0., (now - lastTick) / 1000.);
   lastTick = now;
 }
@@ -65,6 +92,8 @@ void publishControls() {
   };
   std::ostringstream out;
   out << "{\"open\":" << (menu.open() ? "true" : "false")
+      << ",\"submittedFrames\":" << frames
+      << ",\"inFlight\":" << submitted.size()
       << ",\"prompt\":" << (menu.promptVisible(activeTime) ? "true" : "false")
       << ",\"playing\":" << (menu.timeline.playing() ? "true" : "false")
       << ",\"weather\":" << int(menu.weather())
@@ -73,8 +102,25 @@ void publishControls() {
       << ",\"meteorInterval\":" << menu.meteorOptions.intervalHours
       << ",\"fraction\":" << menu.timeline.fraction(activeTime)
       << ",\"span\":" << menu.timeline.span()
-      << ",\"layout\":{\"panel\":" << rect(layout.panel)
+      << ",\"graphics\":{\"open\":" << (menu.graphics.open ? "true" : "false")
+      << ",\"preset\":" << int(menu.graphics.draft.preset)
+      << ",\"name\":\"" << menu.graphics.applied.name() << "\""
+      << ",\"height\":" << menu.graphics.applied.height
+      << ",\"fps\":" << menu.graphics.applied.fps
+      << ",\"revision\":" << menu.graphics.revision << ",\"features\":[";
+  for (int i = 0; i < 8; ++i)
+    out << (i ? "," : "")
+        << (menu.graphics.applied.features[i] ? "true" : "false");
+  out << "]},\"layout\":{\"panel\":" << rect(layout.panel)
       << ",\"prompt\":" << rect(layout.prompt(logicalWidth))
+      << ",\"graphicsButton\":" << rect(layout.graphicsButton())
+      << ",\"graphicsBack\":" << rect(layout.graphicsBack())
+      << ",\"qualitySlider\":" << rect(layout.qualitySlider())
+      << ",\"features\":" << rects(8, [&](int i) { return layout.feature(i); })
+      << ",\"resolution\":" << rect(layout.resolution())
+      << ",\"frameCap\":" << rect(layout.frameCap())
+      << ",\"cloudQuality\":" << rect(layout.cloudQuality())
+      << ",\"graphicsApply\":" << rect(layout.graphicsApply())
       << ",\"close\":" << rect(layout.close())
       << ",\"slider\":" << rect(layout.slider)
       << ",\"buttons\":" << rects(5, [&](int i) { return layout.button(i); })
@@ -91,41 +137,96 @@ void frame() {
     advanceClock();
     if (hidden)
       return;
-    if (submitted) {
-      const GLenum state = glClientWaitSync(submitted, 0, 0);
+    while (!submitted.empty()) {
+      const auto &entry = submitted.front();
+      const GLenum state = glClientWaitSync(entry.fence, 0, 0);
       if (state == GL_WAIT_FAILED)
         throw std::runtime_error("Cannot track GPU frame completion.");
       if (state == GL_TIMEOUT_EXPIRED)
-        return;
-      glDeleteSync(submitted);
-      submitted = nullptr;
-      reportFrame(completed.count, completed.time, completed.cost,
-                  completed.width, completed.height, completed.builds,
-                  completed.pending, completed.paused, completed.menuOpen);
+        break;
+      glDeleteSync(entry.fence);
+      if (entry.frame) {
+        const auto &completed = *entry.frame;
+        reportFrame(completed.count, completed.time, completed.cost,
+                    completed.width, completed.height, completed.sceneWidth,
+                    completed.sceneHeight, completed.builds, completed.pending,
+                    completed.paused, completed.menuOpen,
+                    completed.graphicsOpen, completed.quality, maxInFlight,
+                    emscripten_get_now() - completed.started,
+                    mallinfo().uordblks, emscripten_get_heap_size());
+      } else
+        resizing = false;
+      submitted.pop_front();
     }
+    if (!controls || loadingAssets)
+      return;
     auto &menu = controls->menu;
+    if (!renderer || qualityRevision != menu.graphics.revision) {
+      if (!submitted.empty())
+        return;
+      if (renderer) {
+        renderer.reset();
+        // Submit deletion-only work too. Await retirement before allocating a
+        // replacement, so old/new terrain and GPU targets never overlap.
+        releasing = true;
+        submit();
+        return;
+      }
+      if (releasing)
+        releasing = false;
+      loadingAssets = true;
+      qualityRevision = menu.graphics.revision;
+      requestAssets(menu.graphics.applied.assetGroups().c_str());
+      return;
+    }
     menu.keys({bool(keyMask & 1), bool(keyMask & 2), bool(keyMask & 4),
                bool(keyMask & 8)},
               activeTime);
+    if (submitted.size() >= frameQueueLimit)
+      return;
     int width, height;
     emscripten_get_canvas_element_size("#scene", &width, &height);
+    const auto presentation = menu.graphics.applied.presentationSize(
+        logicalWidth, logicalHeight, menu.open());
+    const auto requestedScene =
+        menu.graphics.applied.size(presentation[0], presentation[1]);
+    if (!submitted.empty() &&
+        (renderer->renderResolution() != requestedScene ||
+         width != presentation[0] || height != presentation[1]))
+      return;
+    if (renderer->releaseSizeTargetsFor(presentation[0], presentation[1])) {
+      // Keep world/mesh/shaders, but never overlap old and new frame targets.
+      resizing = true;
+      redraw = true;
+      submit();
+      return;
+    }
+    if (width != presentation[0] || height != presentation[1]) {
+      width = presentation[0];
+      height = presentation[1];
+      emscripten_set_canvas_element_size("#scene", width, height);
+    }
     const bool prompt = menu.promptVisible(activeTime);
     if (!menu.timeline.playing() && !synchronize && !redraw &&
         width == drawnWidth && height == drawnHeight && prompt == drawnPrompt)
       return;
     const double now = emscripten_get_now();
-    if (now + .1 < lastRender + 1000. / 30)
+    if (now + .1 < lastRender + 1000. / menu.graphics.applied.fps)
       return;
-    lastRender = now - std::fmod(std::max(0., now - lastRender), 1000. / 30);
+    lastRender = now - std::fmod(std::max(0., now - lastRender),
+                                 1000. / menu.graphics.applied.fps);
     if (synchronize)
       glFinish();
     const double start = emscripten_get_now();
     const double scene = menu.time(activeTime), weather = scene + weatherOffset;
     renderer->setWeatherPreset(menu.weather());
-    renderer->setMeteorFrame(
-        {menu.meteorTime(activeTime), 1. / 30, menu.meteorOptions});
-    renderer->render(width, height, scene, 1800, 1, true, true,
-                     {weather, 1. / 30, true, true, 5, 1000}, weather);
+    renderer->setMeteorFrame({menu.meteorTime(activeTime),
+                              1. / menu.graphics.applied.fps,
+                              menu.meteorOptions});
+    renderer->render(
+        width, height, scene, 1800, 1, true, true,
+        {weather, 1. / menu.graphics.applied.fps, true, true, 5, 1000},
+        weather);
     menu.meteorDark = renderer->meteorDarkEnough();
     controls->draw(width, height, logicalWidth, logicalHeight, activeTime);
     if (synchronize)
@@ -137,20 +238,27 @@ void frame() {
     drawnWidth = width;
     drawnHeight = height;
     drawnPrompt = prompt;
-    completed = {++frames,
-                 width,
-                 height,
-                 static_cast<int>(renderer->surfaceBuildsStarted()),
-                 scene,
-                 emscripten_get_now() - start,
-                 renderer->surfaceBuildPending(),
-                 !menu.timeline.playing(),
-                 menu.open()};
-    // At most one outstanding frame, including debug draws. Never spin-wait.
-    submitted = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    if (!submitted)
-      throw std::runtime_error("Cannot track the rendered GPU frame.");
-    glFlush();
+    const auto sceneSize = menu.graphics.applied.size(width, height);
+    const SubmittedFrame completed{
+        ++frames,
+        width,
+        height,
+        sceneSize[0],
+        sceneSize[1],
+        static_cast<int>(renderer->surfaceBuildsStarted()),
+        int(qualityRevision),
+        scene,
+        emscripten_get_now() - start,
+        start,
+        renderer->surfaceBuildPending(),
+        !menu.timeline.playing(),
+        menu.open(),
+        menu.graphics.open};
+    // Bounded overlap lets CPU encoding run while the previous frame renders.
+    // GPU commands reuse the same targets in submission order, without a second
+    // scene or a growing queue. Reconfiguration above always drains both
+    // frames.
+    submit(completed);
     publishControls();
   } catch (const std::exception &error) {
     emscripten_cancel_main_loop();
@@ -159,6 +267,45 @@ void frame() {
 }
 } // namespace
 extern "C" {
+EMSCRIPTEN_KEEPALIVE void preview_assets_ready() {
+  try {
+    if (!loadingAssets || !controls)
+      return;
+    if (qualityRevision != controls->menu.graphics.revision) {
+      consumedAssets();
+      loadingAssets = false;
+      return;
+    }
+    renderer = std::make_unique<Renderer>("/", skyBase, surfaceBase,
+                                          controls->menu.graphics.applied);
+    consumedAssets();
+    lastTick = emscripten_get_now();
+    loadingAssets = false;
+    redraw = true;
+    auto size = controls->menu.graphics.applied.presentationSize(
+        logicalWidth, logicalHeight, controls->menu.open());
+    emscripten_set_canvas_element_size("#scene", size[0], size[1]);
+    publishControls();
+  } catch (const std::exception &error) {
+    reportError(error.what());
+  }
+}
+EMSCRIPTEN_KEEPALIVE void preview_quality(int preset, int height) {
+  if (!controls)
+    return;
+  auto &g = controls->menu.graphics;
+  if (preset < 0 && height == g.applied.height)
+    return;
+  if (preset >= 0 && preset <= 2)
+    g.draft = GraphicsSettings::forPreset(GraphicsPreset(preset));
+  if (height >= 90 && height <= 1080) {
+    g.draft.height = height;
+    g.draft.preset = GraphicsPreset::Custom;
+  }
+  g.apply();
+  redraw = true;
+  publishControls();
+}
 EMSCRIPTEN_KEEPALIVE void preview_pause(int value) {
   if (!controls)
     return;
@@ -186,6 +333,7 @@ EMSCRIPTEN_KEEPALIVE void preview_viewport(int width, int height) {
     return;
   logicalWidth = width;
   logicalHeight = height;
+  // Resize only after the outstanding frame has completed, in frame().
   redraw = true;
   publishControls();
 }
@@ -252,13 +400,32 @@ int main() {
     surface.speed = option("speed", 1, 0, 10000);
     surface.offset =
         option("travel", 162000, 0, 1e10) - sceneStart * surface.speed;
-    renderer = std::make_unique<Renderer>("/", sky, surface);
+    surfaceBase = surface;
+    surfaceBase.enabled = surfaceBase.weather = true;
+    skyBase = {};
     controls = std::make_unique<DebugOverlay>(sceneStart, 1800, false, "/");
+    auto preset = option("quality", -1, -1, 2);
+    auto selected = preset < 0
+                        ? recommendedGraphics(option("memoryGiB", 0, 0, 128),
+                                              int(option("cores", 0, 0, 1024)),
+                                              option("software", 0, 0, 1))
+                        : GraphicsPreset(int(preset));
+    auto q = GraphicsSettings::forPreset(selected);
+    // Explicit diagnostic feature overrides remain available for isolation.
+    const char *names[] = {"surface", "volumetric", "galaxy",  "stars",
+                           "rings",   "emissions",  "meteors", "reflections"};
+    for (int i = 0; i < 8; ++i)
+      q.features[i] = option(names[i], q.features[i], 0, 1) != 0;
+    q.height = int(option("height", q.height, 90, 1080));
+    q.fps = int(option("fps", q.fps, 1, 60));
+    controls->menu.graphics.initialize(q);
     controls->menu.timeline.play(option("paused", 0, 0, 1) == 0, 0);
     // Runtime-initialization messages arrive before main. Start the scene's
     // clock here, after asset loading, independently of the worker clock epoch.
     activeTime = 0;
     lastTick = emscripten_get_now();
+    auto size = q.size(logicalWidth, logicalHeight);
+    emscripten_set_canvas_element_size("#scene", size[0], size[1]);
     publishControls();
     emscripten_set_main_loop(frame, 0, false);
     return 0;

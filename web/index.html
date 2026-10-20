@@ -9,7 +9,7 @@
   <script src="preview.js" defer></script>
 </head>
 <body>
-  <canvas id="scene" width="1920" height="1080" aria-label="Live flight over a moon beneath a gas giant"></canvas>
+  <canvas id="scene" width="640" height="360" aria-label="Live flight over a moon beneath a gas giant"></canvas>
   <header>
     <div><h1>Gas Giant Observatory</h1><p>A three-day flight beneath an alien sky</p></div>
     <a href="https://github.com/mkaszynski/gas-giant-screensaver" target="_blank" rel="noopener">Source ↗</a>
@@ -17,19 +17,21 @@
   <main id="loading" role="status" aria-live="polite">
     <h2>Explore the observatory</h2>
     <p id="status">Loading the live preview…</p>
-    <p id="help">A live GPU-rendered flight. The first launch downloads about 100 MB of world, sky and materials. Target: 30 fps at 1080p. Uses WebGPU where available, with WebGL 2 compatibility. Requires browser threads.</p>
+    <p id="help">A live GPU-rendered flight. Downloads only the assets needed for the selected features. Auto chooses a conservative starting quality for your machine. High targets 30 fps at up to 1080p. Uses WebGPU where available, with WebGL 2 compatibility. Requires browser threads.</p>
     <label>Graphics <select id="backend"><option value="auto">Auto (prefer WebGPU)</option><option value="webgpu">WebGPU</option><option value="webgl2">WebGL 2</option></select></label>
+    <label>Quality <select id="launch-quality"><option value="-1">Auto (recommended)</option><option value="0">Low (static landscape)</option><option value="1">Medium</option><option value="2">High</option></select></label>
     <button id="launch" disabled>Launch preview</button>
   </main>
   <button id="debug-open" hidden aria-label="Open debug menu" aria-expanded="false" aria-controls="browser-controls">Menu</button>
-  <button id="debug-hint" hidden>Move to the upper-right corner ↗<br>to open the debug menu</button>
+  <button id="debug-hint" hidden><span id="graphics-hint"></span><br>Move to the upper-right corner ↗<br>to open the debug menu</button>
   <aside id="browser-controls" aria-label="Browser display controls" hidden>
     <div class="controls">
       <button id="pause" disabled>Pause</button>
-      <button id="stop">Stop preview</button>
-      <label>Resolution <select id="resolution"><option value="1080">1080p</option><option value="720">720p</option></select></label>
+      <button id="stop" title="Stops the worker and releases its WASM heap; launch Low for a fresh memory budget">Stop preview</button>
+      <label>Resolution <select id="resolution"><option value="360">360p</option><option value="540">540p</option><option value="720">720p</option><option value="1080">1080p</option></select></label>
       <button id="fullscreen">Fullscreen</button>
       <button id="debug-close">Close debug menu</button>
+      <output id="quality-status" role="status" aria-live="polite" hidden>Applying graphics settings…</output>
       <output id="performance">30 fps target</output>
     </div>
     <p><span id="backend-status">WebGPU / WebGL 2</span> · <a href="https://github.com/mkaszynski/gas-giant-screensaver" target="_blank" rel="noopener">Source</a> · <a href="https://github.com/mkaszynski/gas-giant-screensaver/blob/main/docs/ASSETS.md" target="_blank" rel="noopener">Credits &amp; asset licenses</a> · <a href="LICENSE">MIT</a></p>

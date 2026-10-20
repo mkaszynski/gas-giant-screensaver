@@ -18,6 +18,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 using namespace observatory;
 namespace {
@@ -59,6 +60,7 @@ int main(int argc, char **argv) {
     bool fullscreen = false, drawRings = true, drawEmissions = true,
          debug = false;
     StarfieldOptions starfield;
+    std::string qualityName;
     MeteorOptions meteorOptions;
     double meteorPreviewStart = -1;
     std::string benchmarkOutput;
@@ -67,7 +69,8 @@ int main(int argc, char **argv) {
       std::string a = argv[i];
       if (a == "--help") {
         std::cout
-            << "Gas Giant Screensaver\n  --fullscreen           Fill the "
+            << "Gas Giant Screensaver\n  --quality auto|low|medium|high  "
+               "Shared graphics preset\n  --fullscreen           Fill the "
                "current monitor\n  --timeout SECONDS      Exit automatically "
                "(0: unlimited)\n  --time SECONDS         Starting simulation "
                "instant for review\n  --day-seconds SECONDS  Solar day length "
@@ -224,7 +227,12 @@ int main(int argc, char **argv) {
         auroraBrightness = number(v, 0, 1e6);
       else if (a == "--day-seconds")
         day = number(v, 30, 86400);
-      else if (a == "--fps")
+      else if (a == "--quality") {
+        qualityName = v;
+        if (qualityName != "auto" && qualityName != "low" &&
+            qualityName != "medium" && qualityName != "high")
+          throw std::runtime_error("Invalid quality preset");
+      } else if (a == "--fps")
         fps = integerArgument(v, 1, 60);
       else if (a == "--width")
         w = integerArgument(v, 64, 7680);
@@ -313,7 +321,32 @@ int main(int argc, char **argv) {
       surface.speed = travelSpeed;
       surface.offset =
           (travelTime < 0 ? time : travelTime) - time * travelSpeed;
-      Renderer renderer(data, starfield, surface);
+      std::optional<GraphicsSettings> quality;
+      if (!qualityName.empty()) {
+        auto preset = qualityName == "low"      ? GraphicsPreset::Low
+                      : qualityName == "medium" ? GraphicsPreset::Medium
+                                                : GraphicsPreset::High;
+        if (qualityName == "auto") {
+          const std::string gpu =
+              reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+          const double memory = double(sysconf(_SC_PHYS_PAGES)) *
+                                sysconf(_SC_PAGESIZE) / (1024. * 1024 * 1024);
+          preset = recommendedGraphics(
+              memory, std::thread::hardware_concurrency(),
+              gpu.find("llvmpipe") != std::string::npos ||
+                  gpu.find("softpipe") != std::string::npos);
+        }
+        quality = GraphicsSettings::forPreset(preset);
+        quality->features[0] &= surface.enabled;
+        quality->features[1] &= surface.weather;
+        quality->features[2] &= starfield.galaxy;
+        quality->features[3] &= starfield.stars;
+        quality->features[4] &= drawRings;
+        quality->features[5] &= drawEmissions;
+        quality->fps = fps;
+      }
+      auto renderer =
+          std::make_unique<Renderer>(data, starfield, surface, quality);
       using Clock = std::chrono::steady_clock;
       auto start = Clock::now();
       std::vector<double> durations, gpuDurations;
@@ -339,6 +372,21 @@ int main(int argc, char **argv) {
         controls = std::make_unique<DebugOverlay>(time, day, debug, data);
       if (controls)
         controls->menu.meteorOptions = meteorOptions;
+      if (controls) {
+        auto q = quality.value_or(GraphicsSettings{});
+        q.features[0] &= surface.enabled;
+        q.features[1] &= surface.weather;
+        q.features[2] &= starfield.galaxy;
+        q.features[3] &= starfield.stars;
+        q.features[4] &= drawRings;
+        q.features[5] &= drawEmissions;
+        if (!quality) {
+          q.features[7] = surface.reflections;
+          q.fps = fps;
+        }
+        controls->menu.graphics.initialize(q);
+      }
+      unsigned qualityRevision = 0;
       // Shader/asset loading is not part of the interactive timeline.
       start = Clock::now();
       std::ofstream frameLog;
@@ -390,7 +438,17 @@ int main(int argc, char **argv) {
                focused && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS,
                focused && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS},
               elapsed);
-          renderer.setWeatherPreset(controls->menu.weather());
+          renderer->setWeatherPreset(controls->menu.weather());
+        }
+        if (controls && qualityRevision != controls->menu.graphics.revision) {
+          glFinish();
+          renderer.reset();
+          quality = controls->menu.graphics.applied;
+          renderer =
+              std::make_unique<Renderer>(data, starfield, surface, quality);
+          qualityRevision = controls->menu.graphics.revision;
+          fps = quality->fps;
+          framePacer = FramePacer(fps);
         }
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
@@ -414,17 +472,17 @@ int main(int argc, char **argv) {
                                       : !record.empty()
                                           ? frames * timeStep
                                           : (capture.empty() ? elapsed : 0);
-        renderer.setMeteorFrame(
+        renderer->setMeteorFrame(
             {controls ? controls->menu.meteorTime(elapsed) : sceneTime,
              1. / fps,
              controls ? controls->menu.meteorOptions : meteorOptions});
-        renderer.render(w, h, sceneTime, day, 1, true, drawRings,
-                        {drawEmissions ? weatherTime + weatherElapsed : -1,
-                         1. / fps, true, true, lightningBrightness,
-                         auroraBrightness},
-                        weatherTime + weatherElapsed);
+        renderer->render(
+            w, h, sceneTime, day, 1, true, quality ? true : drawRings,
+            {(quality || drawEmissions) ? weatherTime + weatherElapsed : -1,
+             1. / fps, true, true, lightningBrightness, auroraBrightness},
+            weatherTime + weatherElapsed);
         if (controls) {
-          controls->menu.meteorDark = renderer.meteorDarkEnough();
+          controls->menu.meteorDark = renderer->meteorDarkEnough();
           if (debug)
             controls->setFrameRate(frameRate.fps(), fps);
           int ww, wh;
@@ -454,10 +512,10 @@ int main(int argc, char **argv) {
                      << ",";
             if (query)
               frameLog << gpuDurations.back();
-            frameLog << "," << renderer.surfaceMeshRevision() << ","
-                     << renderer.surfaceShadowRevision() << ","
-                     << renderer.surfaceUploadBytes() << ","
-                     << renderer.surfaceReflectionRevision() << ","
+            frameLog << "," << renderer->surfaceMeshRevision() << ","
+                     << renderer->surfaceShadowRevision() << ","
+                     << renderer->surfaceUploadBytes() << ","
+                     << renderer->surfaceReflectionRevision() << ","
                      << std::chrono::duration<double, std::milli>(submitted -
                                                                   measure)
                             .count()
@@ -469,8 +527,8 @@ int main(int argc, char **argv) {
                      << std::chrono::duration<double>(
                             measure.time_since_epoch())
                             .count()
-                     << "," << renderer.surfaceBuildsStarted() << ","
-                     << renderer.surfaceBuildPending() << "\n";
+                     << "," << renderer->surfaceBuildsStarted() << ","
+                     << renderer->surfaceBuildPending() << "\n";
             if (!frameLog)
               throw std::runtime_error("Cannot write benchmark frame");
           }
@@ -515,20 +573,21 @@ int main(int argc, char **argv) {
                       << " p95=" << gpuDurations[gpuDurations.size() * 95 / 100]
                       << '\n';
           }
-          auto cloudSize = renderer.weatherResolution();
-          auto cacheSize = renderer.weatherSkyCacheResolution();
+          auto cloudSize = renderer->weatherResolution();
+          auto cacheSize = renderer->weatherSkyCacheResolution();
           if (cloudSize[0] > 0)
             std::cout << "Cloud buffer: " << cloudSize[0] << 'x' << cloudSize[1]
                       << "; noise "
-                      << (renderer.floatingWeatherNoise() ? "RGBA16F" : "RGBA8")
+                      << (renderer->floatingWeatherNoise() ? "RGBA16F"
+                                                           : "RGBA8")
                       << '\n';
           if (cloudSize[0] > 0)
             std::cout << "Cloud sky cache: " << cacheSize[0] << 'x'
                       << cacheSize[1] << '\n';
           if (cloudSize[0] > 0)
             std::cout << "Cloud backend: "
-                      << (renderer.computingWeather() ? "OpenGL compute"
-                                                      : "fragment shader")
+                      << (renderer->computingWeather() ? "OpenGL compute"
+                                                       : "fragment shader")
                       << '\n';
           break;
         }

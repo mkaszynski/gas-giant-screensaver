@@ -1,5 +1,6 @@
 #pragma once
 #include "debug_timeline.hpp"
+#include "graphics_quality.hpp"
 #include "meteor_control.hpp"
 #include "weather_control.hpp"
 #include <array>
@@ -30,9 +31,52 @@ public:
           layout.prompt(width).contains(x, y)) {
         show(true, real);
       }
+    } else if (graphics.open) {
+      if (clicked) {
+        if (layout.close().contains(x, y))
+          open_ = false;
+        else if (layout.graphicsBack().contains(x, y))
+          graphics.open = false;
+        else if (layout.qualitySlider().contains(x, y))
+          graphics.dragging = true;
+        else if (layout.graphicsApply().contains(x, y))
+          graphics.apply();
+        else if (layout.graphicsButton().contains(x, y)) {
+          auto &q = graphics.draft;
+          q.textureSize = q.textureSize == 1024   ? 2048
+                          : q.textureSize == 2048 ? 4096
+                                                  : 1024;
+          q.preset = GraphicsPreset::Custom;
+        } else if (layout.frameCap().contains(x, y)) {
+          graphics.draft.fps = graphics.draft.fps == 15   ? 30
+                               : graphics.draft.fps == 30 ? 60
+                                                          : 15;
+          graphics.draft.preset = GraphicsPreset::Custom;
+        } else if (layout.cloudQuality().contains(x, y)) {
+          graphics.draft.clouds = graphics.draft.clouds == 1 ? .5 : 1;
+          graphics.draft.preset = GraphicsPreset::Custom;
+        } else if (layout.resolution().contains(x, y)) {
+          const auto r = layout.resolution();
+          graphics.draft.height =
+              360 + 120 * std::clamp(int((x - r.x) / r.width * 6 + .5), 0, 6);
+          graphics.draft.preset = GraphicsPreset::Custom;
+        } else
+          for (int i = 0; i < 8; ++i)
+            if (layout.feature(i).contains(x, y))
+              graphics.toggle(i);
+      }
+      if (graphics.dragging) {
+        auto r = layout.qualitySlider();
+        if (present)
+          graphics.select(std::clamp((x - r.x) / r.width, 0., 1.));
+        if (!down)
+          graphics.dragging = false;
+      }
     } else if (clicked) {
       if (layout.close().contains(x, y))
         open_ = false;
+      else if (layout.graphicsButton().contains(x, y))
+        graphics.open = true;
       else if (layout.slider.contains(x, y))
         timeline.beginDrag(layout.fraction(x), real);
       else if (layout.button(0).contains(x, y))
@@ -91,8 +135,8 @@ public:
   void keys(std::array<bool, 4> pressed, double real) {
     const double previous = time(real);
     for (int i = 0; i < 4; ++i) {
-      if (open_ && pressed[i] && !previousKeys[i] && !timeline.dragging() &&
-          !meteorDragging && !meteorIntervalDragging) {
+      if (open_ && !graphics.open && pressed[i] && !previousKeys[i] &&
+          !timeline.dragging() && !meteorDragging && !meteorIntervalDragging) {
         switch (i) {
         case 0:
           timeline.play(!timeline.playing(), real);
@@ -127,6 +171,7 @@ public:
     return meteorOptions.mode == MeteorMode::Preview ? meteorTimeline.time(real)
                                                      : time(real);
   }
+  GraphicsControl graphics;
   MeteorOptions meteorOptions;
   bool meteorDark = false;
   DebugTimeline timeline;

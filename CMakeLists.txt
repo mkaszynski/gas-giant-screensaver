@@ -18,14 +18,11 @@ if(EMSCRIPTEN)
     -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sOFFSCREENCANVAS_SUPPORT=1
     -sGL_PREINITIALIZED_CONTEXT=1
     -sPTHREAD_POOL_SIZE=1 -sPTHREAD_POOL_SIZE_STRICT=1
-    -sINITIAL_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=2147483648
+    -sINITIAL_MEMORY=67108864 -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=805306368
     -sSTACK_SIZE=1048576 -sENVIRONMENT=web,worker
-    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility','_preview_pointer','_preview_keys','_preview_menu','_preview_viewport']"
+    "-sEXPORTED_FUNCTIONS=['_main','_preview_pause','_preview_seek','_preview_visibility','_preview_pointer','_preview_keys','_preview_menu','_preview_viewport','_preview_assets_ready','_preview_quality']"
     "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders"
-    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png@/assets/giant.png"
-    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain@/assets/terrain"
-    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/sky@/assets/sky"
-    "--preload-file=${CMAKE_CURRENT_SOURCE_DIR}/assets/world@/assets/world")
+    "-sEXPORTED_RUNTIME_METHODS=['FS']")
   file(GLOB_RECURSE web_data CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*"
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/terrain/*"
@@ -34,6 +31,10 @@ if(EMSCRIPTEN)
   set_property(TARGET observatory-web APPEND PROPERTY LINK_DEPENDS
     ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/assets/giant.png")
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_custom_target(observatory-web-assets ALL
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/web_assets.py" --output "${CMAKE_CURRENT_BINARY_DIR}"
+    DEPENDS ${web_data} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/web_assets.py"
+    COMMENT "Stage feature-selective static assets")
   find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
   find_program(SPIRV_CROSS spirv-cross REQUIRED)
   find_program(NODE_EXECUTABLE node REQUIRED)
@@ -50,7 +51,7 @@ if(EMSCRIPTEN)
   add_custom_target(observatory-webgpu-shaders ALL
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webgpu-shaders.json")
   add_dependencies(observatory-web observatory-webgpu-shaders)
-  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js graphics-data.js webgpu-context.js)
+  foreach(file IN ITEMS index.html preview.js preview.css isolation-worker.js render-worker.js graphics-data.js gpu-memory.js webgpu-context.js)
     configure_file(web/${file} ${CMAKE_CURRENT_BINARY_DIR}/${file} COPYONLY)
   endforeach()
   configure_file(LICENSE ${CMAKE_CURRENT_BINARY_DIR}/LICENSE COPYONLY)
@@ -71,6 +72,14 @@ enable_testing()
 add_executable(ocean-foam-tests tests/ocean_foam_tests.cpp)
 target_include_directories(ocean-foam-tests PRIVATE src)
 add_test(NAME ocean-foam-model COMMAND ocean-foam-tests)
+add_executable(graphics-quality-tests tests/graphics_quality_tests.cpp)
+target_include_directories(graphics-quality-tests PRIVATE src)
+add_test(NAME graphics-quality COMMAND graphics-quality-tests)
+add_test(NAME cli-quality-invalid COMMAND gas-giant-screensaver --quality invalid)
+set_tests_properties(cli-quality-invalid PROPERTIES WILL_FAIL TRUE)
+foreach(preset IN ITEMS auto low medium high)
+  add_test(NAME cli-quality-${preset} COMMAND gas-giant-screensaver --quality ${preset} --help)
+endforeach()
 add_executable(system-tests tests/system_tests.cpp src/system.cpp)
 target_include_directories(system-tests PRIVATE src)
 add_test(NAME orbital-behavior COMMAND system-tests)
@@ -155,6 +164,8 @@ foreach(mode IN ITEMS capture record benchmark)
   add_test(NAME cli-debug-${mode} COMMAND gas-giant-screensaver --debug --${mode} 1)
   set_tests_properties(cli-debug-${mode} PROPERTIES WILL_FAIL TRUE)
 endforeach()
+add_executable(quality-render-tests tests/quality_render_tests.cpp)
+target_link_libraries(quality-render-tests PRIVATE observatory PkgConfig::GLFW)
 add_executable(debug-render-tests tests/debug_render_tests.cpp src/debug_overlay.cpp)
 target_link_libraries(debug-render-tests PRIVATE observatory PkgConfig::GLFW)
 
