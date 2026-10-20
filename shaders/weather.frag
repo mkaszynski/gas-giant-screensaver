@@ -3,6 +3,7 @@ precision highp float;
 #ifdef OBSERVATORY_WEATHER_COMPUTE
 vec2 uv;
 vec2 weatherCachePixel;
+uniform int uWeatherRowOffset;
 vec4 color,skyWeather;
 bool weatherNeedsSkyOutput=false;
 #else
@@ -18,8 +19,12 @@ uniform highp sampler2D uSurface;
 #include "atmospheric_optics.glsl"
 uniform float uSceneScale;
 uniform vec2 uWeatherResolution;
-#ifdef OBSERVATORY_WEATHER_COMPUTE
+#if defined(OBSERVATORY_WEATHER_COMPUTE)||defined(OBSERVATORY_WEATHER_SKY_ONLY)||defined(OBSERVATORY_WEATHER_PIXEL_ONLY)
 #ifdef OBSERVATORY_WEATHER_SKY_PASS
+const bool uWeatherSkyPass=true;
+#elif defined(OBSERVATORY_WEATHER_SKY_ONLY)
+// Browser/native fragment caches never integrate ground-edge or foreground
+// precipitation. Compile away those paths instead of keeping a uniform branch.
 const bool uWeatherSkyPass=true;
 #else
 const bool uWeatherSkyPass=false;
@@ -32,7 +37,7 @@ uniform highp sampler3D uWeatherLightCache;
 uniform highp sampler2D uWeatherRainCache;
 vec2 weatherPixelPosition(){
 #ifdef OBSERVATORY_WEATHER_COMPUTE
- return vec2(gl_GlobalInvocationID.xy)+.5;
+ return vec2(gl_GlobalInvocationID.xy)+vec2(0.,float(uWeatherRowOffset))+.5;
 #else
  return gl_FragCoord.xy;
 #endif
@@ -73,6 +78,12 @@ float marchDensity(vec3 direction,float distance,float lod){
  return weatherDensity(direction*distance,uObserverHeight,lod)*(1.-smoothstep(75.,100.,distance));
 }
 vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
+#ifdef OBSERVATORY_WEATHER_NO_VOLUME
+ // CPU bounds prove this ray cannot enter the lower cloud volume:
+ // either above its top and outward, or below its base with the inner-sphere
+ // exit beyond the 100 km endpoint. All other layers retain their evaluation.
+ float start=0.,finish=0.;
+#else
  vec2 outer=weatherShell(vec3(0.),d,uWeatherLayer.x+uWeatherLayer.y,uObserverHeight);
  vec2 inner=weatherShell(vec3(0.),d,uWeatherLayer.x,uObserverHeight);
  float start=max(0.,outer.x),finish=min(end,outer.y);
@@ -80,6 +91,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
  if(uObserverHeight>uWeatherLayer.x&&inner.x>0.)finish=min(finish,inner.x);
  // Below the layer looking up: start on the far inner intersection.
  if(uObserverHeight<uWeatherLayer.x)start=max(start,inner.y);
+#endif
  vec3 L=vec3(0.);float T=1.;
  // Keep short paths inexpensive. Long grazing paths need more intervals:
  // 48 midpoint samples alias the cloud field into horizontal bands.

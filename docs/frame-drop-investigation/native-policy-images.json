@@ -1,0 +1,293 @@
+{
+  "scope": "Prior explicit Mesa policy versus new native app default; eight deterministic frames per scene, including 1080p forest and five 640x360 scenes. Strict original image limits: peak <=2, mean <=.02.",
+  "records": [
+    {
+      "scene": "forest-day",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-day",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "forest-lightning",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "coast-sunset",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "ocean-storm",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-day",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 0,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 1,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 2,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 3,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 4,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 5,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 6,
+      "peak": 0,
+      "mean": 0.0
+    },
+    {
+      "scene": "snow-night",
+      "frame": 7,
+      "peak": 0,
+      "mean": 0.0
+    }
+  ]
+}

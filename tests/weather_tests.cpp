@@ -1,4 +1,5 @@
 #include "weather.hpp"
+#include "weather_dispatch.hpp"
 #include <iostream>
 #include <stdexcept>
 using namespace observatory;
@@ -8,6 +9,76 @@ void require(bool condition, const char *message) {
 }
 int main() {
   try {
+    for (auto size : {std::array<int, 2>{1920, 1080}, {641, 359}, {31, 1}}) {
+      const int w = size[0], h = size[1];
+      require(clearWeatherFirstRow(w, h, {0, .3, .95}, {1, 0, 0}, {0, .95, -.3},
+                                   1., 2.) == h,
+              "observer below clouds retains every complete column");
+      require(clearWeatherFirstRow(w, h, {0, .3, .95}, {1, 0, 0}, {0, .95, -.3},
+                                   2.001, 2.) == h,
+              "cloud boundary has a float-safe altitude margin");
+      for (double roll : {0., .25, -.25}) {
+        Vec3 forward{0, .3, .95}, right{1, roll, 0}, up{0, .95, -.3};
+        const int first =
+            clearWeatherFirstRow(w, h, forward, right, up, 3., 2.);
+        require(first >= 0 && first <= h && (first == h || first % 4 == 0),
+                "dispatch cuts only at whole workgroups without gaps");
+        for (int y = first; y < h; ++y)
+          for (int x : {0, w - 1}) {
+            const double qx =
+                ((x + .5) / w * 2 - 1) * w / h * std::tan(29 * pi / 180);
+            const double qy = ((y + .5) / h * 2 - 1) * std::tan(29 * pi / 180);
+            require(forward.y + right.y * qx + up.y * qy > .001,
+                    "every specialized ray points safely above the horizon");
+          }
+      }
+    }
+    require(clearWeatherFirstRow(1920, 1080, {0, 1, 0}, {1, 0, 0}, {0, 0, 1},
+                                 3., 2.) == 1080,
+            "unsupported camera orientation retains full shader");
+    require(clearWeatherEndRow(1920, 1080, {0, 0, 1}, {1, 0, 0}, {0, 1, 0},
+                               .7128, 1.0817) > 400,
+            "below-base coastal ground exercises the smaller exact solver");
+    for (double base : {.5, .999, 1., 1.001})
+      require(clearWeatherEndRow(1920, 1080, {0, 0, 1}, {1, 0, 0}, {0, 1, 0},
+                                 1., base) == 0,
+              "inside/above clouds and unsafe boundary keep complete columns");
+    require(clearWeatherEndRow(1920, 1080, {0, 0, 1}, {1, 0, 0}, {0, 0, 1}, 1.,
+                               2.) == 0,
+            "unsupported downward-row camera keeps complete columns");
+    for (auto size : {std::array<int, 2>{1920, 1080}, {641, 359}, {31, 1}})
+      for (double pitch : {-.5, 0., .5})
+        for (double roll : {-.25, 0., .25})
+          for (double altitude : {0., .7128, 1., 10.})
+            for (double gap : {.0021, .1, .5, 5.}) {
+              const int w = size[0], h = size[1];
+              const Vec3 forward{0, pitch, 1}, right{1, roll, .1},
+                  up{0, 1, -pitch};
+              const int end = clearWeatherEndRow(w, h, forward, right, up,
+                                                 altitude, altitude + gap);
+              require(end >= 0 && end <= h && (end == h || end % 4 == 0),
+                      "lower dispatch cuts only at complete workgroups");
+              for (int y = 0; y < end; ++y)
+                for (int x : {0, w / 2, w - 1}) {
+                  const double qx = ((x + .5) / w * 2 - 1) * w / h *
+                                    std::tan(29 * pi / 180),
+                               qy = ((y + .5) / h * 2 - 1) *
+                                    std::tan(29 * pi / 180);
+                  const auto d = normalized(forward + right * qx + up * qy);
+                  // Same stable inner-sphere root as the shader, evaluated in
+                  // float to exercise its actual precision at grazing angles.
+                  const float r = 6371.f, observer = float(altitude),
+                              base = float(altitude + gap),
+                              b = (r + observer) * float(d.y),
+                              c = (observer - base) * (2 * r + observer + base),
+                              root = std::sqrt(b * b - c),
+                              stable = -b - (b >= 0 ? root : -root),
+                              other = c / stable;
+                  require(std::max(stable, other) > 100.f,
+                          "every specialized ray exits the inner sphere after "
+                          "the full 100 km weather interval");
+                }
+            }
     TravelLocation location{.37, .81};
     WeatherClimate wet{.9, 26, .1, .2}, dry{.1, 26, .1, 0},
         cold{.8, -12, .4, .1};

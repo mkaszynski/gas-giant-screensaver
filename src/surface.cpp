@@ -1,4 +1,5 @@
 #include "surface.hpp"
+#include "surface_sampling.hpp"
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -48,7 +49,7 @@ Grid grid(double lat, double lon, int w, int h) {
 }
 template <class T> double interpolate(const std::vector<T> &a, Grid g, int w) {
   auto at = [&](int x, int y) {
-    x = (x % w + w) % w;
+    x = detail::wrapAdjacentGridIndex(x, w);
     return double(a[y * w + x]);
   };
   return std::lerp(std::lerp(at(g.x, g.y), at(g.x + 1, g.y), g.fx),
@@ -208,16 +209,14 @@ double SurfaceWorld::localRelief(double x, double z, int layer) const {
   const auto &values = layer == 0 ? relief : extraRelief.at(layer - 1);
   x /= reliefSpacing;
   z /= reliefSpacing;
-  int ix = int(std::floor(std::remainder(x, double(reliefWidth)))),
-      iz = int(std::floor(std::remainder(z, double(reliefWidth))));
-  auto at = [&](int a, int b) {
-    a = (a % reliefWidth + reliefWidth) % reliefWidth;
-    b = (b % reliefWidth + reliefWidth) % reliefWidth;
-    return double(values[b * reliefWidth + a]);
-  };
-  double fx = x - std::floor(x), fz = z - std::floor(z);
-  return std::lerp(std::lerp(at(ix, iz), at(ix + 1, iz), fx),
-                   std::lerp(at(ix, iz + 1), at(ix + 1, iz + 1), fx), fz);
+  const auto a = detail::periodicGridCell(x, reliefWidth),
+             b = detail::periodicGridCell(z, reliefWidth);
+  return std::lerp(
+      std::lerp(double(values[b.first * reliefWidth + a.first]),
+                double(values[b.first * reliefWidth + a.next]), a.fraction),
+      std::lerp(double(values[b.next * reliefWidth + a.first]),
+                double(values[b.next * reliefWidth + a.next]), a.fraction),
+      b.fraction);
 }
 std::array<double, 2> SurfaceWorld::reliefCoordinates(double lat,
                                                       double lon) const {
@@ -234,6 +233,13 @@ double SurfaceWorld::elevationAt(double lat, double lon,
                                  std::array<double, 2> coordinates,
                                  const BaseSample &base,
                                  double *reliefHeight) const {
+  // All three height-detail weights are exactly zero below -250 m.
+  // Keep the original ground value without sampling invisible relief.
+  if (base.height <= -250.) {
+    if (reliefHeight)
+      *reliefHeight = 0.;
+    return base.height;
+  }
   // Longitude/pole-safe local relief, anchored in moon-fixed coordinates.
   // The orbit never reaches the poles, but the field remains well-defined
   // there.
@@ -242,8 +248,11 @@ double SurfaceWorld::elevationAt(double lat, double lon,
   double h = base.height;
   const double seam = base.seam;
   const auto &weights = base.landforms;
-  double measured = (1. - weights[0] - weights[1]) *
-                    localRelief(coordinates[0], coordinates[1]);
+  const double continental = 1. - weights[0] - weights[1];
+  double measured =
+      continental == 0.
+          ? 0.
+          : continental * localRelief(coordinates[0], coordinates[1]);
   for (int i = 0; i < 2; ++i)
     if (weights[i] > 0.)
       measured +=
@@ -422,9 +431,12 @@ SurfaceMesh buildSurfaceMesh(const SurfaceWorld &world, TravelLocation center,
       // From airplane height the canopy is a continuous volume. Crown normals
       // and occlusion are mip-filtered in the material, rather than sparse
       // dots.
-      double h = std::max(v.ground, v.water) +
-                 forest * (12. + 6. * noise(surfaceRadius * lon,
-                                            surfaceRadius * lat, 80, 1397));
+      double h =
+          std::max(v.ground, v.water) +
+          (forest == 0.
+               ? forest
+               : forest * (12. + 6. * noise(surfaceRadius * lon,
+                                            surfaceRadius * lat, 80, 1397)));
       double baseHeight = std::max(v.ground - v.reliefHeight, v.water) + h -
                           std::max(v.ground, v.water);
       mesh.vertices.push_back(

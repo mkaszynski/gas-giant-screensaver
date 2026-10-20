@@ -155,6 +155,21 @@ int main() {
       Renderer weather(Renderer::defaultDataDirectory(), {}, {true, 0, 162000});
       auto a = capture(weather, forest, 1790900000.),
            b = capture(weather, forest, 1790900000.001);
+      if (weather.computingWeather()) {
+        require(weather.clearWeatherRows() > 0,
+                "above-cloud fixture exercises the outward-ray solver");
+        Fixture fallback;
+        fallback.replace(
+            "weather.frag", "#version 300 es",
+            "#version 300 es\n#ifdef OBSERVATORY_WEATHER_NO_VOLUME\n"
+            "#error deliberate optional-program failure\n#endif");
+        Renderer complete(fallback.root.string(), {}, {true, 0, 162000});
+        const auto unchanged = capture(complete, forest, 1790900000.);
+        require(complete.computingWeather() && complete.clearWeatherRows() == 0,
+                "optional-program failure retains complete compute rendering");
+        require(difference(a, unchanged).peak <= 1,
+                "optional outward-ray solver cannot change the scene");
+      }
       auto continuity = difference(a, b);
       std::cout << "Unix subframe weather: peak=" << continuity.peak
                 << " mean=" << continuity.mean << '\n';

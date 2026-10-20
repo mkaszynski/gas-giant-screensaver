@@ -1,6 +1,7 @@
 #define GLFW_INCLUDE_ES3
 #include "debug_overlay.hpp"
 #include "frame_pacing.hpp"
+#include "native_render_policy.hpp"
 #include "preview_statistics.hpp"
 #include "renderer.hpp"
 #include <GLES2/gl2ext.h>
@@ -51,6 +52,7 @@ struct PreviewPointerInput {
 };
 } // namespace
 int main(int argc, char **argv) {
+  configureNativeRenderPolicy();
   try {
     int w = 1280, h = 720, fps = 30, benchmark = 0, recordFrames = 270;
     double day = 1800, time = -1, weatherTime = -1, timeout = 0,

@@ -1,0 +1,309 @@
+{
+  "kind": "Rejected shared terrain-topology experiment; unchanged settings and image output. No established frame-time improvement; code removed from candidate.",
+  "before_commit": "9af589d16874a4bfd0bc0869647f32f0a9a1fd57",
+  "after_commit": "e7ef73d3b86c93c38d21f1ed2b6aa7879bec96eb",
+  "preserved_branch": "experiment/shared-terrain-topology",
+  "settings": {
+    "width": 1920,
+    "height": 1080,
+    "sky": 510,
+    "route": 162000,
+    "weather": 1790900000,
+    "fps": 30,
+    "weather_mode": "default volumetric"
+  },
+  "frames_per_run": 360,
+  "steady_excluded_startup_frames": 10,
+  "all_individual_controls_pass": true,
+  "performance_acceptance": false,
+  "records": [
+    {
+      "biome": "forest",
+      "order": 1,
+      "version": "before",
+      "stages": {
+        "render_ms": {
+          "median_ms": 26.6749595,
+          "p95_ms": 28.547451
+        },
+        "gpu_ms": {
+          "median_ms": 23.80717,
+          "p95_ms": 25.59701
+        },
+        "submit_ms": {
+          "median_ms": 1.755357,
+          "p95_ms": 2.054423
+        },
+        "wait_ms": {
+          "median_ms": 24.8786305,
+          "p95_ms": 26.677976
+        }
+      },
+      "background_cpu_cores": 0.26056030859959334,
+      "external_gpu_fraction": 0.000133322447010975,
+      "max_active_cycle_ms": 7.835636002710089,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 0,
+      "steady_frames": 350,
+      "max_render_ms": 296.741093,
+      "logical_scene_seconds": [
+        "510.000073377",
+        "522.231561858"
+      ]
+    },
+    {
+      "biome": "forest",
+      "order": 2,
+      "version": "after",
+      "stages": {
+        "render_ms": {
+          "median_ms": 27.0632095,
+          "p95_ms": 29.77701
+        },
+        "gpu_ms": {
+          "median_ms": 24.2099,
+          "p95_ms": 26.67628
+        },
+        "submit_ms": {
+          "median_ms": 1.7454589999999999,
+          "p95_ms": 2.205066
+        },
+        "wait_ms": {
+          "median_ms": 25.267967,
+          "p95_ms": 27.879
+        }
+      },
+      "background_cpu_cores": 0.33115673747171653,
+      "external_gpu_fraction": 0.00012741763327739754,
+      "max_active_cycle_ms": 6.050879019312561,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 5,
+      "steady_frames": 350,
+      "max_render_ms": 300.74729,
+      "logical_scene_seconds": [
+        "510.000072897",
+        "522.254970296"
+      ]
+    },
+    {
+      "biome": "forest",
+      "order": 3,
+      "version": "after",
+      "stages": {
+        "render_ms": {
+          "median_ms": 27.0675885,
+          "p95_ms": 29.77632
+        },
+        "gpu_ms": {
+          "median_ms": 24.15963,
+          "p95_ms": 26.8915
+        },
+        "submit_ms": {
+          "median_ms": 1.7869415,
+          "p95_ms": 2.116841
+        },
+        "wait_ms": {
+          "median_ms": 25.2680785,
+          "p95_ms": 27.812456
+        }
+      },
+      "background_cpu_cores": 0.37346762824059626,
+      "external_gpu_fraction": 0.00010755263989779185,
+      "max_active_cycle_ms": 6.091296003432944,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 8,
+      "steady_frames": 350,
+      "max_render_ms": 303.136004,
+      "logical_scene_seconds": [
+        "510.000065032",
+        "522.27215046"
+      ]
+    },
+    {
+      "biome": "forest",
+      "order": 4,
+      "version": "before",
+      "stages": {
+        "render_ms": {
+          "median_ms": 26.696178500000002,
+          "p95_ms": 28.715351
+        },
+        "gpu_ms": {
+          "median_ms": 23.852745,
+          "p95_ms": 25.63171
+        },
+        "submit_ms": {
+          "median_ms": 1.7771485,
+          "p95_ms": 2.095751
+        },
+        "wait_ms": {
+          "median_ms": 24.8797005,
+          "p95_ms": 26.753291
+        }
+      },
+      "background_cpu_cores": 0.2360652188889053,
+      "external_gpu_fraction": 0.00018217951658835885,
+      "max_active_cycle_ms": 6.918978004250675,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 0,
+      "steady_frames": 350,
+      "max_render_ms": 298.781912,
+      "logical_scene_seconds": [
+        "510.000129092",
+        "522.238123884"
+      ]
+    },
+    {
+      "biome": "coast",
+      "order": 1,
+      "version": "before",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.712170999999998,
+          "p95_ms": 31.174665
+        },
+        "gpu_ms": {
+          "median_ms": 25.563105,
+          "p95_ms": 27.7589
+        },
+        "submit_ms": {
+          "median_ms": 2.0826265,
+          "p95_ms": 2.430198
+        },
+        "wait_ms": {
+          "median_ms": 26.602529500000003,
+          "p95_ms": 28.926499
+        }
+      },
+      "background_cpu_cores": 0.3113583732973473,
+      "external_gpu_fraction": 0.00021496209597593176,
+      "max_active_cycle_ms": 6.434299022657797,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 4,
+      "steady_frames": 350,
+      "max_render_ms": 367.716676,
+      "logical_scene_seconds": [
+        "1740.00007445",
+        "1752.31164249"
+      ]
+    },
+    {
+      "biome": "coast",
+      "order": 2,
+      "version": "after",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.900415,
+          "p95_ms": 31.295062
+        },
+        "gpu_ms": {
+          "median_ms": 25.78189,
+          "p95_ms": 27.92317
+        },
+        "submit_ms": {
+          "median_ms": 2.0441789999999997,
+          "p95_ms": 2.45751
+        },
+        "wait_ms": {
+          "median_ms": 26.7798875,
+          "p95_ms": 28.808428
+        }
+      },
+      "background_cpu_cores": 0.30221748696722806,
+      "external_gpu_fraction": 9.79471363194705e-05,
+      "max_active_cycle_ms": 6.277745997067541,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 6,
+      "steady_frames": 350,
+      "max_render_ms": 389.591916,
+      "logical_scene_seconds": [
+        "1740.00007054",
+        "1752.33768044"
+      ]
+    },
+    {
+      "biome": "coast",
+      "order": 3,
+      "version": "after",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.932060999999997,
+          "p95_ms": 33.275137
+        },
+        "gpu_ms": {
+          "median_ms": 25.74159,
+          "p95_ms": 30.09097
+        },
+        "submit_ms": {
+          "median_ms": 2.0885825000000002,
+          "p95_ms": 2.555644
+        },
+        "wait_ms": {
+          "median_ms": 26.796565,
+          "p95_ms": 30.996473
+        }
+      },
+      "background_cpu_cores": 0.37432736714228887,
+      "external_gpu_fraction": 0.00014142028341262907,
+      "max_active_cycle_ms": 8.877120999386534,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 17,
+      "steady_frames": 350,
+      "max_render_ms": 419.931605,
+      "logical_scene_seconds": [
+        "1740.00009322",
+        "1752.3914558"
+      ]
+    },
+    {
+      "biome": "coast",
+      "order": 4,
+      "version": "before",
+      "stages": {
+        "render_ms": {
+          "median_ms": 28.668533,
+          "p95_ms": 32.058246
+        },
+        "gpu_ms": {
+          "median_ms": 25.499945,
+          "p95_ms": 29.01512
+        },
+        "submit_ms": {
+          "median_ms": 2.059027,
+          "p95_ms": 2.353695
+        },
+        "wait_ms": {
+          "median_ms": 26.5800855,
+          "p95_ms": 30.158753
+        }
+      },
+      "background_cpu_cores": 0.3295201404463943,
+      "external_gpu_fraction": 1.9919145354793323e-05,
+      "max_active_cycle_ms": 7.768492010654882,
+      "gpu_client_sets_stable": true,
+      "controls_pass": true,
+      "performance_acceptance": false,
+      "steady_deadline_misses": 13,
+      "steady_frames": 350,
+      "max_render_ms": 365.67705,
+      "logical_scene_seconds": [
+        "1740.00007393",
+        "1752.349051"
+      ]
+    }
+  ]
+}

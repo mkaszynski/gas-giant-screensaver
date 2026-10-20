@@ -99,3 +99,36 @@ For a direct comparison, use identical dimensions, scene/route/weather clocks,
 and `--benchmark` settings, adding `--no-weather-compute` for fragment execution.
 The benchmark reports the selected cloud backend. Keep the frozen Phase 1
 comparison separate from this cloud-only optimization comparison.
+
+## Outward rays above cloud tops
+
+An optional native compute variant omits the lower-cloud marcher only when the
+observer is at least two metres above the entire cloud layer and every ray in
+the selected workgroup points safely above the local horizon. The CPU bounds
+the horizontal view extent, includes camera roll, and rounds the split to whole
+four-row workgroups. All remaining rays use the original solver.
+
+This changes shader occupancy rather than rendering resolution. Cirrus, fog,
+rain, atmospheric optics, terrain-edge columns and their original pixel
+coordinates remain unchanged. The two disjoint dispatches write the existing
+weather attachments; no additional images, caches or history are allocated.
+AMD compiler diagnostics reduce the applicable kernel from 84 to 64 vector
+registers and increase its occupancy limit from three to four waves. This is
+a compiler result, not a measured whole-renderer speedup.
+Failure to compile the optional program retains the complete compute solver.
+WebGL and contexts without compute retain their existing fragment programs.
+
+CPU tests check altitude margins, rolled cameras, odd/tiny viewports and the
+ray bounds of every selected row. Hardware compute/fragment comparisons passed
+all 45 cases with zero differing display codes, including live weather changes,
+lightning and meteors. The hardware behavior suite also deliberately rejects
+the optional program and verifies that the complete solver still renders the
+same scene. The CI renderer job runs the same suites on Mesa software rendering;
+the Nix job builds the standalone preview and native Hyprlock integration.
+
+The first [paired diagnostic](frame-drop-investigation/outward-ray-diagnostic.json)
+was stopped when external GPU activity exceeded the declared control limit.
+All [reference frames](frame-drop-investigation/forest-before-1.csv) and
+[candidate frames](frame-drop-investigation/forest-after-1.csv) are retained.
+Both versions missed the 33.33 ms deadline; this does not establish a speedup,
+sustained 30 fps, or the original Phase 1 cost allowance. PR #30 remains a draft.

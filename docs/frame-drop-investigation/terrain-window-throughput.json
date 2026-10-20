@@ -1,0 +1,33 @@
+{
+  "kind": "CPU-only 30Hz forest construction throughput ABBA, no GPU acceptance",
+  "records": [
+    {
+      "window_ms": 2.66667,
+      "wall_seconds": 6.04933,
+      "thread_cpu_seconds": 0.468772,
+      "frames": 180,
+      "vertices": 512800
+    },
+    {
+      "window_ms": 5.33333,
+      "wall_seconds": 2.62171,
+      "thread_cpu_seconds": 0.408155,
+      "frames": 78,
+      "vertices": 512800
+    },
+    {
+      "window_ms": 5.33333,
+      "wall_seconds": 2.35313,
+      "thread_cpu_seconds": 0.362407,
+      "frames": 70,
+      "vertices": 512800
+    },
+    {
+      "window_ms": 2.66667,
+      "wall_seconds": 5.71467,
+      "thread_cpu_seconds": 0.439529,
+      "frames": 170,
+      "vertices": 512800
+    }
+  ]
+}

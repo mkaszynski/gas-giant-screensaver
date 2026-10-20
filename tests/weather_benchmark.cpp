@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_ES3
 #include "renderer.hpp"
+#include "native_render_policy.hpp"
 #include "weather_profile.hpp"
 #include <GLES2/gl2ext.h>
 #include <GLFW/glfw3.h>
@@ -13,6 +14,7 @@ namespace observatory {
 GLuint weatherProfileQueries[weatherProfileNames.size()]{};
 }
 int main(int argc, char **argv) {
+  observatory::configureNativeRenderPolicy();
   using namespace observatory;
   try {
     const std::string data =

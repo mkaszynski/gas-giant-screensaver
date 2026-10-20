@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 namespace observatory {
 struct StarfieldOptions {
@@ -56,6 +57,11 @@ public:
   bool floatingWeatherNoise() const { return floatingNoise; }
   bool computingWeather() const { return weatherComputeProgram != 0; }
   bool computingWeatherCache() const { return weatherSkyComputeProgram != 0; }
+  bool specializingFragmentSky() const { return weatherSkyFragmentProgram != 0; }
+  bool specializingFragmentClear() const {
+    return weatherClearFragmentProgram != 0;
+  }
+  int clearWeatherRows() const { return weatherClearRows; }
   bool computingCalmWeather() const {
     return weatherCalmComputeProgram && weatherState.storm == 0. &&
            weatherState.flashRadiance == 0.;
@@ -118,10 +124,12 @@ private:
          backgroundProgram = 0, bodyProgram = 0, starProgram = 0,
          postProgram = 0, presentationProgram = 0, ringProgram = 0,
          giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
-         weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0;
+         weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0,
+         weatherSkyFragmentProgram = 0, weatherClearFragmentProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
-         weatherPixelProgram = 0;
+         weatherPixelProgram = 0, weatherClearComputeProgram = 0;
+  int weatherClearRows = 0;
   GLuint giant = 0, mountains = 0, noise = 0, ringProfile = 0, giantSlab = 0,
          terrainNormal = 0, terrainGeometry = 0, horizonA = 0, horizonB = 0,
          galaxy = 0, vao = 0, starBuffer = 0, starVao = 0, emissionBuffer = 0,
@@ -137,14 +145,16 @@ private:
   int stars = 0;
   std::string shader(const std::string &);
   GLuint program(const std::string &, const std::string & = "fullscreen.vert",
-                 int giantAtmosphere = 0);
+                 int giantAtmosphere = 0, std::string_view defines = {});
   GLuint imageTexture(const std::string &);
   GLuint galaxyTexture();
   void target(Target &, int, int, bool depth = false, bool skyLayer = false,
               GLenum format = GL_RGBA16F, bool immutable = false);
-  GLuint createWeatherComputeProgram(bool calm = false, bool skyPass = false);
+  GLuint createWeatherComputeProgram(bool calm = false, bool skyPass = false,
+                                     bool noVolume = false);
   void weatherPixelCoordinates(Target &, int, int, int, int);
-  void dispatchWeather(GLuint, const Target &, const Target &);
+  void dispatchWeather(GLuint, const Target &, const Target &, int firstRow = 0,
+                       int rows = -1);
   void release(Target &);
   void bind(GLuint, int, const char *, GLuint);
   void common(GLuint, const Scene &, int, int);

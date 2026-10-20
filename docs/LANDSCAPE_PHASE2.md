@@ -115,3 +115,29 @@ report and slow runs are retained in `landscape-phase2-resolution-benchmark.json
 see `VALIDATION.md`. Release performance acceptance remains open. The latest
 local gate passed 40 CPU/CLI checks, 38 offline tests, all 13 GPU suites on AMD
 hardware and Mesa, and the real benchmark CSV checks on both renderers.
+
+## Acceptance audit, 19 October 2026
+
+The preceding checkpoints are historical. The landscape implementation was
+reviewed and merged through PR #12; subsequent weather and rendering work does
+not replace the frozen Phase 1 reference above. Its packaged executable still
+matches the recorded SHA-256 `776dde86a09f15a10a9e02a64f1b08d5e14e7592c97d6aafb9eec655e5a02865`.
+The active completion gates remain stricter than an average-FPS demonstration.
+
+| Requirement | Current evidence | Remaining verification |
+| --- | --- | --- |
+| Coherent detailed geometry, filtered PBR materials, dense canopy and water | `surface.cpp`, numerical world/material caches, `fidelity-render-tests`, `water-render-tests` and offline world/material tests; operator reviewed the landscape | Preserve these effects and their output through further optimization |
+| Hardware/software correctness | Application `5bf5c20` passes all renderer/Nix/browser/memory CI; all 45 compute-reference and 30 specialization software images are identical; target GPU flights and a native preview work | Verify later product changes and browser hardware performance |
+| 30 fps at native 1920×1080 | Four current forest/coast flights pass their workload controls with zero missed deadlines in 2,840 steady frames; largest p95 27.655 ms; native preview shows 30.0 fps | [Browser hardware diagnostic](BROWSER_GPU_TIMING.md): 20.76 fps, below target; the original full comparative trial remains invalid after its reference-only collection failure |
+| At most 30% added complete-renderer cost | Fresh original frozen Phase 1 comparison passes all 12 runs and six matched pairs; worst median ratio 1.093, p95 ratio 1.058 | Preserve original baseline, complete-renderer scope, cloud isolation, controls and 1.30 limit through later changes |
+| Bounded memory and streaming | Every current long flight completes four mesh revisions, with normal uploads at most 2 MiB; whole-flight process-tree peak 374.7 MiB; browser memory CI passes | Continue distinguishing requested GPU storage, WASM capacity and process-tree RAM |
+| Native integration and operator review | Current application passes all four Nix checks and a target-GPU preview; the operator authorized incremental landing of PR #29 and #30 on 20 October 2026 | Browser performance acceptance remains open; the installation pin is unchanged |
+
+Neither green correctness CI nor the previous median cost pass establishes full
+performance acceptance. Do not mark Phase 2 complete while these gates remain
+open. Failed timing controls and rejected optimization experiments are retained
+with the local experiment records rather than substituted with faster retries.
+The [current validation report](BENCHMARK_CPU_BUDGET.md) publishes numerical
+results, frame traces, source/binary fingerprints and the retained failed
+reference. Collector CPU headroom uses stricter child limits inside the same
+parent resource envelope; it does not relax any workload or cost threshold.

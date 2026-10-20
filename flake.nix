@@ -37,7 +37,7 @@
         cp ${./src}/{renderer,system,emissions,sky_catalog,sky_texture,surface,surface_renderer,optics}.{cpp,hpp} src/observatory/
         mkdir -p src/observatory/third_party
         cp ${./src}/third_party/bcdec.h src/observatory/third_party/
-        cp ${./src}/{graphics_quality,texture_quality,frame_pacing,weather,weather_control,debug_timeline,debug_menu,projection}.hpp src/observatory/
+        cp ${./src}/{graphics_quality,texture_quality,frame_pacing,weather,weather_control,weather_dispatch,debug_timeline,debug_menu,projection,surface_sampling,surface_work}.hpp src/observatory/
         cp ${./src}/ocean_{foam,quantiles}.hpp src/observatory/
         cp ${./src}/debug_overlay.{cpp,hpp} src/observatory/
         cp ${./src}/{meteors,meteor_control}.hpp src/observatory/
@@ -50,7 +50,8 @@
         CMAKE
       '';
       postFixup = (old.postFixup or "") + ''
-        wrapProgram "$out/bin/hyprlock" --set FONTCONFIG_FILE ${lockFonts}
+        wrapProgram "$out/bin/hyprlock" --set FONTCONFIG_FILE ${lockFonts} \
+          --set-default radeonsi_inline_uniforms false
       '';
     });
     lockReview = pkgs.writeShellScriptBin "gas-giant-lock" ''

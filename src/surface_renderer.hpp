@@ -1,5 +1,6 @@
 #pragma once
 #include "surface.hpp"
+#include "surface_work.hpp"
 #include <GLES3/gl3.h>
 #include <functional>
 #include <future>
@@ -24,6 +25,8 @@ public:
     return pending.valid() && pending.wait_for(std::chrono::seconds(0)) !=
                                   std::future_status::ready;
   }
+  void prepareFrame();
+  void finishFrame();
   void releaseSizeTargets();
   GLuint render(const Scene &, TravelLocation, int, int, double, double, GLuint,
                 const std::function<void(GLuint)> &);
@@ -62,6 +65,12 @@ private:
   size_t shadowDraws = 0;
   bool shadowsValid = false;
   double fraction = 1;
+  detail::SurfaceWork backgroundWork;
+  bool cooperativeBuilds = true, frameCpuWork = false;
+#ifndef __EMSCRIPTEN__
+  GLsync frameFence = nullptr;
+  detail::SurfaceWork::Clock::time_point lastWorkFrame{};
+#endif
   void upload(SurfaceMesh, bool prepared = false);
   void stageUpload();
   void vertexAttributes();

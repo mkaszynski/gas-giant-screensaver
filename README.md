@@ -93,6 +93,11 @@ The viewport aspect is preserved independently of device pixel ratio.
 Both backends request a high-performance GPU. The corner hint identifies the
 applied quality and whether terrain is moving; Auto Low is a reduced preview.
 
+Measured performance differs by backend: the validated native 1080p flights
+meet 30 fps, while the High-quality AMD browser diagnostic measures 20.76 fps.
+Browser 30 fps remains an optimization target. See the
+[measurements and limitations](docs/BROWSER_GPU_TIMING.md).
+
 Move to the upper-right corner (or focus the corner button with Tab) to open the
 shared native debug panel. Choose **Graphics** for the overall Low–High slider
 and Custom feature switches, resolution, texture size, cloud resolution and
