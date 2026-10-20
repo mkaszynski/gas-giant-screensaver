@@ -84,3 +84,27 @@ jobs:
       - uses: cachix/install-nix-action@v31
       - name: Build preview, Hyprlock and validate configuration
         run: nix flake check --print-build-logs --cores 2
+      - name: Export the checked native application for hardware review
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess
+          out = pathlib.Path('native-application')
+          out.mkdir()
+          package = subprocess.check_output(['nix', 'build', '.#gas-giant-screensaver', '--no-link', '--print-out-paths'], text=True).strip()
+          binary = pathlib.Path(package) / 'bin/gas-giant-screensaver'
+          with (out / 'application.nar').open('wb') as archive:
+              subprocess.run(['nix-store', '--dump', package], stdout=archive, check=True)
+          metadata = {
+              'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'source_tree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'package': package,
+              'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+              'closure': subprocess.check_output(['nix-store', '--query', '--requisites', package], text=True).splitlines(),
+          }
+          (out / 'provenance.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-application
+          path: native-application/
+          retention-days: 7
