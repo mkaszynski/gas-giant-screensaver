@@ -127,13 +127,17 @@ The active completion gates remain stricter than an average-FPS demonstration.
 | Requirement | Current evidence | Remaining verification |
 | --- | --- | --- |
 | Coherent detailed geometry, filtered PBR materials, dense canopy and water | `surface.cpp`, numerical world/material caches, `fidelity-render-tests`, `water-render-tests` and offline world/material tests; operator reviewed the landscape | Preserve these effects and their output through further optimization |
-| Hardware/software correctness | Combined head `678930a` passes renderer, Nix and browser CI in PR #29 | Validate any new scheduling/shading change on both AMD and Mesa |
-| 30 fps at native 1920×1080 | Native previews run at 30 fps, but a controlled 360-frame forest trace still has six frames above 33.33 ms (35.58 ms maximum) | Resolve rendering tails; submission rate or HUD FPS alone is insufficient |
-| At most 30% added complete-renderer cost | Historical median comparison passes; original p95 comparison fails | Fresh matched complete-renderer comparison against the unchanged frozen reference; do not substitute a newer baseline or a terrain-only timing |
-| Bounded memory and streaming | Prior long combined runs use 274–278 MiB RSS and at most 2 MiB normal-frame uploads | Recheck long flights and mesh replacements on the final candidate |
-| Native integration and operator review | PR #29 contains the combined sky/ocean work and remains open against `main` | Final package/native checks and operator review before merge or installation-pin changes |
+| Hardware/software correctness | Application `5bf5c20` passes all renderer/Nix/browser/memory CI; all 45 compute-reference and 30 specialization software images are identical; target GPU flights and a native preview work | Verify later product changes and browser hardware performance |
+| 30 fps at native 1920×1080 | Four current forest/coast flights pass their workload controls with zero missed deadlines in 2,840 steady frames; largest p95 27.655 ms; native preview shows 30.0 fps | Browser hardware fps remains unverified; the original full comparative trial remains invalid after its reference-only collection failure |
+| At most 30% added complete-renderer cost | Fresh original frozen Phase 1 comparison passes all 12 runs and six matched pairs; worst median ratio 1.093, p95 ratio 1.058 | Preserve original baseline, complete-renderer scope, cloud isolation, controls and 1.30 limit through later changes |
+| Bounded memory and streaming | Every current long flight completes four mesh revisions, with normal uploads at most 2 MiB; whole-flight process-tree peak 374.7 MiB; browser memory CI passes | Continue distinguishing requested GPU storage, WASM capacity and process-tree RAM |
+| Native integration and operator review | Current application passes all four Nix checks and a target-GPU preview; PR #30 remains stacked on open #29 | Operator review before merge or installation-pin changes; current results do not authorize a pin update |
 
 Neither green correctness CI nor the previous median cost pass establishes full
 performance acceptance. Do not mark Phase 2 complete while these gates remain
 open. Failed timing controls and rejected optimization experiments are retained
 with the local experiment records rather than substituted with faster retries.
+The [current validation report](BENCHMARK_CPU_BUDGET.md) publishes numerical
+results, frame traces, source/binary fingerprints and the retained failed
+reference. Collector CPU headroom uses stricter child limits inside the same
+parent resource envelope; it does not relax any workload or cost threshold.

@@ -1,0 +1,696 @@
+{
+  "application_revision": "5bf5c208249276411d5e9b50e4cec1b8157c5a7c",
+  "source_tree": "a4524648413240e5df35b987debe307877c471d7",
+  "binary_sha256": "78595d2632126af3d76377cfb69cb8a85d8a63b28b35eff559d205dcd75da924",
+  "reference_revision": "f882d4d701308b06c25be0a2118871dc244f9794",
+  "reference_binary_sha256": "776dde86a09f15a10a9e02a64f1b08d5e14e7592c97d6aafb9eec655e5a02865",
+  "parent_envelope": {
+    "cpu_max": "90000 100000",
+    "memory_mib": 1100,
+    "system_reserve_mib": 768,
+    "renderer_cpu_max": "4000 5000",
+    "note": "Both binaries use identical stricter child limits; parent caps, original workload controls, pairs and cost allowance are unchanged."
+  },
+  "frozen_cost": {
+    "all_controls_pass": true,
+    "cost_gate_pass": true,
+    "cost_limit": 1.3,
+    "cost_samples": "All180frames per run; no startup exclusion for median/p95",
+    "pair_costs": [
+      {
+        "biome": "ocean",
+        "before_order": 1,
+        "after_order": 2,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 0.861209998064333,
+          "p95_ms": 0.9651457394301732
+        },
+        "cost_pass": true
+      },
+      {
+        "biome": "ocean",
+        "before_order": 4,
+        "after_order": 3,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 0.9083307943676782,
+          "p95_ms": 0.989331356821319
+        },
+        "cost_pass": true
+      },
+      {
+        "biome": "forest",
+        "before_order": 1,
+        "after_order": 2,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 1.092827351267104,
+          "p95_ms": 0.9957743627393726
+        },
+        "cost_pass": true
+      },
+      {
+        "biome": "forest",
+        "before_order": 4,
+        "after_order": 3,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 1.0275039318678796,
+          "p95_ms": 1.0575942729321421
+        },
+        "cost_pass": true
+      },
+      {
+        "biome": "snow",
+        "before_order": 1,
+        "after_order": 2,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 0.9471237306816291,
+          "p95_ms": 0.7819353770154176
+        },
+        "cost_pass": true
+      },
+      {
+        "biome": "snow",
+        "before_order": 4,
+        "after_order": 3,
+        "background_pair_match": true,
+        "ratios": {
+          "median_ms": 0.9456865867947314,
+          "p95_ms": 0.9691634775928799
+        },
+        "cost_pass": true
+      }
+    ],
+    "records": [
+      {
+        "biome": "ocean",
+        "order": 1,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 12.372995,
+            "p95_ms": 16.998008
+          },
+          "gpu_ms": {
+            "median_ms": 9.760580000000001,
+            "p95_ms": 13.15424
+          }
+        },
+        "background_cpu_cores": 0.3050686761882872,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.467173003125936,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-ocean-1-before.csv.gz",
+        "trace_sha256": "cf19e02bfabf8c758118cc0f92e6a380811e19011dc75315fb2f75e977ade97a"
+      },
+      {
+        "biome": "ocean",
+        "order": 2,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 10.655747000000002,
+            "p95_ms": 16.405555
+          },
+          "gpu_ms": {
+            "median_ms": 8.45285,
+            "p95_ms": 9.3016
+          }
+        },
+        "background_cpu_cores": 0.2956808709654874,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.5447510201483965,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-ocean-2-after.csv.gz",
+        "trace_sha256": "b29737594afd3137a0f538d85767e24b687ad10a1ea3a3b648ce3ceb6814ad7a"
+      },
+      {
+        "biome": "ocean",
+        "order": 3,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 10.643248,
+            "p95_ms": 16.190932
+          },
+          "gpu_ms": {
+            "median_ms": 8.45168,
+            "p95_ms": 9.31864
+          }
+        },
+        "background_cpu_cores": 0.3040946686710035,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.883096000412479,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-ocean-3-after.csv.gz",
+        "trace_sha256": "278a0743e5e9000e8dbbf601be293fcbaa4af7b43eec4d1af18b2bc430c8f10e"
+      },
+      {
+        "biome": "ocean",
+        "order": 4,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 11.717369999999999,
+            "p95_ms": 16.36553
+          },
+          "gpu_ms": {
+            "median_ms": 9.665825,
+            "p95_ms": 13.57276
+          }
+        },
+        "background_cpu_cores": 0.3057544927604259,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.0870690029114485,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-ocean-4-before.csv.gz",
+        "trace_sha256": "59e04b6088d06cdd56990ea85df54116f5b518ec0c6a43eaff129150b992d838"
+      },
+      {
+        "biome": "forest",
+        "order": 1,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 11.130658,
+            "p95_ms": 17.9793
+          },
+          "gpu_ms": {
+            "median_ms": 8.94417,
+            "p95_ms": 12.2808
+          }
+        },
+        "background_cpu_cores": 0.3640680021032445,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.443901008926332,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-forest-1-before.csv.gz",
+        "trace_sha256": "963b2aab19d55238c05edb31b6ebd92db67a2351f4aad52e9ad670bf9e9f01f6"
+      },
+      {
+        "biome": "forest",
+        "order": 2,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 12.163887500000001,
+            "p95_ms": 17.903326
+          },
+          "gpu_ms": {
+            "median_ms": 9.322105,
+            "p95_ms": 10.8118
+          }
+        },
+        "background_cpu_cores": 0.31012709079593287,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.777033977210522,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-forest-2-after.csv.gz",
+        "trace_sha256": "6b1a69da311298e19b440aef4381caf4a52bfa499df5dda7d9055cfac0ef1be8"
+      },
+      {
+        "biome": "forest",
+        "order": 3,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 11.3118735,
+            "p95_ms": 17.236865
+          },
+          "gpu_ms": {
+            "median_ms": 9.084065,
+            "p95_ms": 10.5189
+          }
+        },
+        "background_cpu_cores": 0.31529898346309765,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.199089995585382,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-forest-3-after.csv.gz",
+        "trace_sha256": "8ee7cfc31724945d0a8d515df5cabda4e945d30879f00d2c25e09e2f13f783f8"
+      },
+      {
+        "biome": "forest",
+        "order": 4,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 11.0090805,
+            "p95_ms": 16.298183
+          },
+          "gpu_ms": {
+            "median_ms": 8.91779,
+            "p95_ms": 12.71833
+          }
+        },
+        "background_cpu_cores": 0.3307965172503797,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.035241978475824,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-forest-4-before.csv.gz",
+        "trace_sha256": "82eea606cadef699c11917096febeabe8f02cc43faf659ae151788c26925238a"
+      },
+      {
+        "biome": "snow",
+        "order": 1,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 11.0678005,
+            "p95_ms": 20.83005
+          },
+          "gpu_ms": {
+            "median_ms": 9.005885,
+            "p95_ms": 12.10209
+          }
+        },
+        "background_cpu_cores": 0.3091614773735692,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.975549003574997,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-snow-1-before.csv.gz",
+        "trace_sha256": "006f44a564ca62b9d8a21a718a4369f616167388b399303d73084b79152db985"
+      },
+      {
+        "biome": "snow",
+        "order": 2,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 10.4825765,
+            "p95_ms": 16.287753
+          },
+          "gpu_ms": {
+            "median_ms": 8.188984999999999,
+            "p95_ms": 9.65997
+          }
+        },
+        "background_cpu_cores": 0.2746649681994448,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.99605797813274,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-snow-2-after.csv.gz",
+        "trace_sha256": "6ef8d95f7792f00d47d577c17026959ff6c3ee94a6d963d419e70a467054be48"
+      },
+      {
+        "biome": "snow",
+        "order": 3,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 10.400958500000002,
+            "p95_ms": 16.484363
+          },
+          "gpu_ms": {
+            "median_ms": 8.29205,
+            "p95_ms": 9.67094
+          }
+        },
+        "background_cpu_cores": 0.2770509095029755,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.413581995526329,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-snow-3-after.csv.gz",
+        "trace_sha256": "9ac9bd09e7255da76be43d9e85a372049fd4c98633d588ade22cc51a93f4ce3a"
+      },
+      {
+        "biome": "snow",
+        "order": 4,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 10.9983145,
+            "p95_ms": 17.008857
+          },
+          "gpu_ms": {
+            "median_ms": 9.004185,
+            "p95_ms": 12.26041
+          }
+        },
+        "background_cpu_cores": 0.3178346093410762,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 5.504011001903564,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 170,
+        "trace": "5bf-frozen-cost-reserved-snow-4-before.csv.gz",
+        "trace_sha256": "c6e3d662d0da4193f60c8cb0c36176ca1070871b71014d957bed2115a9118310"
+      }
+    ]
+  },
+  "full_weather": {
+    "original_comparative_trial_valid": false,
+    "failed_original_reference": {
+      "biome": "forest",
+      "order": 1,
+      "version": "before",
+      "stages": {
+        "render_ms": {
+          "median_ms": 20.74552,
+          "p95_ms": 21.984707
+        },
+        "gpu_ms": {
+          "median_ms": 18.37567,
+          "p95_ms": 19.47652
+        },
+        "submit_ms": {
+          "median_ms": 1.3155545000000002,
+          "p95_ms": 1.697286
+        },
+        "wait_ms": {
+          "median_ms": 19.4232685,
+          "p95_ms": 20.451358
+        }
+      },
+      "background_cpu_cores": 0.3228519400451641,
+      "external_gpu_fraction": 0.0,
+      "max_active_cycle_ms": 11.468917015008628,
+      "gpu_client_sets_stable": true,
+      "controls_pass": false,
+      "steady_deadline_misses": 0,
+      "steady_frames": 710,
+      "trace": "5bf-default-weather-reserved-forest-1-before.csv.gz",
+      "trace_sha256": "17f4ef17a1a0ac1723d38f4542deffb54bc2020604c00a391ee7d5c0ec57f379"
+    },
+    "remaining_records": [
+      {
+        "biome": "forest",
+        "order": 2,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.0892785,
+            "p95_ms": 27.301835
+          },
+          "gpu_ms": {
+            "median_ms": 18.366889999999998,
+            "p95_ms": 19.39373
+          },
+          "submit_ms": {
+            "median_ms": 1.4966335,
+            "p95_ms": 7.298679
+          },
+          "wait_ms": {
+            "median_ms": 19.415757499999998,
+            "p95_ms": 20.587102
+          }
+        },
+        "background_cpu_cores": 0.3384081607471719,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 6.481987016741186,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-forest-2-after.csv.gz",
+        "trace_sha256": "6dd0c619395a8c53965ec78e355d213012acf8179d03c02eff17e6b119ebbbb0",
+        "measured_steady_fps": 29.99970465734532,
+        "mesh_revisions": 4,
+        "max_normal_upload_bytes": 2097152,
+        "max_steady_render_ms": 30.798547
+      },
+      {
+        "biome": "forest",
+        "order": 3,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.1707715,
+            "p95_ms": 26.93714
+          },
+          "gpu_ms": {
+            "median_ms": 18.32572,
+            "p95_ms": 19.45086
+          },
+          "submit_ms": {
+            "median_ms": 1.5742495,
+            "p95_ms": 7.221715
+          },
+          "wait_ms": {
+            "median_ms": 19.4070815,
+            "p95_ms": 20.568887
+          }
+        },
+        "background_cpu_cores": 0.33299981627176817,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 4.981379985110834,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-forest-3-after.csv.gz",
+        "trace_sha256": "7de68116950d5342bcc63a8783007f0d32c196624ac27b415e76a16e703144ae",
+        "measured_steady_fps": 30.000010578279806,
+        "mesh_revisions": 4,
+        "max_normal_upload_bytes": 2097152,
+        "max_steady_render_ms": 30.067025
+      },
+      {
+        "biome": "forest",
+        "order": 4,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 20.796003,
+            "p95_ms": 22.053323
+          },
+          "gpu_ms": {
+            "median_ms": 18.43689,
+            "p95_ms": 19.49347
+          },
+          "submit_ms": {
+            "median_ms": 1.3972674999999999,
+            "p95_ms": 1.784299
+          },
+          "wait_ms": {
+            "median_ms": 19.410683499999998,
+            "p95_ms": 20.481803
+          }
+        },
+        "background_cpu_cores": 0.3195903363633148,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 6.048021983588114,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-forest-4-before.csv.gz",
+        "trace_sha256": "f3749202ee5f2a18a2ca766e47bce223cfb4178a476b977d915786acd6b8045d"
+      },
+      {
+        "biome": "coast",
+        "order": 1,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.14061,
+            "p95_ms": 22.434368
+          },
+          "gpu_ms": {
+            "median_ms": 18.63917,
+            "p95_ms": 19.65658
+          },
+          "submit_ms": {
+            "median_ms": 1.5792235,
+            "p95_ms": 2.028016
+          },
+          "wait_ms": {
+            "median_ms": 19.5517075,
+            "p95_ms": 20.619061
+          }
+        },
+        "background_cpu_cores": 0.34616336676207893,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 8.62216399400495,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 1,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-coast-1-before.csv.gz",
+        "trace_sha256": "4c966030e38146895aeb090aab28fb373824996c32987c171329376fdf79fdba"
+      },
+      {
+        "biome": "coast",
+        "order": 2,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.2378875,
+            "p95_ms": 27.654637
+          },
+          "gpu_ms": {
+            "median_ms": 18.52383,
+            "p95_ms": 19.79864
+          },
+          "submit_ms": {
+            "median_ms": 1.6565794999999999,
+            "p95_ms": 7.419686
+          },
+          "wait_ms": {
+            "median_ms": 19.4538235,
+            "p95_ms": 20.883828
+          }
+        },
+        "background_cpu_cores": 0.30594106931026044,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 6.387248024111614,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-coast-2-after.csv.gz",
+        "trace_sha256": "b4d87d0a060dbb1e6ef66e38b133f0cae8fd8c3277d3e40caf9935cfbf2bf7bb",
+        "measured_steady_fps": 30.00000550073826,
+        "mesh_revisions": 4,
+        "max_normal_upload_bytes": 2097152,
+        "max_steady_render_ms": 31.372385
+      },
+      {
+        "biome": "coast",
+        "order": 3,
+        "version": "after",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.328342,
+            "p95_ms": 27.398085
+          },
+          "gpu_ms": {
+            "median_ms": 18.536745,
+            "p95_ms": 19.65186
+          },
+          "submit_ms": {
+            "median_ms": 1.76345,
+            "p95_ms": 7.485851
+          },
+          "wait_ms": {
+            "median_ms": 19.4980015,
+            "p95_ms": 20.659848
+          }
+        },
+        "background_cpu_cores": 0.33071875786124655,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 6.428476015571505,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-coast-3-after.csv.gz",
+        "trace_sha256": "4c5ee4d08fb503bb8b10b6a964bc0580d9e23cbdd5cab68fd28250a8b8323cce",
+        "measured_steady_fps": 30.00014513471756,
+        "mesh_revisions": 4,
+        "max_normal_upload_bytes": 2097152,
+        "max_steady_render_ms": 30.76813
+      },
+      {
+        "biome": "coast",
+        "order": 4,
+        "version": "before",
+        "stages": {
+          "render_ms": {
+            "median_ms": 21.0617715,
+            "p95_ms": 22.253819
+          },
+          "gpu_ms": {
+            "median_ms": 18.63559,
+            "p95_ms": 19.51948
+          },
+          "submit_ms": {
+            "median_ms": 1.5289545,
+            "p95_ms": 1.99758
+          },
+          "wait_ms": {
+            "median_ms": 19.5363885,
+            "p95_ms": 20.483606
+          }
+        },
+        "background_cpu_cores": 0.32183201212250434,
+        "external_gpu_fraction": 0.0,
+        "max_active_cycle_ms": 6.511481013149023,
+        "gpu_client_sets_stable": true,
+        "controls_pass": true,
+        "steady_deadline_misses": 0,
+        "steady_frames": 710,
+        "trace": "5bf-default-weather-continuation-coast-4-before.csv.gz",
+        "trace_sha256": "91d7a47d5f95d4f35987f365bbaeaeb645445f9f43bdd17d3854a883489867ca"
+      }
+    ],
+    "current_candidate_controls_all_pass": true,
+    "current_candidate_steady_misses": 0,
+    "current_candidate_steady_frames": 2840,
+    "startup_exclusion_per_run": 10,
+    "claim_scope": "Four individual current native default-weather flights meet30fps render deadlines with passing controls; the full comparative trial is invalid because its first reference exceeded the10ms collector limit. No controlled comparative speedup is claimed.",
+    "reference_application_revision": "0e88c7af5d6cd3b563daef22c6e4eb427c1b27dd",
+    "reference_binary_sha256": "1a8c6359767c8402cac050a3ecbf73dda78dbdb959da5167da264542d68b6ec3"
+  },
+  "ci": {
+    "renderer_run": 39352159150,
+    "web_memory_run": 39352164108,
+    "status_at_application_revision": "all required checks pass",
+    "compute_fragment_images": 45,
+    "compute_fragment_peak": 0,
+    "specialization_images": 30,
+    "specialization_peak": 0
+  },
+  "preview": {
+    "resolution": [
+      1920,
+      1080
+    ],
+    "observed_hud_fps": 30.0,
+    "aggregate_process_tree_peak_mib": 258.7,
+    "image": "preview-1080.png",
+    "memory_scope": "Native app cgroup RAM, not a measurement of total GPU residency",
+    "physical_presentation_timing_measured": false
+  },
+  "remaining": {
+    "browser_hardware_fps": "not verified",
+    "operator_review": "required before merge/pin"
+  },
+  "measurement_tool_sha256": {
+    "5bf-frozen-cost-reserved.py": "db47ae14a2ed7cb17fceb622287b8925d3baf5a898fd9c891335f255b93270f3",
+    "5bf-default-weather-reserved.py": "658aa378b4968b9ca7b58c0679751456745e9150d1f67e1ad811fd752416a080",
+    "5bf-default-weather-continue.py": "094bbecbc94cb414c73e4130197075a7a3eb4b3ebf5bc8d192931f4fed586644",
+    "owned_cpu_reservation.py": "888856783f44a3f7ed361d7d14f4190600aae2c5e128b10e9ff708082473ea38",
+    "frame_trace.cpp": "38ef4e9a20b8fdd512dd554fa1cd48f80e573099c263126fe70c69610b451233",
+    "frame_trace.so": "cb32baf691e54a56a81ce6512203486d2d29255150bcf5526e1e8ca4493a4a22",
+    "browser_budget.py": "27fa9c081d1c9e80fdfa2812b0f7350047c20654188f628fa63498db293a4982",
+    "workload_sampler.py": "32b5587e2454a355ac12c64da30ec049d1f70eaf7c86d3c676446abf29c239ae"
+  }
+}

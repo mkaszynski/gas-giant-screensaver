@@ -43,7 +43,15 @@ also failed: a forest build remained pending for 9.4 seconds and triggered a
 306 ms synchronous rebuild. A CPU-only ABBA throughput probe built the same
 512,800-vertex forest in 5.88 seconds with 2.67 ms windows, versus 2.49 seconds
 with 5.33 ms windows at 30 Hz. The revised sixteen-percent grant restores
-construction margin; it still needs the packaged deadline and streaming gate.
+construction margin.
 [Raw CPU window measurements](frame-drop-investigation/terrain-window-throughput.json).
 CPU savings, image parity and passing functional tests alone do not establish
 the 30 fps gate.
+
+At packaged application `5bf5c20`, four current forest/coast flights complete
+four mesh revisions apiece, keep normal uploads within 2 MiB, and miss zero
+deadlines in 2,840 steady frames with passing workload controls. The largest
+p95 is 27.655 ms. The full comparative trial remains invalid because its first
+reference exceeded the collection-latency bound; no comparative speedup is
+claimed. [The report](BENCHMARK_CPU_BUDGET.md) includes the original failure,
+all remaining samples and the independent frozen Phase 1 cost acceptance.

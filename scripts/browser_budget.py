@@ -27,6 +27,8 @@ def main():
     parser.add_argument("--cpu-percent", type=int, default=90)
     parser.add_argument("--seconds", type=int, default=1200)
     parser.add_argument("--reserve-mib", type=int, default=768)
+    parser.add_argument("--delegate-cpu", action="store_true",
+                        help="Allow benchmark CPU subgroups inside the unchanged parent envelope")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
@@ -45,10 +47,11 @@ def main():
         identity = ['--uid=' + str(user.pw_uid), '--setenv=HOME=' + user.pw_dir]
     launch = ['systemd-run', *mode, '--wait', '--pipe', '--remain-after-exit', '--unit=' + unit,
               '--working-directory=' + str(Path.cwd()), *identity,
+              *(['-p', 'Delegate=cpu'] if args.delegate_cpu else []),
               '-p', f'MemoryMax={args.memory_mib}M', '-p', f'MemoryHigh={max(1, int(args.memory_mib*args.memory_high_percent/100))}M',
               '-p', 'MemorySwapMax=0', '-p', f'CPUQuota={args.cpu_percent}%', '-p', 'TasksMax=192',
               '-p', f'RuntimeMaxSec={args.seconds}', '-p', 'OOMPolicy=kill', *command]
-    report = {'unit': unit, 'memory_mib': args.memory_mib, 'memory_high_percent': args.memory_high_percent, 'cpu_percent': args.cpu_percent, 'samples': []}
+    report = {'unit': unit, 'memory_mib': args.memory_mib, 'memory_high_percent': args.memory_high_percent, 'cpu_percent': args.cpu_percent, 'delegate_cpu': args.delegate_cpu, 'samples': []}
     started = time.monotonic()
     process = subprocess.Popen(launch)
     try:

@@ -34,16 +34,18 @@ The GPU regression compares daylight, sunset, storm, lightning and night
 against a fixture that rejects only the optional fragment specializations. It requires
 the fallback to run and limits complete-image differences to the existing
 two-code/0.003-mean threshold. Full rendering checks and browser memory matrices
-run in CI. Passing conversion or image tests does not establish a speedup or
-the 30 fps hardware gate; those remain pending for this candidate.
+run in CI. Passing conversion or image tests alone does not establish a speedup
+or browser hardware fps.
 The established compute/fragment comparison separately rejects only the new
 empty-volume fragment variant. Its reference therefore still executes the full
 marcher rather than sharing the candidate's row-selection decision.
 
-For the earlier sky-only candidate `ead1700`, all five added full-scene software
-comparisons have zero differing display codes, and WebGL/WebGPU/fallback/native
-parity CI passes. Local builds and all 72 CPU/CLI checks pass for the subsequent
-clear-row extension; its full rendering checks are pending. A compiler-only
+At `5bf5c20`, all 72 CPU/CLI checks, renderer/Nix CI, browser backend/native
+parity and the full browser memory matrix pass. All 30 specialization and 45
+compute/full-reference software images have zero differing display codes.
+[Four current native flights](BENCHMARK_CPU_BUDGET.md) meet their steady 30 fps
+deadlines with passing workload controls; browser hardware fps remains
+unverified. A compiler-only
 probe using glslang 16.0.0 with `-V -Os` reduces generic weather SPIR-V from
 97,828 bytes to 32,112 bytes for sky-only rendering and 47,448 bytes for an
 empty-volume final pass. These code-size observations are not runtime timings.
