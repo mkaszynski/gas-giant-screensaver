@@ -128,6 +128,48 @@ inline MeteorWindow meteorWindowAt(double seconds, double intervalHours = 4.5) {
       std::min(360 + 600 * meteor_detail::unit(id ^ 0x55aa), period * .15);
   return {meteorShowerStart(id, intervalHours), duration, id};
 }
+inline uint64_t meteorPreviewId(const MeteorOptions &options) {
+  if (!std::isfinite(options.previewStart) || options.previewStart < 0 ||
+      options.previewStart > 1.e10)
+    return 0;
+  return meteor_detail::hash(uint64_t(options.previewStart * 1000) ^
+                             options.restart);
+}
+// Pick once at the encounter's start. A radiant outside the visible field
+// produces a coherent stream across the sky rather than a central starburst.
+// Keep it above the horizon so an explicit trigger is immediately useful.
+inline Vec3 meteorPreviewRadiant(const Scene &field, uint64_t id,
+                                  double aspect = 16. / 9.) {
+  const double horizontalLimit =
+      std::tan(29 * pi / 180) *
+      (std::isfinite(aspect) && aspect > 0 ? aspect : 16. / 9.) * 1.2;
+  const double verticalLimit = std::tan(29 * pi / 180) * 1.2;
+  const double minimumHeight = std::sin(25 * pi / 180),
+               maximumHeight = std::sin(70 * pi / 180);
+  for (uint64_t attempt = 0; attempt < 16; ++attempt) {
+    const double azimuth =
+        2 * pi * meteor_detail::unit(id ^ (0x6a09e667ull + 2 * attempt));
+    const double y = minimumHeight + (maximumHeight - minimumHeight) *
+                                        meteor_detail::unit(
+                                            id ^ (0xbb67ae85ull + 2 * attempt));
+    const double horizontal = std::sqrt(1 - y * y);
+    const Vec3 direction{horizontal * std::cos(azimuth), y,
+                         horizontal * std::sin(azimuth)};
+    const double forward = dot(direction, field.forward);
+    if (forward <= 0 ||
+        std::abs(dot(direction, field.right)) > forward * horizontalLimit ||
+        std::abs(dot(direction, field.cameraUp)) > forward * verticalLimit)
+      return normalized(meteor_detail::world(field, direction));
+  }
+  // Bounded fallback for unusually wide views or a near-zenith camera.
+  Vec3 horizontal{field.forward.x, 0, field.forward.z};
+  if (length(horizontal) < 1.e-6)
+    horizontal = {field.cameraUp.x, 0, field.cameraUp.z};
+  horizontal = normalized(horizontal);
+  return normalized(meteor_detail::world(
+      field, horizontal * -std::sqrt(1 - minimumHeight * minimumHeight) +
+                 Vec3{0, minimumHeight, 0}));
+}
 inline double meteorNight(const Scene &s) {
   // Natural encounters are night-only. An explicit manual trigger bypasses
   // this gate; an eclipse alone does not change the automatic night schedule.
@@ -167,8 +209,7 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
         frame.options.previewStart < 0 || frame.options.previewStart > 1.e10)
       return batch;
     window.start = frame.options.previewStart;
-    window.id = hash(uint64_t(std::max(0., window.start) * 1000) ^
-                     frame.options.restart);
+    window.id = meteorPreviewId(frame.options);
     window.duration = 1.e11;
   }
   const double phase = frame.seconds - window.start;
@@ -187,8 +228,11 @@ inline MeteorBatch meteorsAt(MeteorFrame frame, const Scene &s,
   Vec3 radiantWorld = normalized(Vec3{2 * unit(window.id + 51) - 1,
                                       2 * unit(window.id + 52) - 1,
                                       2 * unit(window.id + 53) - 1});
-  if (preview && length(previewRadiant) > .5)
-    radiantWorld = normalized(previewRadiant);
+  if (preview)
+    radiantWorld = length(previewRadiant) > .5
+                       ? normalized(previewRadiant)
+                       : meteorPreviewRadiant(fieldScene ? *fieldScene : s,
+                                              window.id, aspect);
   // Real velocities and sub-second streaks do not inherit the accelerated
   // astronomical clock. Correct the radiant for the moon's spin since birth.
   const double spinRate =

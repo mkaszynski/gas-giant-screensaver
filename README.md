@@ -64,6 +64,8 @@ review commands](docs/METEORS.md).
 For a reproducible preview, use `--meteor-mode preview --meteor-rate 30`.
 `--meteor-preview-start SECONDS` fixes the stream epoch for captures/recordings;
 `--meteor-mode off` restores a meteor-free reference.
+Each manual shower chooses an off-screen radiant once and keeps that incoming
+direction throughout the encounter. Starting another shower chooses a new direction.
 
 Hidden menus issue no extra GPU draws or allocations. Native
 pointer controls require `general:hide_cursor = false`, as in the shipped config.

@@ -53,6 +53,68 @@ int main() {
     }
     auto scene = sceneAt(1200);
     scene.sunLocal.y = -.4;
+    {
+      int left = 0, right = 0;
+      for (double aspect : {.6, 16. / 9., 32. / 9.}) {
+        for (uint64_t id = 0; id < 512; ++id) {
+          const auto radiant = meteorPreviewRadiant(scene, id, aspect);
+          const auto local = scene.local(radiant);
+          const double forward = dot(local, scene.forward);
+          require(std::abs(length(radiant) - 1) < 1.e-12 &&
+                      local.y >= std::sin(25 * pi / 180) - 1.e-12 &&
+                      local.y <= std::sin(70 * pi / 180) + 1.e-12,
+                  "manual radiants stay finite, normalized and above the horizon");
+          require(forward <= 0 ||
+                      std::abs(dot(local, scene.right)) >
+                          forward * std::tan(29 * pi / 180) * aspect * 1.2 ||
+                      std::abs(dot(local, scene.cameraUp)) >
+                          forward * std::tan(29 * pi / 180) * 1.2,
+                  "radiants stay outside the viewport, avoiding a central burst");
+          require(length(radiant - meteorPreviewRadiant(scene, id, aspect)) <
+                      1.e-12,
+                  "a shower seed always reproduces the same incoming direction");
+          (dot(local, scene.right) < 0 ? left : right)++;
+        }
+      }
+      require(left > 400 && right > 400,
+              "encounters choose both leftward and rightward streams");
+      MeteorOptions options{MeteorMode::Preview, 60, 1200};
+      const auto id = meteorPreviewId(options);
+      const auto radiant = meteorPreviewRadiant(scene, id);
+      options.rate = 1800;
+      options.intervalHours = 12;
+      require(meteorPreviewId(options) == id,
+              "rate and recurrence changes cannot reroll an active shower");
+      ++options.restart;
+      require(length(radiant -
+                     meteorPreviewRadiant(scene, meteorPreviewId(options))) > .01,
+              "a fresh encounter selects a new stream direction");
+      options.restart = 0;
+      size_t tracks = 0;
+      for (int i = 0; i < 120; ++i) {
+        MeteorFrame f{1200 + i / 30., 1. / 30, options};
+        const auto explicitStream =
+            meteorsAt(f, scene, 16. / 9., 1800, radiant, &scene);
+        const auto implicitStream =
+            meteorsAt(f, scene, 16. / 9., 1800, {}, &scene);
+        require(explicitStream.count == implicitStream.count,
+                "the model and renderer share their radiant selection");
+        for (size_t j = 0; j < explicitStream.count; ++j) {
+          const auto &segment = explicitStream.segments[j];
+          require(length(segment.head - implicitStream.segments[j].head) <
+                      1.e-10,
+                  "cached and directly sampled showers have identical tracks");
+          const auto incoming = segment.tail - segment.head;
+          if (length(incoming) < 1.e-6)
+            continue;
+          require(dot(normalized(incoming), scene.local(radiant)) >
+                      std::cos(3 * pi / 180),
+                  "meteors retain one incoming stream with only physical dispersion");
+          ++tracks;
+        }
+      }
+      require(tracks > 100, "direction consistency covers many actual meteors");
+    }
     const auto radiant = meteor_detail::world(
         scene, normalized(scene.forward * .65 + Vec3{0, .8, 0}));
     MeteorFrame frame{1200, 1. / 30, {MeteorMode::Preview, 3, 1200}};

@@ -115,8 +115,8 @@ int main() {
               "automatic daytime rendering adds no meteor pixels");
       {
         auto glare = day;
-        const auto radiant = meteor_detail::world(
-            glare, normalized(glare.forward * .65 + Vec3{0, .8, 0}));
+        const auto radiant = meteorPreviewRadiant(
+            glare, meteorPreviewId({MeteorMode::Preview, 60, 1200}));
         const auto batch =
             meteorsAt({1200.9, 1. / 30, {MeteorMode::Preview, 60, 1200}}, glare,
                       16. / 9., 1800, radiant, &glare);
