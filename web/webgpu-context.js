@@ -444,6 +444,7 @@
       // Pipelines retain program layouts. Reconfiguration must release them.
       this.pipelineCache.clear();
       program.groups.clear();
+      program.textureState = null;
     }
     uniform(
       location,
@@ -589,6 +590,7 @@
         params: new Map(),
         views: new Map(),
         generation: 0,
+        samplerRevision: 0,
       });
     }
     activeTexture(unit) {
@@ -608,7 +610,10 @@
       );
     }
     texParameteri(target, name, value) {
-      this.texture(target).params.set(name, value);
+      const texture = this.texture(target);
+      if (texture.params.get(name) === value) return;
+      texture.params.set(name, value);
+      ++texture.samplerRevision;
     }
     texParameterf(target, name, value) {
       this.texParameteri(target, name, value);
@@ -1342,6 +1347,61 @@
       }
       return { pipeline: this.pipelineCache.get(key), inputs };
     }
+    samplerTexture(program, sampler) {
+      sampler.bindingTarget ??= sampler.type.includes('Cube')
+        ? G.TEXTURE_CUBE_MAP
+        : sampler.type.includes('3D')
+          ? G.TEXTURE_3D
+          : sampler.type.includes('Array')
+            ? G.TEXTURE_2D_ARRAY
+            : G.TEXTURE_2D;
+      const unit = program.locations.get(sampler.name).unit;
+      return this.textures[unit].get(sampler.bindingTarget) ||
+        this.dummyTexture(sampler.bindingTarget, sampler.type.endsWith('Shadow'));
+    }
+    textureGroup(program) {
+      const samplers = program.definition.frag.samplers;
+      if (!samplers.length) return null;
+      const previous = program.textureState;
+      if (previous && samplers.every((sampler, index) => {
+        const texture = this.samplerTexture(program, sampler);
+        const old = previous.textures[index];
+        return old.texture === texture &&
+          old.generation === texture.generation &&
+          old.samplerRevision === texture.samplerRevision;
+      })) return previous.group;
+
+      const bindings = [], identities = [], textures = [];
+      for (const sampler of samplers) {
+        const texture = this.samplerTexture(program, sampler);
+        const target = sampler.bindingTarget;
+        bindings.push({
+          binding: sampler.binding,
+          resource: this.view(texture,
+            target === G.TEXTURE_CUBE_MAP ? 'cube' :
+            target === G.TEXTURE_3D ? '3d' :
+            target === G.TEXTURE_2D_ARRAY ? '2d-array' : '2d'),
+        });
+        if (sampler.sampled) bindings.push({
+          binding: sampler.binding + 1,
+          resource: this.sampler(texture, sampler.type.endsWith('Shadow')),
+        });
+        identities.push([texture.id, texture.generation, [...texture.params]]);
+        textures.push({texture, generation: texture.generation,
+          samplerRevision: texture.samplerRevision});
+      }
+      const key = JSON.stringify(identities);
+      if (!program.groups.has(key)) {
+        if (program.groups.size >= 64)
+          program.groups.delete(program.groups.keys().next().value);
+        program.groups.set(key, this.device.createBindGroup({
+          layout: program.textureLayout, entries: bindings,
+        }));
+      }
+      const group = program.groups.get(key);
+      program.textureState = {group, textures};
+      return group;
+    }
     bindDraw(mode) {
       const { pipeline, inputs } = this.pipeline(mode),
         pass = this.beginPass();
@@ -1397,55 +1457,8 @@
         dynamic.push(offset);
       }
       if (program.globals) pass.setBindGroup(0, program.globals, dynamic);
-      const bindings = [],
-        identities = [];
-      for (const sampler of program.definition.frag.samplers) {
-        const unit = program.locations.get(sampler.name).unit;
-        const target = sampler.type.includes('Cube')
-          ? G.TEXTURE_CUBE_MAP
-          : sampler.type.includes('3D')
-            ? G.TEXTURE_3D
-            : sampler.type.includes('Array')
-              ? G.TEXTURE_2D_ARRAY
-              : G.TEXTURE_2D;
-        const texture =
-          this.textures[unit].get(target) ||
-          this.dummyTexture(target, sampler.type.endsWith('Shadow'));
-        bindings.push({
-          binding: sampler.binding,
-          resource: this.view(
-            texture,
-            target === G.TEXTURE_CUBE_MAP
-              ? 'cube'
-              : target === G.TEXTURE_3D
-                ? '3d'
-                : target === G.TEXTURE_2D_ARRAY
-                  ? '2d-array'
-                  : '2d',
-          ),
-        });
-        if (sampler.sampled)
-          bindings.push({
-            binding: sampler.binding + 1,
-            resource: this.sampler(texture, sampler.type.endsWith('Shadow')),
-          });
-        identities.push([texture.id, texture.generation, [...texture.params]]);
-      }
-      if (bindings.length) {
-        const key = JSON.stringify(identities);
-        if (!program.groups.has(key)) {
-          if (program.groups.size >= 64)
-            program.groups.delete(program.groups.keys().next().value);
-          program.groups.set(
-            key,
-            this.device.createBindGroup({
-              layout: program.textureLayout,
-              entries: bindings,
-            }),
-          );
-        }
-        pass.setBindGroup(1, program.groups.get(key));
-      }
+      const textures = this.textureGroup(program);
+      if (textures) pass.setBindGroup(1, textures);
       return pass;
     }
     drawArrays(mode, first, count) {

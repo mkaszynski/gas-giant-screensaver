@@ -1,6 +1,7 @@
 #define GLFW_INCLUDE_ES3
 #include "renderer.hpp"
 #include "surface_renderer.hpp"
+#include "weather_quadrature_reference.hpp"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <filesystem>
@@ -126,6 +127,7 @@ void fragmentSkySpecialization() {
   const auto root = std::filesystem::absolute(Renderer::defaultDataDirectory());
   std::filesystem::copy(root / "shaders", fixture / "shaders",
                         std::filesystem::copy_options::recursive);
+  freezeWeatherQuadrature(fixture);
   std::filesystem::create_directory_symlink(root / "assets", fixture / "assets");
   const auto shader = fixture / "shaders/weather.frag";
   std::ifstream in(shader);
@@ -148,12 +150,27 @@ void fragmentSkySpecialization() {
       require(specialized.specializingFragmentSky() &&
                   specialized.specializingFragmentClear() &&
                   !reference.specializingFragmentSky() &&
-                  !reference.specializingFragmentClear(),
+                  !reference.specializingFragmentClear() &&
+                  !reference.specializingFragmentCalm(),
               "fragment specializations and optional-failure fallback run");
       glEnable(GL_SCISSOR_TEST);
       glScissor(7, 9, 13, 17);
       compare(shot(specialized, test[1], test[2]),
                shot(reference, test[1], test[2]));
+      if (test[0] == 162000. && test[1] == 510. && test[2] == 1790900000.) {
+        require(specialized.specializingFragmentCalm(),
+                "calm daylight selects the optional fragment specialization");
+        for (double clock : {1260., 1512.8, 1790900000.}) {
+          compare(shot(specialized, test[1], clock),
+                  shot(reference, test[1], clock));
+          require(specialized.specializingFragmentCalm() ==
+                      (clock == 1790900000.),
+                  "weather seeks switch calm/full fragments immediately");
+        }
+      }
+      if (test[2] == 1260. || test[2] == 1512.8)
+        require(!specialized.specializingFragmentCalm(),
+                "storm and lightning retain the complete fragment model");
       GLint box[4]{};
       glGetIntegerv(GL_SCISSOR_BOX, box);
       require(glIsEnabled(GL_SCISSOR_TEST) && box[0] == 7 && box[1] == 9 &&

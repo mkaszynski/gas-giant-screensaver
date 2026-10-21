@@ -19,6 +19,7 @@ struct WeatherState {
   Vec3 noiseOffset{}, regionalOffset{}, cirrusOffset{};
   Vec3 flash{};
   double flashRadiance = 0;
+  bool calm() const { return storm == 0. && flashRadiance == 0.; }
 };
 namespace weather_detail {
 inline double smooth(double a, double b, double x) {

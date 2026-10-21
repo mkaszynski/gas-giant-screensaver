@@ -9,6 +9,18 @@ void require(bool condition, const char *message) {
 }
 int main() {
   try {
+    WeatherState calm;
+    require(calm.calm(), "exactly zero storm and flash enable specialization");
+    calm.storm = 1.e-30;
+    require(!calm.calm(), "even a tiny growing storm retains the full model");
+    calm.storm = 0.;
+    calm.flashRadiance = 1.e-30;
+    require(!calm.calm(), "subframe lightning cannot use the calm model");
+    calm.flashRadiance = 0.;
+    calm.cover = .9;
+    calm.rain = .2;
+    require(calm.calm(),
+            "cloud cover and stratus rain remain dynamic in calm weather");
     for (auto size : {std::array<int, 2>{1920, 1080}, {641, 359}, {31, 1}}) {
       const int w = size[0], h = size[1];
       require(clearWeatherFirstRow(w, h, {0, .3, .95}, {1, 0, 0}, {0, .95, -.3},
