@@ -1,0 +1,44 @@
+[
+  {
+    "flags": [],
+    "tokens": 5564,
+    "sha256": "92c19f2d09e1f9aa459afe88151a32193c0dd10c58a04c9db821750c063e8578"
+  },
+  {
+    "flags": [
+      "OBSERVATORY_WEATHER_SKY_PASS"
+    ],
+    "tokens": 5564,
+    "sha256": "d0b9a3281cb9c984efc0bacb36373214a1f7fd938d2f19c7b17f9c165dc2cd18"
+  },
+  {
+    "flags": [
+      "OBSERVATORY_WEATHER_CALM"
+    ],
+    "tokens": 5501,
+    "sha256": "cd77964cde6767fce19afaaa95df155a539ba3373ee47c3ba869e8c209b14dbf"
+  },
+  {
+    "flags": [
+      "OBSERVATORY_WEATHER_SKY_PASS",
+      "OBSERVATORY_WEATHER_CALM"
+    ],
+    "tokens": 5501,
+    "sha256": "8481a4c736ad36ea8dd1482ab720ddc38c8f24c60f231dedadcab026feabb9df"
+  },
+  {
+    "flags": [
+      "OBSERVATORY_WEATHER_NO_VOLUME"
+    ],
+    "tokens": 5463,
+    "sha256": "bb61be1e0bf711d2dd531780f8fe752b270d7b3813c3b1d538579ce2cb621ac1"
+  },
+  {
+    "flags": [
+      "OBSERVATORY_WEATHER_NO_VOLUME",
+      "OBSERVATORY_WEATHER_CALM"
+    ],
+    "tokens": 5400,
+    "sha256": "57fa0297a17088d23d13ce4bc2a95405a1ec96a01d4d536a297caf55a6c428c5"
+  }
+]

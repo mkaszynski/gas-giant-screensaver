@@ -81,6 +81,18 @@ def programs():
             "#define OBSERVATORY_WEATHER_NO_VOLUME\n",
         ),
         (
+            "weather.frag",
+            "fullscreen.vert",
+            "#define OBSERVATORY_WEATHER_PIXEL_ONLY\n"
+            "#define OBSERVATORY_WEATHER_CALM\n",
+        ),
+        (
+            "weather.frag",
+            "fullscreen.vert",
+            "#define OBSERVATORY_WEATHER_SKY_ONLY\n"
+            "#define OBSERVATORY_WEATHER_CALM\n",
+        ),
+        (
             "body.frag",
             "fullscreen.vert",
             "#define GIANT_ATMOSPHERE\n#define GIANT_SLAB_LUT\n#define GIANT_INTERIOR\n",

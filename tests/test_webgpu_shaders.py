@@ -33,12 +33,12 @@ class ShaderBakeTests(unittest.TestCase):
 
     def test_all_shared_program_variants_are_distinct(self):
         programs = list(bake.programs())
-        self.assertEqual(len(programs), 30)
+        self.assertEqual(len(programs), 32)
         self.assertEqual(
             len(
                 {bake.source_key(v) + ":" + bake.source_key(f) for _, v, f in programs}
             ),
-            30,
+            32,
         )
         self.assertIn("weather-rain.frag", {p[0] for p in programs})
         for label, vertex, fragment in programs:
@@ -63,6 +63,20 @@ class ShaderBakeTests(unittest.TestCase):
         self.assertIn("constbooluWeatherSkyPass=true;", compact)
         self.assertNotIn("uintuWeatherSkyPass;", compact)
         self.assertIn("integrateWeather", converted)
+
+    def test_calm_fragments_keep_dynamic_weather_and_constant_storm(self):
+        variants = [p for p in bake.programs() if p[0].startswith("weather.frag:")
+                    and "OBSERVATORY_WEATHER_CALM" in p[0]]
+        self.assertEqual(len(variants), 2)
+        for label, _, fragment in variants:
+            converted, _ = bake.convert_program(label, fragment, "frag", {"uv": 0})
+            compact = "".join(converted.split())
+            self.assertIn("constfloatweatherStorm=0.;", compact)
+            self.assertNotIn("uWeatherFlash.w", converted)
+            self.assertIn("uWeatherKind", converted)
+            sky = "SKY_ONLY" in label
+            self.assertIn("constbooluWeatherSkyPass=" + str(sky).lower() + ";", compact)
+            self.assertNotIn("uintuWeatherSkyPass;", compact)
 
     def test_clear_fragment_keeps_shared_solver_and_zero_volume_span(self):
         defines = ("#define OBSERVATORY_WEATHER_PIXEL_ONLY\n"

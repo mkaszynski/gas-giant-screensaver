@@ -77,6 +77,9 @@ float weatherRainDensity(vec3 column){
 float marchDensity(vec3 direction,float distance,float lod){
  return weatherDensity(direction*distance,uObserverHeight,lod)*(1.-smoothstep(75.,100.,distance));
 }
+#ifndef OBSERVATORY_WEATHER_COMPUTE
+#include "weather_quadrature.glsl"
+#endif
 vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
 #ifdef OBSERVATORY_WEATHER_NO_VOLUME
  // CPU bounds prove this ray cannot enter the lower cloud volume:
@@ -118,6 +121,7 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
    vec3 p=d*distance;
    float footprint=max(.001,distance*uTanFov*2./uWeatherResolution.y);
    float lod=clamp(log2(footprint*(64./14.)),-6.,3.);
+#ifdef OBSERVATORY_WEATHER_COMPUTE
    float density;
    // Two-point Gaussian quadrature resolves density between coarse march
    // positions. Evaluate lighting once at the density-weighted centroid.
@@ -137,6 +141,10 @@ vec4 integrateWeather(vec3 d,float end,bool allowSkyCache){
     if(density>.00001)distance=moment/density;
     p=d*distance;
    }else density=marchDensity(d,distance,lod);
+#else
+   float density=weatherStepDensity(d,position,stepLength,lod,distance);
+   p=d*distance;
+#endif
    position+=stepLength;
    if(density>.001){
     float segmentT=exp(-density*stepLength);

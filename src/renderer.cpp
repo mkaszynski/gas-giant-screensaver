@@ -665,6 +665,28 @@ Renderer::Renderer(std::string dir, StarfieldOptions options,
       }
       if (!weatherComputeProgram) {
         try {
+          weatherCalmFragmentProgram =
+              program("weather.frag", "fullscreen.vert", 0,
+                      "#define OBSERVATORY_WEATHER_PIXEL_ONLY\n"
+                      "#define OBSERVATORY_WEATHER_CALM\n");
+        } catch (const std::exception &error) {
+          std::cerr << "Calm weather fragment specialization unavailable; "
+                       "using the full cloud shader: "
+                    << error.what() << '\n';
+        }
+        if (surfaceOptions.weatherCache) {
+          try {
+            weatherSkyCalmFragmentProgram =
+                program("weather.frag", "fullscreen.vert", 0,
+                        "#define OBSERVATORY_WEATHER_SKY_ONLY\n"
+                        "#define OBSERVATORY_WEATHER_CALM\n");
+          } catch (const std::exception &error) {
+            std::cerr << "Calm sky fragment specialization unavailable; "
+                         "using the available sky shader: "
+                      << error.what() << '\n';
+          }
+        }
+        try {
           weatherClearFragmentProgram =
               program("weather.frag", "fullscreen.vert", 0,
                       "#define OBSERVATORY_WEATHER_PIXEL_ONLY\n"
@@ -1343,18 +1365,19 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
     if (surfaceOptions.weatherCache) {
       if (weatherSkyComputeProgram) {
 #ifndef __EMSCRIPTEN__
-        const GLuint compute = weatherSkyCalmComputeProgram &&
-                                       weatherState.storm == 0. &&
-                                       weatherState.flashRadiance == 0.
-                                   ? weatherSkyCalmComputeProgram
-                                   : weatherSkyComputeProgram;
+        const GLuint compute =
+            weatherSkyCalmComputeProgram && weatherState.calm()
+                ? weatherSkyCalmComputeProgram
+                : weatherSkyComputeProgram;
         prepareWeather(compute);
         dispatchWeather(compute, weatherSkyPixels, skyWeatherCache);
 #endif
       } else {
-        const GLuint skyFragment = weatherSkyFragmentProgram
-                                       ? weatherSkyFragmentProgram
-                                       : weatherProgram;
+        const GLuint skyFragment =
+            weatherSkyCalmFragmentProgram && weatherState.calm()
+                ? weatherSkyCalmFragmentProgram
+            : weatherSkyFragmentProgram ? weatherSkyFragmentProgram
+                                        : weatherProgram;
         prepareWeather(skyFragment);
         integer(skyFragment, "uWeatherSkyPass", true);
         glBindFramebuffer(GL_FRAMEBUFFER, skyWeatherCache.framebuffer);
@@ -1405,20 +1428,22 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
       }
 #endif
     } else {
-      // A distinct sky-only program has its own uniforms. Preserve the old
-      // single setup when the optional specialization is unavailable.
-      if (!surfaceOptions.weatherCache || weatherSkyFragmentProgram)
-        prepareWeather(weatherProgram);
-      bind(weatherProgram, 13, "uWeatherSkyCache",
+      const GLuint pixelFragment = specializingFragmentCalm()
+                                       ? weatherCalmFragmentProgram
+                                       : weatherProgram;
+      // Every optional program owns its uniforms; even a fallback sky draw
+      // cannot supply the final pass's setup implicitly.
+      prepareWeather(pixelFragment);
+      bind(pixelFragment, 13, "uWeatherSkyCache",
            surfaceOptions.weatherCache ? skyWeatherCache.texture : mountains);
-      integer(weatherProgram, "uWeatherSkyPass", false);
+      integer(pixelFragment, "uWeatherSkyPass", false);
       if (firstClear < weather.height || endClear > 0) {
         // Scissoring preserves the original fullscreen interpolation and pixel
         // centres. Disjoint rows cover both MRT attachments exactly once.
         glEnable(GL_SCISSOR_TEST);
         if (firstClear > endClear) {
           glScissor(0, endClear, weather.width, firstClear - endClear);
-          quad(weatherProgram);
+          quad(pixelFragment);
         }
         prepareWeather(weatherClearFragmentProgram);
         glScissor(0, endClear ? 0 : firstClear, weather.width,
@@ -1427,7 +1452,7 @@ void Renderer::renderScene(int w, int h, const Scene &s, double seconds,
         glDisable(GL_SCISSOR_TEST);
         weatherClearRows = endClear + weather.height - firstClear;
       } else {
-        quad(weatherProgram);
+        quad(pixelFragment);
       }
     }
     revealMeteors(s, w, h, surfaceTexture);

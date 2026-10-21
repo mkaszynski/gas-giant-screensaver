@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_ES3
 #include "renderer.hpp"
+#include "weather_quadrature_reference.hpp"
 #include <GLES3/gl31.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -30,6 +31,7 @@ struct FullFragmentReference {
     const auto source = std::filesystem::absolute(data);
     std::filesystem::copy(source / "shaders", root / "shaders",
                           std::filesystem::copy_options::recursive);
+    freezeWeatherQuadrature(root);
     std::filesystem::create_directory_symlink(source / "assets", root / "assets");
     const auto shader = root / "shaders/weather.frag";
     std::ifstream in(shader);

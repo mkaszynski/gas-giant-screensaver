@@ -16,7 +16,8 @@ const device = {
   createBuffer: () => ({ destroy() {} }),
   createTexture(descriptor) {
     descriptors.push(descriptor);
-    return { destroy() {} };
+    const texture = { destroy() {}, createView() { return { texture }; } };
+    return texture;
   },
   queue: {
     onSubmittedWorkDone: () => Promise.resolve(),
@@ -153,6 +154,67 @@ for (const name of ['graphics-data.js', 'gpu-memory.js', 'webgpu-context.js'])
   await second;
   assert.equal(gl.uniformCursor, 64);
   assert.equal(gl.memoryStats().bytes, baseline, 'Overlap needs no extra GPU uniform buffer');
+  // Repeated cloud-light slices share textures, but changed bindings, storage
+  // or sampler state must immediately replace the cached texture group.
+  device.createRenderPipeline = descriptor => descriptor;
+  device.createBindGroup = descriptor => descriptor;
+  device.createSampler = descriptor => descriptor;
+  const bound = [];
+  gl.beginPass = () => ({
+    setPipeline() {}, setViewport() {}, setScissorRect() {},
+    setBindGroup(slot, group) { if (slot === 1) bound.push(group); },
+  });
+  const program = gl.createProgram();
+  program.definition = {
+    label: 'texture-state fixture', points: false,
+    vert: { module: {}, inputs: [] },
+    frag: { module: {}, samplers: [
+      {name: 'uImage', type: 'sampler2D', binding: 0, sampled: true},
+    ] },
+  };
+  for (const stage of ['vert', 'frag'])
+    program[stage] = {data: new ArrayBuffer(0), definition: {blockSize: 0}};
+  program.pipelineLayout = {};
+  program.textureLayout = {};
+  program.locations.set('uImage', {program, base: 'uImage', sampler: true, unit: 0});
+  gl.useProgram(program);
+  const image = gl.createTexture();
+  gl.bindTexture(constants.TEXTURE_2D, image);
+  gl.texStorage2D(constants.TEXTURE_2D, 1, constants.RGBA8, 4, 4);
+  let lookups = 0;
+  const sampler = gl.sampler.bind(gl);
+  gl.sampler = (...args) => { ++lookups; return sampler(...args); };
+  gl.bindDraw(constants.TRIANGLES);
+  const firstGroup = bound.at(-1);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.equal(bound.at(-1), firstGroup);
+  assert.equal(lookups, 1, 'Stable draws skip sampler/descriptor reconstruction');
+  gl.texParameteri(constants.TEXTURE_2D, constants.TEXTURE_WRAP_S, constants.REPEAT);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.notEqual(bound.at(-1), firstGroup, 'Sampler edits invalidate the fast path');
+  const editedGroup = bound.at(-1);
+  gl.texParameteri(constants.TEXTURE_2D, constants.TEXTURE_WRAP_S, constants.REPEAT);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.equal(bound.at(-1), editedGroup);
+  assert.equal(lookups, 2, 'An identical parameter assignment preserves cached state');
+  gl.texStorage2D(constants.TEXTURE_2D, 1, constants.RGBA8, 8, 4);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.notEqual(bound.at(-1), editedGroup, 'New storage cannot retain an old view');
+  assert.equal(bound.at(-1).entries[0].resource.texture, image.gpu);
+  const other = gl.createTexture();
+  gl.activeTexture(constants.TEXTURE0 + 1);
+  gl.bindTexture(constants.TEXTURE_2D, other);
+  gl.texStorage2D(constants.TEXTURE_2D, 1, constants.RGBA8, 4, 4);
+  gl.uniform1i(gl.getUniformLocation(program, 'uImage'), 1);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.equal(bound.at(-1).entries[0].resource.texture, other.gpu,
+    'A sampler-unit change resolves the current texture');
+  gl.uniform1i(gl.getUniformLocation(program, 'uImage'), 0);
+  gl.bindTexture(constants.TEXTURE_2D, image);
+  gl.uniform1i(gl.getUniformLocation(program, 'uImage'), 1);
+  gl.bindDraw(constants.TRIANGLES);
+  assert.equal(bound.at(-1).entries[0].resource.texture, image.gpu,
+    'Rebinding the same unit invalidates the previous texture identity');
   console.log(
     'WebGPU adapter: targets, light cache, software hints, retirement and overlapping uniform frames passed',
   );

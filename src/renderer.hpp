@@ -61,10 +61,12 @@ public:
   bool specializingFragmentClear() const {
     return weatherClearFragmentProgram != 0;
   }
+  bool specializingFragmentCalm() const {
+    return weatherCalmFragmentProgram && weatherState.calm();
+  }
   int clearWeatherRows() const { return weatherClearRows; }
   bool computingCalmWeather() const {
-    return weatherCalmComputeProgram && weatherState.storm == 0. &&
-           weatherState.flashRadiance == 0.;
+    return weatherCalmComputeProgram && weatherState.calm();
   }
   size_t surfaceMeshRevision() const {
     return surface ? surface->meshRevision() : 0;
@@ -125,7 +127,8 @@ private:
          postProgram = 0, presentationProgram = 0, ringProgram = 0,
          giantProgram = 0, giantLimbProgram = 0, emissionProgram = 0,
          weatherProgram = 0, weatherLightProgram = 0, weatherRainProgram = 0,
-         weatherSkyFragmentProgram = 0, weatherClearFragmentProgram = 0;
+         weatherSkyFragmentProgram = 0, weatherClearFragmentProgram = 0,
+         weatherCalmFragmentProgram = 0, weatherSkyCalmFragmentProgram = 0;
   GLuint weatherComputeProgram = 0, weatherCalmComputeProgram = 0,
          weatherSkyComputeProgram = 0, weatherSkyCalmComputeProgram = 0,
          weatherPixelProgram = 0, weatherClearComputeProgram = 0;
