@@ -27,6 +27,18 @@ moving the meteors with the screen. The observer's altitude, the moon's spin
 since birth and the changing local basis enter that transform. This is a visual
 ablation model, not a gas-dynamics simulation.
 
+Natural encounters already use a direction seeded by their encounter ID.
+Manual showers now select a random radiant 25–70 degrees above the horizon,
+outside the initial viewport with a margin. This produces streams sweeping
+across the view instead of a fan centered on the screen. The renderer stores
+that world-space direction when the shower starts; individual meteors share it
+with only their existing small dispersion. Camera movement and the rotating
+sky can change its projection, but the stream is never rerolled per frame or
+per meteor. Changing the rate or recurrence does not change its direction.
+A new trigger or time-seek restart chooses a new stream; a fixed preview epoch
+and restart number reproduce the same direction for captures. Selection is
+bounded to 16 candidates once per encounter and adds no GPU resources or draws.
+
 The modeled bright population has magnitudes +2 to -4, using the catalog-star
 flux zero point. Larger ablation events penetrate farther and leave longer
 wakes; they do not become resolved rocks or thick heads. Seeded asymmetric

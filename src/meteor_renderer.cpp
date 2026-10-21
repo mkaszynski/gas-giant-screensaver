@@ -21,8 +21,8 @@ void Renderer::drawMeteors(const Scene &s, int width, int height, double day) {
     meteorField = s;
     meteorFieldAspect = double(width) / height;
     if (preview)
-      previewRadiant =
-          meteor_detail::world(s, normalized(s.forward * .65 + Vec3{0, .8, 0}));
+      previewRadiant = meteorPreviewRadiant(
+          meteorField, meteorPreviewId(meteorFrame.options), meteorFieldAspect);
     lastMeteorPreview = meteorFrame.options.previewStart;
     lastMeteorRestart = meteorFrame.options.restart;
     lastMeteorInterval = meteorFrame.options.intervalHours;
