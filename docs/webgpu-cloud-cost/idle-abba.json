@@ -1,0 +1,414 @@
+{
+  "kind": "Authorized idle-desktop headless AMD WebGPU diagnostic; not physical presentation timing",
+  "source": "f4353949f5eff69dade1d0a99b55a149ebdbea1d",
+  "baseline_source": "d7c65f75cf51d8cbcb6f16f68231eb877ed61dd6",
+  "protocol": {
+    "sequence": "ABBA",
+    "warmup_completed_frames": 60,
+    "measured_completed_frames_per_run": 300,
+    "quality": "High",
+    "scene_resolution": [
+      1920,
+      1080
+    ],
+    "query": "backend=webgpu&quality=2&time=510&travel=162000&weather=1790900000&speed=1",
+    "resource_envelope": {
+      "memory_mib": 1100,
+      "cpu_percent_of_one_core": 90,
+      "reserve_mib": 768
+    },
+    "desktop": "Operator confirmed unlocked and idle; no hyprlock in process preflight. No clock or power changes."
+  },
+  "runs": [
+    {
+      "kind": "Authorized targeted hardware browser diagnostic, not software CI or physical presentation timing",
+      "build": "baseline",
+      "wasm_sha256": "fef9cde1530dc0315e1e76958417f8818f469f34ee921d6c69feadaf4dc47198",
+      "adapter": {
+        "software": false,
+        "actual_device": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        },
+        "enumerated": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        }
+      },
+      "health": {
+        "backend": "webgpu",
+        "scene": [
+          1920,
+          1080
+        ],
+        "display": [
+          1920,
+          1080
+        ],
+        "quality": {
+          "open": false,
+          "preset": 2,
+          "name": "High",
+          "height": 1080,
+          "fps": 30,
+          "revision": 0,
+          "features": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ]
+        },
+        "error": null
+      },
+      "frames": 300,
+      "fps": 20.089819635042097,
+      "cpu_encode_median_ms": 10.72509765625,
+      "cpu_encode_p95_ms": 12.554931640625,
+      "completion_latency_p95_ms": 116.599853515625,
+      "cpu_stat_delta": {
+        "usage_usec": 11428253,
+        "user_usec": 9972857,
+        "system_usec": 1455396,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 149,
+        "nr_throttled": 22,
+        "throttled_usec": 1817343,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "parent_cpu_max": "90000 100000",
+      "parent_memory_max": "1153433600",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "run": "idle-abba-1-before",
+      "clock_mhz_mean": 981.9798657718121,
+      "gpu_busy_percent_mean": 98.23489932885906,
+      "trace": {
+        "file": "idle-abba-1-before.json.gz",
+        "sha256": "2760d5d24a4eea52b1597daadf3dd08b7266f148764073a26378e89b20622855"
+      }
+    },
+    {
+      "kind": "Authorized targeted hardware browser diagnostic, not software CI or physical presentation timing",
+      "build": "candidate",
+      "wasm_sha256": "efd4073b370683426beab84cedee352cbd63f810a52ae54781b1c67fcd623d81",
+      "adapter": {
+        "software": false,
+        "actual_device": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        },
+        "enumerated": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        }
+      },
+      "health": {
+        "backend": "webgpu",
+        "scene": [
+          1920,
+          1080
+        ],
+        "display": [
+          1920,
+          1080
+        ],
+        "quality": {
+          "open": false,
+          "preset": 2,
+          "name": "High",
+          "height": 1080,
+          "fps": 30,
+          "revision": 0,
+          "features": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ]
+        },
+        "error": null
+      },
+      "frames": 300,
+      "fps": 20.504070983819158,
+      "cpu_encode_median_ms": 8.39501953125,
+      "cpu_encode_p95_ms": 10.204833984375,
+      "completion_latency_p95_ms": 100.590087890625,
+      "cpu_stat_delta": {
+        "usage_usec": 10491369,
+        "user_usec": 9013203,
+        "system_usec": 1478166,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 146,
+        "nr_throttled": 12,
+        "throttled_usec": 1558608,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "parent_cpu_max": "90000 100000",
+      "parent_memory_max": "1153433600",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "run": "idle-abba-2-after",
+      "clock_mhz_mean": 982.4285714285714,
+      "gpu_busy_percent_mean": 98.23809523809524,
+      "trace": {
+        "file": "idle-abba-2-after.json.gz",
+        "sha256": "5a35fb7ea19bf15f7cb440018e62b0816b9da8463654dd30cef0f5871c5c4731"
+      }
+    },
+    {
+      "kind": "Authorized targeted hardware browser diagnostic, not software CI or physical presentation timing",
+      "build": "candidate",
+      "wasm_sha256": "efd4073b370683426beab84cedee352cbd63f810a52ae54781b1c67fcd623d81",
+      "adapter": {
+        "software": false,
+        "actual_device": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        },
+        "enumerated": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        }
+      },
+      "health": {
+        "backend": "webgpu",
+        "scene": [
+          1920,
+          1080
+        ],
+        "display": [
+          1920,
+          1080
+        ],
+        "quality": {
+          "open": false,
+          "preset": 2,
+          "name": "High",
+          "height": 1080,
+          "fps": 30,
+          "revision": 0,
+          "features": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ]
+        },
+        "error": null
+      },
+      "frames": 300,
+      "fps": 20.18082423486606,
+      "cpu_encode_median_ms": 8.25,
+      "cpu_encode_p95_ms": 10.074951171875,
+      "completion_latency_p95_ms": 116.43017578125,
+      "cpu_stat_delta": {
+        "usage_usec": 10707746,
+        "user_usec": 9137176,
+        "system_usec": 1570570,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 149,
+        "nr_throttled": 15,
+        "throttled_usec": 1372894,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "parent_cpu_max": "90000 100000",
+      "parent_memory_max": "1153433600",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "run": "idle-abba-3-after",
+      "clock_mhz_mean": 993.9133333333334,
+      "gpu_busy_percent_mean": 96.84666666666666,
+      "trace": {
+        "file": "idle-abba-3-after.json.gz",
+        "sha256": "9ff25bcdf096ccccfc13d37e8cd02001478adfda34dec70855f29b8073a755e2"
+      }
+    },
+    {
+      "kind": "Authorized targeted hardware browser diagnostic, not software CI or physical presentation timing",
+      "build": "baseline",
+      "wasm_sha256": "fef9cde1530dc0315e1e76958417f8818f469f34ee921d6c69feadaf4dc47198",
+      "adapter": {
+        "software": false,
+        "actual_device": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        },
+        "enumerated": {
+          "vendor": "amd",
+          "architecture": "rdna-2",
+          "device": "",
+          "description": ""
+        }
+      },
+      "health": {
+        "backend": "webgpu",
+        "scene": [
+          1920,
+          1080
+        ],
+        "display": [
+          1920,
+          1080
+        ],
+        "quality": {
+          "open": false,
+          "preset": 2,
+          "name": "High",
+          "height": 1080,
+          "fps": 30,
+          "revision": 0,
+          "features": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            false
+          ]
+        },
+        "error": null
+      },
+      "frames": 300,
+      "fps": 20.52690294344804,
+      "cpu_encode_median_ms": 11.35009765625,
+      "cpu_encode_p95_ms": 14.43505859375,
+      "completion_latency_p95_ms": 116.204833984375,
+      "cpu_stat_delta": {
+        "usage_usec": 11399754,
+        "user_usec": 9884216,
+        "system_usec": 1515537,
+        "nice_usec": 0,
+        "core_sched.force_idle_usec": 0,
+        "nr_periods": 146,
+        "nr_throttled": 31,
+        "throttled_usec": 2188982,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      },
+      "parent_cpu_max": "90000 100000",
+      "parent_memory_max": "1153433600",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "run": "idle-abba-4-before",
+      "clock_mhz_mean": 972.5646258503401,
+      "gpu_busy_percent_mean": 97.52380952380952,
+      "trace": {
+        "file": "idle-abba-4-before.json.gz",
+        "sha256": "43c595e425d8936a65aa8ad3f91304324352366f58caeb196734f482bbb66a10"
+      }
+    }
+  ],
+  "frozen_images": [
+    {
+      "scene": "daylight",
+      "width": 1920,
+      "height": 1080,
+      "rgba_bytes": 8294400,
+      "changed_channels": 0,
+      "maximum_code_difference": 0,
+      "mean_absolute_code_difference": 0.0,
+      "baseline_sha256": "0ce9bc42b41866d75f89bf4467e9da9bf87fe20e4e68b9d6d1393b194a1bc442",
+      "candidate_sha256": "0ce9bc42b41866d75f89bf4467e9da9bf87fe20e4e68b9d6d1393b194a1bc442"
+    },
+    {
+      "scene": "storm",
+      "width": 1920,
+      "height": 1080,
+      "rgba_bytes": 8294400,
+      "changed_channels": 0,
+      "maximum_code_difference": 0,
+      "mean_absolute_code_difference": 0.0,
+      "baseline_sha256": "454a8cef874d8afaa01d78bcc382dcaa412a06ead4570e0659209e9486f547cf",
+      "candidate_sha256": "454a8cef874d8afaa01d78bcc382dcaa412a06ead4570e0659209e9486f547cf"
+    },
+    {
+      "scene": "lightning",
+      "width": 1920,
+      "height": 1080,
+      "rgba_bytes": 8294400,
+      "changed_channels": 0,
+      "maximum_code_difference": 0,
+      "mean_absolute_code_difference": 0.0,
+      "baseline_sha256": "0b067b51486838d93967bfa908a3585826c9a1d62c1fe4d5903266da7277225e",
+      "candidate_sha256": "0b067b51486838d93967bfa908a3585826c9a1d62c1fe4d5903266da7277225e"
+    }
+  ],
+  "gpu_profiles": [
+    {
+      "run": "idle-profile-before",
+      "frames": 24,
+      "mean_gpu_ms_by_pass": {
+        "": 0.7006616666666668,
+        "background.frag stars.frag rings.frag body.frag body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_INTERIOR body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_LIMB emission.frag": 10.458969999999999,
+        "surface.frag:SURFACE_PURE_LAND,OBSERVATORY_WEATHER_MODE 1": 6.217063333333334,
+        "weather-light.frag": 0.8044016666666678,
+        "weather.frag:OBSERVATORY_WEATHER_SKY_ONLY": 2.5176233333333333,
+        "weather.frag weather.frag:OBSERVATORY_WEATHER_PIXEL_ONLY,OBSERVATORY_WEATHER_NO_VOLUME": 22.06030833333333,
+        "post.frag:OBSERVATORY_WEATHER_MODE 1": 1.388838333333333,
+        "presentation.frag": 0.5672083333333334,
+        "sky_lut.frag": 0.05572666666666667,
+        "surface_shadow.frag:OBSERVATORY_WEATHER_MODE 1": 0.060338333333333334
+      },
+      "mean_pass_sum_ms": 44.83114,
+      "warning": "Separate instrumented run; not completion-FPS or physical presentation timing."
+    },
+    {
+      "run": "idle-profile-after",
+      "frames": 24,
+      "mean_gpu_ms_by_pass": {
+        "": 0.7240683333333335,
+        "background.frag stars.frag rings.frag body.frag body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_INTERIOR body.frag:GIANT_ATMOSPHERE,GIANT_SLAB_LUT,GIANT_LIMB emission.frag": 10.561475000000002,
+        "surface.frag:SURFACE_PURE_LAND,OBSERVATORY_WEATHER_MODE 1": 6.390376666666667,
+        "weather-light.frag": 0.8287849999999994,
+        "weather.frag:OBSERVATORY_WEATHER_SKY_ONLY,OBSERVATORY_WEATHER_CALM": 2.5770966666666664,
+        "weather.frag:OBSERVATORY_WEATHER_PIXEL_ONLY,OBSERVATORY_WEATHER_CALM weather.frag:OBSERVATORY_WEATHER_PIXEL_ONLY,OBSERVATORY_WEATHER_NO_VOLUME": 23.166000000000004,
+        "post.frag:OBSERVATORY_WEATHER_MODE 1": 1.3904866666666664,
+        "presentation.frag": 0.5449450000000001,
+        "sky_lut.frag": 0.05436833333333333,
+        "surface_shadow.frag:OBSERVATORY_WEATHER_MODE 1": 0.05609833333333333
+      },
+      "mean_pass_sum_ms": 46.2937,
+      "warning": "Separate instrumented run; not completion-FPS or physical presentation timing."
+    }
+  ],
+  "conclusion": "CPU encoding medians improve about 25%; completion throughput is effectively unchanged around 20.3 fps. No GPU speedup or 30 fps acceptance established."
+}

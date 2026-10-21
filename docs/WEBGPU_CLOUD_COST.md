@@ -51,16 +51,49 @@ remain unchanged. No new render targets, texture formats or scene passes are
 introduced. Two additional shader variants can affect compilation/driver memory;
 the full before/after memory matrix remains required.
 
-## Validation status
+## Idle-desktop hardware comparison
 
-The native application builds and all 72 CPU/CLI checks pass. Portable checks
-include the new variant conversion and adapter invalidation cases. A frozen
-1080p daylight shader probe preserved all 8,294,400 display bytes; the production
-build still needs its full renderer/browser/memory CI and final hardware checks.
+After the operator unlocked the desktop and confirmed it was idle, the actual
+baseline and production builds ran in ABBA order on the AMD hardware adapter.
+Each run used High quality, a 1920×1080 scene and display, all default effects,
+60 completed warmup frames and 300 measured completed frames. The scene was
+`time=510&travel=162000&weather=1790900000&speed=1`. The unchanged process-tree
+envelope was 1100 MiB and 90% of one CPU, with a 768 MiB system reserve.
+There was no installed lock-screen process in the preflight and no clock or
+power changes. The baseline artifact predates the merged baseline's final
+documentation commits; its runtime sources are unchanged.
 
-The initial hardware probes ran alongside the installed lock screen. A separate
-two-second DRM client-counter sample measured 1.25 seconds of lock-screen
-GPU work. Those timings are diagnostics, not controlled performance acceptance;
-no FPS improvement or 30 fps claim is based on them. Final before/after timings
-require an unlocked, idle desktop and the unchanged local resource envelope.
+| Run | Completed frames/s | Median CPU encoding | p95 CPU encoding |
+| --- | ---: | ---: | ---: |
+| Baseline A1 | 20.09 | 10.73 ms | 12.55 ms |
+| Candidate B1 | 20.50 | 8.40 ms | 10.20 ms |
+| Candidate B2 | 20.18 | 8.25 ms | 10.07 ms |
+| Baseline A2 | 20.53 | 11.35 ms | 14.44 ms |
+
+CPU encoding medians improve about 25%, but completion throughput is effectively
+unchanged around 20.3 fps. This does **not** establish a GPU speedup or satisfy
+the browser's 30 fps requirement. Completion timing is not physical screen
+presentation timing; CPU quota throttling is recorded in every run.
+
+Separate 24-frame GPU timestamp runs measured the final weather pass at
+22.06 ms before and 23.17 ms after, including its clear-row draw. Total pass
+time was 44.83/46.29 ms. These instrumented runs are distinct from the ABBA
+throughput samples and provide no evidence of reduced GPU cost. The terrain
+cloud solver remains the largest GPU cost. A further conservative empty-cell
+lookup probe did not improve it and is excluded from the implementation.
+
+The [numeric record and compressed completed-frame traces](webgpu-cloud-cost/idle-abba.json)
+retain artifact hashes, adapter, dimensions, quality, throttling and read-only
+GPU telemetry. Original contended probes are excluded: a separate two-second
+DRM counter sample measured 1.25 seconds of installed lock-screen GPU work.
 See [the preceding baseline](BROWSER_GPU_TIMING.md) for earlier measurements.
+
+## Correctness validation
+
+The native application builds and all 72 CPU/CLI checks pass. All 13 portable
+test commands pass, including variant conversion and adapter invalidation
+cases. The production WASM build succeeds. Direct GPU readback of frozen
+1080p daylight, storm and lightning scenes is byte-identical to the baseline:
+all 8,294,400 RGBA bytes match in each scene. These captures use the actual
+production catalog and runtime, without replacement shader manifests.
+Full renderer/backend/native-parity/Nix/memory CI remains the release gate.
